@@ -14,6 +14,7 @@ class DeliveryOrder extends Model
     protected $fillable = [
         'tenant_id',
         'order_id',
+        'delivery_address',
         'status',
         'driver_name',
     ];

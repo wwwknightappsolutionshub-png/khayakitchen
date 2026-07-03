@@ -17,6 +17,12 @@ class TenantBranding extends Model
         'logo_url',
         'primary_color',
         'secondary_color',
+        'accent_color',
         'banner_image',
+        'platform_override_logo_url',
+        'platform_override_primary_color',
+        'platform_override_secondary_color',
+        'platform_override_accent_color',
+        'platform_override_banner_image',
     ];
 }

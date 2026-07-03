@@ -86,7 +86,6 @@ export function RealtimeProvider({
     const token = localStorage.getItem("khayaos_token");
     const needsAuth = channels.some((c) => c !== "customer");
     if (needsAuth && !token) {
-      setIsConnected(false);
       return;
     }
 

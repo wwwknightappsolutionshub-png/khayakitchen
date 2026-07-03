@@ -39,4 +39,9 @@ class OrderItem extends Model
     {
         return $this->hasMany(OrderItemOption::class, 'order_item_id');
     }
+
+    public function meal(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Menu\Domain\Models\Meal::class, 'meal_id');
+    }
 }

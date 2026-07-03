@@ -14,6 +14,8 @@ import {
   LogOut,
   Megaphone,
   Store,
+  UtensilsCrossed,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,12 +25,14 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, flag: "dashboard" },
   { href: "/orders", label: "Orders", icon: ShoppingBag, flag: "orders" },
   { href: "/kitchen", label: "Kitchen", icon: ChefHat, flag: "kitchen" },
+  { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, flag: "menu" },
   { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },
   { href: "/crm", label: "CRM", icon: Users, flag: "crm" },
   { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
   { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },
   { href: "/reports", label: "Reports", icon: BarChart3, flag: "reporting" },
+  { href: "/audit", label: "Audit", icon: ClipboardList, flag: null },
   { href: "/settings", label: "Settings", icon: Settings, flag: null },
 ];
 

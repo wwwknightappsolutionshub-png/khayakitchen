@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -88,9 +89,9 @@ export default function LoginPage() {
         </form>
         <p className="mt-4 text-center text-xs text-muted">
           Customer ordering?{" "}
-          <a href="/" className="text-primary hover:underline">
+          <Link href="/" className="text-primary hover:underline">
             Go to menu
-          </a>
+          </Link>
           {" · "}
           Platform admin?{" "}
           <span className="text-violet-400">admin@khayaos.com</span>

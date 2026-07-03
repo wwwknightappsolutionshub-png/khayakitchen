@@ -25,8 +25,36 @@ class BrandingService
                 'restaurant_name' => 'Khaya Kitchen',
                 'primary_color' => '#E07A5F',
                 'secondary_color' => '#81B29A',
+                'accent_color' => '#F2CC8F',
             ],
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function resolveEffective(TenantBranding $branding): array
+    {
+        return [
+            'id' => $branding->id,
+            'tenant_id' => $branding->tenant_id,
+            'restaurant_name' => $branding->restaurant_name,
+            'logo_url' => $branding->platform_override_logo_url ?? $branding->logo_url,
+            'primary_color' => $branding->platform_override_primary_color ?? $branding->primary_color,
+            'secondary_color' => $branding->platform_override_secondary_color ?? $branding->secondary_color,
+            'accent_color' => $branding->platform_override_accent_color ?? $branding->accent_color,
+            'banner_image' => $branding->platform_override_banner_image ?? $branding->banner_image,
+            'has_platform_override' => $this->hasPlatformOverride($branding),
+        ];
+    }
+
+    public function hasPlatformOverride(TenantBranding $branding): bool
+    {
+        return $branding->platform_override_logo_url
+            || $branding->platform_override_primary_color
+            || $branding->platform_override_secondary_color
+            || $branding->platform_override_accent_color
+            || $branding->platform_override_banner_image;
     }
 
     public function update(array $data, array $permissions): TenantBranding
@@ -43,6 +71,54 @@ class BrandingService
             'tenant_branding',
             $branding->id,
             $data,
+        );
+
+        return $branding->fresh();
+    }
+
+    public function updatePlatformOverride(string $tenantId, array $data): TenantBranding
+    {
+        $branding = $this->getForTenant($tenantId);
+
+        $branding->update([
+            'platform_override_logo_url' => $data['logo_url'] ?? $branding->platform_override_logo_url,
+            'platform_override_primary_color' => $data['primary_color'] ?? $branding->platform_override_primary_color,
+            'platform_override_secondary_color' => $data['secondary_color'] ?? $branding->platform_override_secondary_color,
+            'platform_override_accent_color' => $data['accent_color'] ?? $branding->platform_override_accent_color,
+            'platform_override_banner_image' => $data['banner_image'] ?? $branding->platform_override_banner_image,
+        ]);
+
+        $this->auditLogService->log(
+            'branding.platform_override',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            $data,
+        );
+
+        return $branding->fresh();
+    }
+
+    public function clearPlatformOverride(string $tenantId): TenantBranding
+    {
+        $branding = $this->getForTenant($tenantId);
+
+        $branding->update([
+            'platform_override_logo_url' => null,
+            'platform_override_primary_color' => null,
+            'platform_override_secondary_color' => null,
+            'platform_override_accent_color' => null,
+            'platform_override_banner_image' => null,
+        ]);
+
+        $this->auditLogService->log(
+            'branding.platform_override_cleared',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            [],
         );
 
         return $branding->fresh();

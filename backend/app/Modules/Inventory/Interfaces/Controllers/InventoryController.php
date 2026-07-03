@@ -57,4 +57,55 @@ class InventoryController extends Controller
             'item' => $this->inventoryService->logWaste($data, $request->get('permissions', [])),
         ], 201);
     }
+
+    public function adjustment(Request $request)
+    {
+        $data = $request->validate([
+            'item_id' => ['required', 'uuid'],
+            'quantity' => ['required', 'numeric'],
+        ]);
+
+        return ApiResponse::success([
+            'item' => $this->inventoryService->adjustStock($data, $request->get('permissions', [])),
+        ], 201);
+    }
+
+    public function transactions(Request $request)
+    {
+        return ApiResponse::success([
+            'transactions' => $this->inventoryService->listTransactions(
+                $request->get('permissions', []),
+                $request->query('item_id'),
+            ),
+        ]);
+    }
+
+    public function storeItem(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'unit' => ['nullable', 'in:kg,g,liter,unit'],
+            'current_stock' => ['nullable', 'numeric', 'min:0'],
+            'reorder_level' => ['nullable', 'numeric', 'min:0'],
+            'cost_per_unit' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        return ApiResponse::success([
+            'item' => $this->inventoryService->createItem($data, $request->get('permissions', [])),
+        ], 201);
+    }
+
+    public function updateItem(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'unit' => ['sometimes', 'in:kg,g,liter,unit'],
+            'reorder_level' => ['nullable', 'numeric', 'min:0'],
+            'cost_per_unit' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        return ApiResponse::success([
+            'item' => $this->inventoryService->updateItem($id, $data, $request->get('permissions', [])),
+        ]);
+    }
 }

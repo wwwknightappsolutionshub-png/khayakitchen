@@ -8,6 +8,7 @@ use App\Modules\CRM\Domain\Models\CrmTagAssignment;
 use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\NotificationsCampaign\Application\Services\AudienceResolverService;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Pricing\Application\Services\PlanLimitService;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Entitlements\FeatureAccessService;
 use App\Shared\Tenancy\TenantContext;
@@ -20,6 +21,7 @@ class CrmService
         private PermissionService $permissionService,
         private AudienceResolverService $audienceResolver,
         private FeatureAccessService $featureAccessService,
+        private PlanLimitService $planLimitService,
     ) {}
 
     public function listCustomers(array $permissions)
@@ -183,6 +185,28 @@ class CrmService
             'average_order_value' => $averageOrderValue,
             'visit_frequency_score' => min(100, $profile->order_count * 10),
             'is_loyal' => $profile->order_count >= 5,
+        ]);
+    }
+
+    public function findOrCreateByPhone(string $phone, string $name): Customer
+    {
+        $tenantId = $this->tenantContext->id();
+        $customer = Customer::where('phone', $phone)->first();
+
+        if ($customer) {
+            if ($name && $customer->name === 'Guest') {
+                $customer->update(['name' => $name]);
+            }
+
+            return $customer->fresh();
+        }
+
+        $this->planLimitService->assertCustomerLimit($tenantId);
+
+        return Customer::create([
+            'tenant_id' => $tenantId,
+            'name' => $name,
+            'phone' => $phone,
         ]);
     }
 }

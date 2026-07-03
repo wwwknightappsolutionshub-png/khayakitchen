@@ -23,6 +23,16 @@ class LoyaltyService
     {
         $this->permissionService->authorize($permissions, 'loyalty.manage');
 
+        return $this->findOrCreateAccount($customerId);
+    }
+
+    public function getAccountPublic(string $customerId): LoyaltyAccount
+    {
+        return $this->findOrCreateAccount($customerId);
+    }
+
+    private function findOrCreateAccount(string $customerId): LoyaltyAccount
+    {
         return LoyaltyAccount::firstOrCreate(
             ['customer_id' => $customerId, 'tenant_id' => $this->tenantContext->id()],
             ['points_balance' => 0, 'tier' => 'bronze', 'created_at' => now()],

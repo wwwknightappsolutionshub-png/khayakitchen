@@ -14,6 +14,16 @@ class DeliveryService
         private PermissionService $permissionService,
     ) {}
 
+    public function createForOrder(Order $order, string $address): DeliveryOrder
+    {
+        return DeliveryOrder::create([
+            'tenant_id' => $order->tenant_id,
+            'order_id' => $order->id,
+            'delivery_address' => $address,
+            'status' => 'pending',
+        ]);
+    }
+
     public function create(array $data, array $permissions): DeliveryOrder
     {
         $this->permissionService->authorize($permissions, 'delivery.manage');

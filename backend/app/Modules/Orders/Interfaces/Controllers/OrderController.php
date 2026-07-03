@@ -57,4 +57,11 @@ class OrderController extends Controller
 
         return ApiResponse::success(['order' => $order]);
     }
+
+    public function show(Request $request, string $id)
+    {
+        $order = $this->orderService->showOrder($id, $request->get('permissions', []));
+
+        return ApiResponse::success(['order' => $order]);
+    }
 }

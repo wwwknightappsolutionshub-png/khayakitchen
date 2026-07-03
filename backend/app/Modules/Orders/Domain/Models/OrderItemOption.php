@@ -26,8 +26,8 @@ class OrderItemOption extends Model
         ];
     }
 
-    public function orderItem(): BelongsTo
+    public function option(): BelongsTo
     {
-        return $this->belongsTo(OrderItem::class, 'order_item_id');
+        return $this->belongsTo(\App\Modules\Menu\Domain\Models\MealOption::class, 'option_id');
     }
 }

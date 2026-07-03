@@ -12,6 +12,7 @@ export interface RealtimeConfig {
     customer: string;
   };
   auth_endpoint: string;
+  vapid_public_key?: string;
 }
 
 export interface RealtimeDashboardSummary {

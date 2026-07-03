@@ -11,6 +11,7 @@ import {
   CreditCard,
   LogOut,
   Shield,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/platform/modules", label: "Modules", icon: Boxes, available: true },
   { href: "/platform/feature-flags", label: "Feature Flags", icon: Flag, available: true },
   { href: "/platform/pricing", label: "Pricing", icon: CreditCard, available: true },
+  { href: "/platform/audit", label: "Audit", icon: ClipboardList, available: true },
 ];
 
 export function PlatformSidebar() {

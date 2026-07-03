@@ -110,11 +110,12 @@ class RestaurantStatusService
     public function getStorefront(?string $tenantId = null): array
     {
         $tenantId = $tenantId ?? $this->tenantContext->id();
-        $branding = app(BrandingService::class)->getForTenant($tenantId);
+        $brandingService = app(BrandingService::class);
+        $branding = $brandingService->getForTenant($tenantId);
         $status = $this->getForTenant($tenantId);
 
         return [
-            'branding' => $branding,
+            'branding' => $brandingService->resolveEffective($branding),
             'status' => $status,
         ];
     }

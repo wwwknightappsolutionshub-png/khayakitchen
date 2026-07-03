@@ -2,11 +2,14 @@
 
 namespace App\Modules\Orders\Application\Services;
 
+use App\Modules\CRM\Application\Services\CrmService;
+use App\Modules\Delivery\Application\Services\DeliveryService;
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Modules\Menu\Domain\Models\MealOption;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderItem;
 use App\Modules\Orders\Domain\Models\OrderItemOption;
+use App\Modules\Orders\Domain\Models\Payment;
 use App\Modules\Orders\Events\OrderCancelled;
 use App\Modules\Orders\Events\OrderCompleted;
 use App\Modules\Orders\Events\OrderCreated;
@@ -32,6 +35,8 @@ class OrderService
         private PlanLimitService $planLimitService,
         private FeatureAccessService $featureAccessService,
         private RestaurantStatusService $restaurantStatusService,
+        private CrmService $crmService,
+        private DeliveryService $deliveryService,
     ) {}
 
     public function createOrder(array $data, array $permissions): array
@@ -41,12 +46,39 @@ class OrderService
         $this->restaurantStatusService->assertAcceptingOrders();
         $this->planLimitService->assertOrderLimit();
 
-        return DB::transaction(function () use ($data) {
+        return $this->persistNewOrder($data, $data['customer_id'] ?? null, $this->tenantContext->user()?->id);
+    }
+
+    public function createCustomerOrder(array $data): array
+    {
+        $this->featureAccessService->assertAccess('orders');
+        $this->restaurantStatusService->assertAcceptingOrders();
+        $this->planLimitService->assertOrderLimit();
+
+        $customer = $this->crmService->findOrCreateByPhone($data['phone'], $data['name']);
+
+        return $this->persistNewOrder(
+            $data,
+            $customer->id,
+            null,
+            $data['payment_method'] ?? 'cash',
+        );
+    }
+
+    /**
+     * @return array{order_id: string, status: string, total: float, customer_id: string}
+     */
+    private function persistNewOrder(
+        array $data,
+        ?string $customerId,
+        ?string $userId,
+        ?string $paymentMethod = null,
+    ): array {
+        return DB::transaction(function () use ($data, $customerId, $userId, $paymentMethod) {
             $total = 0;
-            $userId = $this->tenantContext->user()?->id;
 
             $order = $this->orderRepository->create([
-                'customer_id' => $data['customer_id'] ?? null,
+                'customer_id' => $customerId,
                 'status' => 'pending',
                 'order_type' => $data['order_type'] ?? 'pickup',
                 'scheduled_time' => $data['scheduled_time'] ?? null,
@@ -87,6 +119,22 @@ class OrderService
             }
 
             $order->update(['total_amount' => $total]);
+
+            if ($paymentMethod) {
+                Payment::create([
+                    'tenant_id' => $order->tenant_id,
+                    'order_id' => $order->id,
+                    'provider' => $paymentMethod,
+                    'status' => 'paid',
+                    'amount' => $total,
+                    'created_at' => now(),
+                ]);
+            }
+
+            if (($data['order_type'] ?? '') === 'delivery' && ! empty($data['address'])) {
+                $this->deliveryService->createForOrder($order, $data['address']);
+            }
+
             $order->load(['items.options']);
 
             DomainEventLogger::log($order->tenant_id, 'OrderCreated', ['order_id' => $order->id], $order->id, 'order');
@@ -94,6 +142,7 @@ class OrderService
 
             return [
                 'order_id' => $order->id,
+                'customer_id' => $customerId,
                 'status' => $order->status,
                 'total' => (float) $order->total_amount,
             ];
@@ -170,7 +219,66 @@ class OrderService
         $this->permissionService->authorize($permissions, 'kitchen.view');
 
         return $this->orderRepository->list(null)
-            ->whereIn('status', ['accepted', 'preparing', 'ready'])
+            ->filter(function (Order $o) {
+                if (in_array($o->status, ['pending', 'accepted', 'preparing', 'ready'], true)) {
+                    return true;
+                }
+
+                if ($o->status === 'cancelled') {
+                    return $o->updated_at >= now()->subHours(24);
+                }
+
+                if ($o->status === 'completed') {
+                    return $o->updated_at >= now()->subHours(2);
+                }
+
+                return false;
+            })
+            ->sortBy(fn (Order $o) => [
+                match ($o->status) {
+                    'pending' => 0,
+                    'accepted' => 1,
+                    'preparing' => 2,
+                    'ready' => 3,
+                    'cancelled' => 4,
+                    'completed' => 5,
+                    default => 6,
+                },
+                $o->scheduled_time ?? $o->created_at,
+            ])
             ->values();
+    }
+
+    public function showCustomerOrder(string $id, string $phone): Order
+    {
+        $customer = \App\Modules\CRM\Domain\Models\Customer::where('phone', $phone)->firstOrFail();
+
+        return Order::where('customer_id', $customer->id)
+            ->where('id', $id)
+            ->with(['items.meal', 'items.options.option'])
+            ->firstOrFail();
+    }
+
+    public function showOrder(string $id, array $permissions): Order
+    {
+        $this->permissionService->authorize($permissions, 'orders.view');
+
+        return $this->orderRepository->findOrFail($id)->load(['items.options']);
+    }
+
+    public function listCustomerOrders(string $phone): array
+    {
+        $customer = \App\Modules\CRM\Domain\Models\Customer::where('phone', $phone)->first();
+
+        if (! $customer) {
+            return ['orders' => []];
+        }
+
+        $orders = Order::where('customer_id', $customer->id)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get(['id', 'status', 'order_type', 'total_amount', 'scheduled_time', 'created_at']);
+
+        return ['orders' => $orders, 'customer_id' => $customer->id];
     }
 }

@@ -4,8 +4,20 @@ import { useEffect, useState } from "react";
 import { ModalPortal } from "@/components/ui/ModalPortal";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
+import { realtimeService } from "@/services/realtime.service";
 
 const STORAGE_KEY = "khayaos-opt-in-dismissed";
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 export function NotificationOptInPrompt() {
   const [open, setOpen] = useState(false);
@@ -42,10 +54,18 @@ export function NotificationOptInPrompt() {
         const permission = await Notification.requestPermission();
         if (permission === "granted") {
           const reg = await navigator.serviceWorker.ready;
-          const subscription = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: undefined,
-          }).catch(() => null);
+          const publicConfig = await realtimeService.getPublicConfig();
+          const vapidKey = publicConfig.vapid_public_key;
+          const applicationServerKey = vapidKey
+            ? (urlBase64ToUint8Array(vapidKey) as BufferSource)
+            : undefined;
+
+          const subscription = await reg.pushManager
+            .subscribe({
+              userVisibleOnly: true,
+              applicationServerKey,
+            })
+            .catch(() => null);
 
           if (subscription) {
             await customerNotificationsService.registerDeviceToken(
@@ -75,6 +95,10 @@ export function NotificationOptInPrompt() {
           <h2 className="text-xl font-semibold">Stay in the loop</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Get updates on your orders and exclusive offers?
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Push notifications alert you when your order is accepted, being prepared, and ready.
+            You can change this anytime.
           </p>
 
           <div className="mt-4">

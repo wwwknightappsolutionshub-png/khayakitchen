@@ -1,23 +1,56 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ClipboardList, Settings, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { featureFlagsService } from "@/services/feature-flags.service";
-import { Settings } from "lucide-react";
+import { staffService } from "@/services/staff.service";
+
+const ROLES = ["owner", "manager", "kitchen", "staff"] as const;
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { flags } = useFeatureFlags();
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [staffForm, setStaffForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "staff" as (typeof ROLES)[number],
+  });
 
   const { data: flagsData } = useQuery({
     queryKey: ["feature-flags"],
     queryFn: () => featureFlagsService.getFlags(),
   });
 
+  const { data: staffData, isLoading: staffLoading } = useQuery({
+    queryKey: ["staff"],
+    queryFn: () => staffService.getStaff(),
+    enabled: user?.role === "owner" || user?.role === "manager",
+  });
+
+  const createStaffMutation = useMutation({
+    mutationFn: () => staffService.createStaff(staffForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+      setShowStaffForm(false);
+      setStaffForm({ name: "", email: "", password: "", role: "staff" });
+    },
+  });
+
   const allFlags = flagsData?.flags ?? flags;
+  const staff = staffData?.users ?? [];
+  const canManageStaff = user?.role === "owner" || user?.role === "manager";
 
   return (
     <div className="animate-fade-in">
@@ -70,6 +103,128 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted">No feature flags configured</p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <CardTitle>Staff users</CardTitle>
+            </div>
+            {canManageStaff && (
+              <Button size="sm" onClick={() => setShowStaffForm((v) => !v)}>
+                Add staff
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {showStaffForm && canManageStaff && (
+              <div className="mb-6 space-y-4 rounded-[var(--radius)] border border-border bg-surface-elevated/50 p-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Name"
+                    value={staffForm.name}
+                    onChange={(e) => setStaffForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                  <Input
+                    label="Password"
+                    type="password"
+                    value={staffForm.password}
+                    onChange={(e) => setStaffForm((f) => ({ ...f, password: e.target.value }))}
+                  />
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium">Role</label>
+                    <select
+                      className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm"
+                      value={staffForm.role}
+                      onChange={(e) =>
+                        setStaffForm((f) => ({
+                          ...f,
+                          role: e.target.value as (typeof ROLES)[number],
+                        }))
+                      }
+                    >
+                      {ROLES.map((r) => (
+                        <option key={r} value={r} className="capitalize">
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => createStaffMutation.mutate()}
+                  isLoading={createStaffMutation.isPending}
+                  disabled={
+                    !staffForm.name.trim() ||
+                    !staffForm.email.trim() ||
+                    staffForm.password.length < 8
+                  }
+                >
+                  Create staff user
+                </Button>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted">
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Role</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffLoading &&
+                    Array.from({ length: 3 }).map((_, i) => <TableRowSkeleton key={i} cols={4} />)}
+                  {!staffLoading && staff.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                        {canManageStaff ? "No staff users yet" : "Staff list requires owner or manager role"}
+                      </td>
+                    </tr>
+                  )}
+                  {staff.map((member) => (
+                    <tr key={member.id} className="border-b border-border">
+                      <td className="px-4 py-3 font-medium">{member.name}</td>
+                      <td className="px-4 py-3 text-muted">{member.email}</td>
+                      <td className="px-4 py-3 capitalize">{member.role}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={member.status === "disabled" ? "outline" : "secondary"}>
+                          {member.status ?? "active"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              Audit & compliance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-muted">
+              Review who changed what across menu, inventory, orders, and settings.
+            </p>
+            <Link href="/audit">
+              <Button variant="secondary">View audit logs</Button>
+            </Link>
           </CardContent>
         </Card>
 

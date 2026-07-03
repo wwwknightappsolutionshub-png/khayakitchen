@@ -9,7 +9,7 @@ export function CustomerLayoutShell({ children }: { children: React.ReactNode })
   const hasCartBar = itemCount > 0 && !["/cart", "/checkout"].includes(pathname);
 
   return (
-    <main className={`mx-auto min-h-[calc(100vh-3.5rem)] max-w-lg ${hasCartBar ? "pb-24" : "pb-8"}`}>
+    <main className={`mx-auto min-h-[calc(100vh-3.5rem)] max-w-lg pb-20 ${hasCartBar ? "pb-28" : ""}`}>
       {children}
     </main>
   );

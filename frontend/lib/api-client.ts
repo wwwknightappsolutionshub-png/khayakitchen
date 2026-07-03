@@ -136,4 +136,59 @@ export const api = {
 
   delete: <T>(endpoint: string, options?: RequestOptions) =>
     apiClient<T>(endpoint, { ...options, method: "DELETE" }),
+
+  upload: <T>(endpoint: string, formData: FormData, options?: Omit<RequestOptions, "headers">) =>
+    uploadFormData<T>(endpoint, formData, options),
 };
+
+async function uploadFormData<T>(
+  endpoint: string,
+  formData: FormData,
+  options: Omit<RequestOptions, "headers"> = {},
+): Promise<T> {
+  const { params, skipAuth, ...fetchOptions } = options;
+  const url = new URL(`${API_URL}${endpoint}`);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) url.searchParams.set(key, value);
+    });
+  }
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+
+  if (!skipAuth) {
+    const token = getStoredToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (!endpoint.startsWith("/platform")) {
+    const tenantId = getStoredTenantId();
+    if (tenantId) headers["X-Tenant-ID"] = tenantId;
+    const tenantSlug = getStoredTenantSlug();
+    if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;
+  }
+
+  const response = await fetch(url.toString(), {
+    ...fetchOptions,
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorBody: ApiError | null = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      // non-json error
+    }
+    throw new ApiClientError(
+      errorBody?.message ?? `Request failed with status ${response.status}`,
+      errorBody?.code ?? "REQUEST_FAILED",
+      response.status,
+      errorBody?.details as Record<string, unknown> | undefined,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}

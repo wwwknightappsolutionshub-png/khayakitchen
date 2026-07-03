@@ -37,7 +37,34 @@ export interface Meal {
   description?: string;
   image_url?: string;
   base_price: number | string;
+  is_active?: boolean;
   options: MealOptionGroup[];
+}
+
+export interface AdminOptionGroup {
+  id: string;
+  meal_id: string;
+  name: string;
+  type: "single" | "multiple";
+  options?: AdminMealOption[];
+}
+
+export interface AdminMealOption {
+  id: string;
+  option_group_id: string;
+  name: string;
+  price_delta: number | string;
+  is_active?: boolean;
+}
+
+export interface AdminMeal {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  base_price: number | string;
+  is_active: boolean;
+  option_groups?: AdminOptionGroup[];
 }
 
 export interface MenuResponse {
@@ -53,6 +80,7 @@ export interface OrderItemPayload {
 export interface CreateOrderPayload {
   customer_id?: string;
   order_type: "pickup" | "delivery";
+  address?: string;
   scheduled_time?: string;
   items: OrderItemPayload[];
 }
@@ -81,7 +109,7 @@ export interface OrderItem {
   base_price: number;
   final_price: number;
   meal?: { name: string };
-  options?: { option_id: string; price_delta?: number }[];
+  options?: { option_id: string; price_delta?: number; option?: { id: string; name: string } }[];
 }
 
 export interface InventoryItem {
@@ -91,6 +119,37 @@ export interface InventoryItem {
   current_stock: number | string;
   reorder_level: number | string;
   cost_per_unit: number | string;
+}
+
+export interface InventoryTransaction {
+  id: string;
+  inventory_item_id: string;
+  type: string;
+  quantity: number | string;
+  reference_type?: string;
+  reference_id?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  tenant_id?: string;
+  action: string;
+  user_id?: string;
+  entity_type?: string;
+  entity_id?: string;
+  metadata?: Record<string, unknown>;
+  reason?: string;
+  created_at: string;
 }
 
 export interface Customer {

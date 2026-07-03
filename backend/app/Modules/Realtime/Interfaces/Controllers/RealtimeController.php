@@ -2,6 +2,7 @@
 
 namespace App\Modules\Realtime\Interfaces\Controllers;
 
+use App\Modules\NotificationsCampaign\Application\Services\PushNotificationService;
 use App\Modules\Realtime\Application\Services\RealtimePollingService;
 use App\Modules\Realtime\Infrastructure\WebSocketGateway;
 use App\Shared\Tenancy\TenantContext;
@@ -48,6 +49,7 @@ class RealtimeController extends Controller
             'scheme' => config('realtime.websocket.scheme', 'ws'),
             'channels' => $channels,
             'auth_endpoint' => url('/api/broadcasting/auth'),
+            'vapid_public_key' => PushNotificationService::vapidPublicKey(),
         ];
     }
 

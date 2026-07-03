@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
@@ -21,6 +21,8 @@ const checkoutSchema = z
     phone: z.string().min(1, "Phone number is required"),
     order_type: z.enum(["pickup", "delivery"]),
     address: z.string().optional(),
+    scheduled_time: z.string().optional(),
+    payment_method: z.enum(["cash", "card", "transfer"]),
     whatsapp_opt_in: z.boolean().optional(),
   })
   .refine((data) => data.order_type !== "delivery" || (data.address && data.address.length > 0), {
@@ -42,7 +44,7 @@ export default function CheckoutPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<CheckoutForm>({
@@ -52,12 +54,15 @@ export default function CheckoutPage() {
       phone: "",
       order_type: "pickup",
       address: "",
+      scheduled_time: "",
+      payment_method: "cash",
       whatsapp_opt_in: true,
     },
   });
 
-  const orderType = watch("order_type");
-  const whatsappOptIn = watch("whatsapp_opt_in");
+  const orderType = useWatch({ control, name: "order_type" });
+  const whatsappOptIn = useWatch({ control, name: "whatsapp_opt_in" });
+  const paymentMethod = useWatch({ control, name: "payment_method" });
 
   if (items.length === 0) {
     return (
@@ -83,13 +88,21 @@ export default function CheckoutPage() {
       }
 
       const response = await placeOrder.mutateAsync({
+        name: data.name,
+        phone: data.phone,
         order_type: data.order_type,
+        address: data.order_type === "delivery" ? data.address : undefined,
+        payment_method: data.payment_method,
+        scheduled_time: data.scheduled_time || undefined,
         items: items.map((item) => ({
           meal_id: item.mealId,
           quantity: item.quantity,
           options: item.selectedOptions.map((o) => ({ option_id: o.optionId })),
         })),
       });
+      if (response.customer_id) {
+        localStorage.setItem("khayaos-customer-id", response.customer_id);
+      }
       setActiveOrderId(response.order_id);
       clearCart();
       router.push(`/tracking?id=${response.order_id}`);
@@ -97,7 +110,7 @@ export default function CheckoutPage() {
       if (err instanceof ApiClientError) {
         setError(err.message);
       } else {
-        setError("Failed to place order. Please sign in and try again.");
+        setError("Failed to place order. Please try again.");
       }
     }
   };
@@ -151,6 +164,34 @@ export default function CheckoutPage() {
             {...register("address")}
           />
         )}
+
+        <CustomerInput
+          label="Pickup / delivery time (optional)"
+          type="datetime-local"
+          error={errors.scheduled_time?.message}
+          {...register("scheduled_time")}
+        />
+
+        <section>
+          <p className="mb-3 text-sm font-medium">Payment method</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(["cash", "card", "transfer"] as const).map((method) => (
+              <button
+                key={method}
+                type="button"
+                onClick={() => setValue("payment_method", method)}
+                className={cn(
+                  "customer-press rounded-xl border px-2 py-3 text-xs font-medium capitalize transition-colors duration-200 sm:text-sm",
+                  paymentMethod === method
+                    ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                    : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/30",
+                )}
+              >
+                {method}
+              </button>
+            ))}
+          </div>
+        </section>
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <input

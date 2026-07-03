@@ -7,7 +7,9 @@ use App\Modules\Inventory\Domain\Models\InventoryTransaction;
 use App\Modules\Inventory\Domain\Models\RecipeComponent;
 use App\Modules\Inventory\Domain\Models\RecipeDefinition;
 use App\Modules\Inventory\Events\InventoryUpdated;
+use App\Modules\Menu\Domain\Models\MealOption;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Domain\Models\OrderItem;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Events\DomainEventLogger;
 use App\Shared\Tenancy\TenantContext;
@@ -57,12 +59,24 @@ class InventoryService
         });
     }
 
+    public function adjustStock(array $data, array $permissions): InventoryItem
+    {
+        $this->permissionService->authorize($permissions, 'inventory.adjust');
+
+        return DB::transaction(function () use ($data) {
+            $item = InventoryItem::findOrFail($data['item_id']);
+            $this->recordTransaction($item, 'adjustment', (float) $data['quantity'], 'adjustment');
+
+            return $item->fresh();
+        });
+    }
+
     public function consume(array $data, array $permissions): array
     {
         $this->permissionService->authorize($permissions, 'inventory.manage');
 
         if (isset($data['order_id'])) {
-            return $this->consumeForOrder(Order::with('items')->findOrFail($data['order_id']));
+            return $this->consumeForOrder(Order::with(['items.options'])->findOrFail($data['order_id']));
         }
 
         $item = InventoryItem::findOrFail($data['item_id']);
@@ -77,7 +91,13 @@ class InventoryService
 
         DB::transaction(function () use ($order, &$updated) {
             foreach ($order->items as $orderItem) {
-                $recipe = RecipeDefinition::with('components')->where('meal_id', $orderItem->meal_id)->first();
+                $portionSize = $this->resolvePortionSize($orderItem);
+                $recipe = RecipeDefinition::with('components')
+                    ->where('meal_id', $orderItem->meal_id)
+                    ->when($portionSize, fn ($q) => $q->where('portion_size', $portionSize))
+                    ->first()
+                    ?? RecipeDefinition::with('components')->where('meal_id', $orderItem->meal_id)->first();
+
                 if (! $recipe) {
                     continue;
                 }
@@ -131,6 +151,49 @@ class InventoryService
         return $query->get();
     }
 
+    public function listTransactions(array $permissions, ?string $itemId = null)
+    {
+        $this->permissionService->authorize($permissions, 'inventory.manage');
+
+        $query = InventoryTransaction::orderByDesc('created_at')->limit(100);
+
+        if ($itemId) {
+            $query->where('inventory_item_id', $itemId);
+        }
+
+        return $query->get();
+    }
+
+    public function createItem(array $data, array $permissions): InventoryItem
+    {
+        $this->permissionService->authorize($permissions, 'inventory.manage');
+
+        return InventoryItem::create([
+            'tenant_id' => $this->tenantContext->id(),
+            'name' => $data['name'],
+            'unit' => $data['unit'] ?? 'unit',
+            'current_stock' => $data['current_stock'] ?? 0,
+            'reorder_level' => $data['reorder_level'] ?? 0,
+            'cost_per_unit' => $data['cost_per_unit'] ?? 0,
+            'created_by' => $this->tenantContext->user()?->id,
+        ]);
+    }
+
+    public function updateItem(string $id, array $data, array $permissions): InventoryItem
+    {
+        $this->permissionService->authorize($permissions, 'inventory.manage');
+
+        $item = InventoryItem::findOrFail($id);
+        $item->update(array_filter([
+            'name' => $data['name'] ?? null,
+            'unit' => $data['unit'] ?? null,
+            'reorder_level' => $data['reorder_level'] ?? null,
+            'cost_per_unit' => $data['cost_per_unit'] ?? null,
+        ], fn ($v) => $v !== null));
+
+        return $item->fresh();
+    }
+
     private function recordTransaction(
         InventoryItem $item,
         string $type,
@@ -172,5 +235,19 @@ class InventoryService
         ], $item->id, 'inventory_item');
 
         InventoryUpdated::dispatch($item->fresh(), $type, $quantity);
+    }
+
+    private function resolvePortionSize(OrderItem $orderItem): ?string
+    {
+        $optionIds = $orderItem->options->pluck('option_id');
+        $names = MealOption::whereIn('id', $optionIds)->pluck('name')->map(fn ($n) => strtolower($n));
+
+        foreach (['small', 'medium', 'large'] as $size) {
+            if ($names->contains(fn ($n) => str_contains($n, $size))) {
+                return $size;
+            }
+        }
+
+        return null;
     }
 }

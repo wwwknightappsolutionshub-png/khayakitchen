@@ -1,9 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
-import { ordersService } from "@/services/orders.service";
-import type { CreateOrderPayload } from "@/lib/types";
+import { customerOrdersService, type CustomerOrderPayload } from "@/services/customer-orders.service";
 
 export function usePlaceOrder() {
   return useMutation({
-    mutationFn: (payload: CreateOrderPayload) => ordersService.createOrder(payload),
+    mutationFn: (payload: CustomerOrderPayload) => customerOrdersService.createOrder(payload),
   });
 }

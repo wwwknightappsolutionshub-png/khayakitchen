@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useStorefront } from "@/hooks/useStorefront";
 
 export function CustomerHeader() {
-  const pathname = usePathname();
-  const isHome = pathname === "/" || pathname === "/home";
-  const isMenu = pathname.startsWith("/menu");
   const { data } = useStorefront();
   const name = data?.branding?.restaurant_name ?? "Khaya Kitchen";
   const logo = data?.branding?.logo_url;
@@ -27,34 +23,6 @@ export function CustomerHeader() {
             <span className="text-base font-semibold leading-tight tracking-tight">Order</span>
           </div>
         </Link>
-        <nav className="flex items-center gap-1">
-          <Link
-            href="/home"
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              isHome ? "text-[var(--primary)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Home
-          </Link>
-          <Link
-            href="/menu"
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              isMenu ? "text-[var(--primary)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Menu
-          </Link>
-          <Link
-            href="/account"
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              pathname.startsWith("/account")
-                ? "text-[var(--primary)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Account
-          </Link>
-        </nav>
       </div>
     </header>
   );

@@ -6,6 +6,8 @@ use App\Modules\NotificationsCampaign\Domain\Models\DeviceToken;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Minishlink\WebPush\Subscription;
+use Minishlink\WebPush\WebPush;
 
 class PushNotificationService
 {
@@ -49,18 +51,47 @@ class PushNotificationService
         return $delivered > 0;
     }
 
+    public static function vapidPublicKey(): ?string
+    {
+        return config('services.webpush.vapid.public_key') ?: null;
+    }
+
     /**
      * @param  array<string, mixed>  $context
      */
-    private function deliverToToken(string $token, string $title, string $body, array $context): void
+    private function deliverToToken(string $tokenJson, string $title, string $body, array $context): void
     {
-        if (! config('services.webpush.enabled', false)) {
-            Log::info('Push stub delivery', compact('token', 'title', 'body', 'context'));
+        $publicKey = config('services.webpush.vapid.public_key');
+        $privateKey = config('services.webpush.vapid.private_key');
+        $subject = config('services.webpush.vapid.subject', 'mailto:admin@khayaos.com');
+
+        if (! $publicKey || ! $privateKey) {
+            Log::info('Push stub delivery (VAPID not configured)', compact('title', 'body', 'context'));
 
             return;
         }
 
-        throw new \RuntimeException('Web push provider not configured');
+        $payload = json_encode([
+            'title' => $title,
+            'body' => $body,
+            'message' => $body,
+            'data' => $context,
+        ]);
+
+        $subscription = Subscription::create(json_decode($tokenJson, true));
+        $webPush = new WebPush([
+            'VAPID' => [
+                'subject' => $subject,
+                'publicKey' => $publicKey,
+                'privateKey' => $privateKey,
+            ],
+        ]);
+
+        $report = $webPush->sendOneNotification($subscription, $payload);
+
+        if (! $report->isSuccess()) {
+            throw new \RuntimeException($report->getReason() ?? 'Push failed');
+        }
     }
 
     /**

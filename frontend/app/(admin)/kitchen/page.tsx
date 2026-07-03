@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/Card";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge, getKitchenCardClass } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
@@ -12,6 +12,8 @@ import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
 import { formatCurrency } from "@/lib/utils";
 import { ChefHat, Clock, Bell } from "lucide-react";
+
+const ACTIVE_STATUSES = new Set(["pending", "accepted", "preparing", "ready"]);
 
 export default function KitchenPage() {
   const queryClient = useQueryClient();
@@ -45,6 +47,8 @@ export default function KitchenPage() {
   });
 
   const orders = data?.orders ?? [];
+  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.has(o.status));
+  const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
 
   return (
     <div className="animate-fade-in">
@@ -53,7 +57,7 @@ export default function KitchenPage() {
           <ChefHat className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">Kitchen</h1>
-            <p className="text-sm text-muted">Mobile kitchen mode · tap-friendly</p>
+            <p className="text-sm text-muted">New orders appear immediately · tap-friendly</p>
           </div>
         </div>
         <ReconnectingIndicator />
@@ -61,7 +65,7 @@ export default function KitchenPage() {
 
       {newTicketId && (
         <div
-          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3"
+          className="mb-4 flex animate-pulse items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3"
           role="alert"
         >
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -100,98 +104,148 @@ export default function KitchenPage() {
         </Card>
       )}
 
-      <div className="grid gap-4">
-        {orders.map((order) => (
-          <Card
-            key={order.id}
-            className={`border-2 transition-colors ${
-              order.id === newTicketId
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/30"
-            }`}
-          >
-            <CardContent className="py-4 sm:py-5">
-              <div className="mb-4 flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-mono text-xl font-bold sm:text-2xl">
-                    #{order.id.slice(0, 6).toUpperCase()}
-                  </p>
-                  <p className="mt-1 flex items-center gap-1 text-sm text-muted capitalize">
-                    <Clock className="h-3.5 w-3.5" />
-                    {order.order_type}
-                  </p>
-                </div>
-                <StatusBadge status={order.status} />
-              </div>
+      {activeOrders.length > 0 && (
+        <div className="mb-6 grid gap-4">
+          {activeOrders.map((order) => (
+            <KitchenOrderCard
+              key={order.id}
+              order={order}
+              isNew={order.id === newTicketId}
+              updateMutation={updateMutation}
+            />
+          ))}
+        </div>
+      )}
 
-              {order.items && order.items.length > 0 && (
-                <ul className="mb-4 space-y-2">
-                  {order.items.map((item) => (
-                    <li key={item.id} className="flex justify-between text-base sm:text-lg">
-                      <span>
-                        <span className="font-mono font-bold">{item.quantity}×</span>{" "}
-                        {item.meal?.name ?? "Item"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <span className="font-mono text-lg font-bold sm:text-xl">
-                  {formatCurrency(order.total_amount)}
-                </span>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                  {order.status === "pending" && (
-                    <Button
-                      size="lg"
-                      className="min-h-12 w-full text-base"
-                      onClick={() =>
-                        updateMutation.mutate({ id: order.id, status: "accepted" })
-                      }
-                    >
-                      Accept
-                    </Button>
-                  )}
-                  {(order.status === "accepted" || order.status === "pending") && (
-                    <Button
-                      size="lg"
-                      variant="secondary"
-                      className="min-h-12 w-full text-base"
-                      onClick={() =>
-                        updateMutation.mutate({ id: order.id, status: "preparing" })
-                      }
-                    >
-                      Cooking
-                    </Button>
-                  )}
-                  {order.status === "preparing" && (
-                    <Button
-                      size="lg"
-                      className="min-h-12 w-full text-base"
-                      onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
-                    >
-                      Ready
-                    </Button>
-                  )}
-                  {order.status === "ready" && (
-                    <Button
-                      size="lg"
-                      variant="secondary"
-                      className="min-h-12 w-full text-base"
-                      onClick={() =>
-                        updateMutation.mutate({ id: order.id, status: "completed" })
-                      }
-                    >
-                      Complete
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {recentOrders.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-medium text-muted">Recently completed / rejected</h2>
+          <div className="grid gap-4">
+            {recentOrders.map((order) => (
+              <KitchenOrderCard
+                key={order.id}
+                order={order}
+                isNew={false}
+                updateMutation={updateMutation}
+                readOnly
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+type KitchenOrder = {
+  id: string;
+  status: string;
+  order_type: string;
+  total_amount: number;
+  items?: { id: string; quantity: number; meal?: { name: string } }[];
+};
+
+function KitchenOrderCard({
+  order,
+  isNew,
+  updateMutation,
+  readOnly = false,
+}: {
+  order: KitchenOrder;
+  isNew: boolean;
+  updateMutation: {
+    mutate: (vars: { id: string; status: string }) => void;
+    isPending: boolean;
+  };
+  readOnly?: boolean;
+}) {
+  return (
+    <Card className={`border-2 transition-colors ${getKitchenCardClass(order.status, isNew)}`}>
+      <CardContent className="py-4 sm:py-5">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <div>
+            <p className="font-mono text-xl font-bold sm:text-2xl">
+              #{order.id.slice(0, 6).toUpperCase()}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-sm capitalize text-muted">
+              <Clock className="h-3.5 w-3.5" />
+              {order.order_type}
+            </p>
+          </div>
+          <StatusBadge status={order.status} />
+        </div>
+
+        {order.items && order.items.length > 0 && (
+          <ul className="mb-4 space-y-2">
+            {order.items.map((item) => (
+              <li key={item.id} className="flex justify-between text-base sm:text-lg">
+                <span>
+                  <span className="font-mono font-bold">{item.quantity}×</span>{" "}
+                  {item.meal?.name ?? "Item"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-mono text-lg font-bold sm:text-xl">
+            {formatCurrency(order.total_amount)}
+          </span>
+          {!readOnly && (
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              {order.status === "pending" && (
+                <>
+                  <Button
+                    size="lg"
+                    className="min-h-12 w-full text-base"
+                    onClick={() => updateMutation.mutate({ id: order.id, status: "accepted" })}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="danger"
+                    className="min-h-12 w-full text-base"
+                    onClick={() => updateMutation.mutate({ id: order.id, status: "cancelled" })}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
+              {order.status === "accepted" && (
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="min-h-12 w-full text-base"
+                  onClick={() => updateMutation.mutate({ id: order.id, status: "preparing" })}
+                >
+                  Cooking
+                </Button>
+              )}
+              {order.status === "preparing" && (
+                <Button
+                  size="lg"
+                  className="min-h-12 w-full text-base"
+                  onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
+                >
+                  Ready
+                </Button>
+              )}
+              {order.status === "ready" && (
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="min-h-12 w-full text-base"
+                  onClick={() => updateMutation.mutate({ id: order.id, status: "completed" })}
+                >
+                  Complete
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

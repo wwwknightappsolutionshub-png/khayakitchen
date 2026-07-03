@@ -1,5 +1,6 @@
 import { api } from "@/lib/api-client";
 import type {
+  AuditLogEntry,
   PlatformDashboardOverview,
   PlatformModule,
   PlatformTenant,
@@ -42,5 +43,63 @@ export const platformService = {
     },
   ) {
     return api.patch(`/platform/tenants/${tenantId}/restaurant-status`, payload);
+  },
+
+  async createTenant(payload: {
+    name: string;
+    slug: string;
+    logo_url?: string;
+    primary_color?: string;
+    owner_name?: string;
+    owner_email?: string;
+    owner_password?: string;
+  }): Promise<{ tenant: PlatformTenant }> {
+    return api.post<{ tenant: PlatformTenant }>("/platform/tenants", payload);
+  },
+
+  async updateTenant(
+    tenantId: string,
+    payload: {
+      name?: string;
+      slug?: string;
+      logo_url?: string;
+      primary_color?: string;
+      status?: "active" | "suspended";
+    },
+  ): Promise<{ tenant: PlatformTenant }> {
+    return api.put<{ tenant: PlatformTenant }>(`/platform/tenants/${tenantId}`, payload);
+  },
+
+  async deleteTenant(tenantId: string): Promise<{ deleted: boolean }> {
+    return api.delete<{ deleted: boolean }>(`/platform/tenants/${tenantId}`);
+  },
+
+  async getAuditLogs(params?: {
+    limit?: number;
+    tenant_id?: string;
+  }): Promise<{ logs: AuditLogEntry[] }> {
+    return api.get<{ logs: AuditLogEntry[] }>("/platform/audit-logs", {
+      params: {
+        limit: params?.limit ? String(params.limit) : undefined,
+        tenant_id: params?.tenant_id,
+      },
+    });
+  },
+
+  async overrideBranding(
+    tenantId: string,
+    payload: {
+      logo_url?: string;
+      primary_color?: string;
+      secondary_color?: string;
+      accent_color?: string;
+      banner_image?: string;
+    },
+  ) {
+    return api.patch(`/platform/tenants/${tenantId}/branding`, payload);
+  },
+
+  async clearBrandingOverride(tenantId: string) {
+    return api.delete(`/platform/tenants/${tenantId}/branding`);
   },
 };
