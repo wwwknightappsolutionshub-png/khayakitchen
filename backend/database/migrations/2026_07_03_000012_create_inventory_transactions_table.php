@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('inventory_transactions', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('tenant_id');
+            $table->uuid('inventory_item_id');
+            $table->enum('type', ['in', 'out', 'waste', 'adjustment']);
+            $table->decimal('quantity', 12, 4);
+            $table->string('reference_type')->nullable();
+            $table->uuid('reference_id')->nullable();
+            $table->uuid('created_by')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->softDeletes();
+
+            $table->index('tenant_id');
+            $table->index('inventory_item_id');
+            $table->index('created_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('inventory_transactions');
+    }
+};

@@ -1,0 +1,213 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Link from "next/link";
+import { CustomerButton } from "@/components/customer/CustomerButton";
+import { CustomerInput } from "@/components/customer/CustomerInput";
+import { useCartStore, getLinePrice } from "@/stores/cart-store";
+import { usePlaceOrder } from "@/hooks/usePlaceOrder";
+import { useStorefront } from "@/hooks/useStorefront";
+import { customerNotificationsService } from "@/services/customer-notifications.service";
+import { formatCurrency, cn } from "@/lib/utils";
+import { ApiClientError } from "@/lib/api-client";
+
+const checkoutSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    phone: z.string().min(1, "Phone number is required"),
+    order_type: z.enum(["pickup", "delivery"]),
+    address: z.string().optional(),
+    whatsapp_opt_in: z.boolean().optional(),
+  })
+  .refine((data) => data.order_type !== "delivery" || (data.address && data.address.length > 0), {
+    message: "Address is required for delivery",
+    path: ["address"],
+  });
+
+type CheckoutForm = z.infer<typeof checkoutSchema>;
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const { items, getTotal, clearCart, setActiveOrderId } = useCartStore();
+  const [error, setError] = useState<string | null>(null);
+  const placeOrder = usePlaceOrder();
+  const total = getTotal();
+  const { data: storefront } = useStorefront();
+  const isClosed = storefront?.status?.is_accepting_orders === false;
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<CheckoutForm>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      order_type: "pickup",
+      address: "",
+      whatsapp_opt_in: true,
+    },
+  });
+
+  const orderType = watch("order_type");
+  const whatsappOptIn = watch("whatsapp_opt_in");
+
+  if (items.length === 0) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <h1 className="text-xl font-semibold">Nothing to checkout</h1>
+        <Link href="/menu" className="mt-6">
+          <CustomerButton>Browse Menu</CustomerButton>
+        </Link>
+      </div>
+    );
+  }
+
+  const onSubmit = async (data: CheckoutForm) => {
+    setError(null);
+    try {
+      if (data.whatsapp_opt_in || data.phone) {
+        await customerNotificationsService.upsertPreferences({
+          phone: data.phone,
+          name: data.name,
+          push_enabled: false,
+          whatsapp_enabled: !!data.whatsapp_opt_in,
+        }).catch(() => undefined);
+      }
+
+      const response = await placeOrder.mutateAsync({
+        order_type: data.order_type,
+        items: items.map((item) => ({
+          meal_id: item.mealId,
+          quantity: item.quantity,
+          options: item.selectedOptions.map((o) => ({ option_id: o.optionId })),
+        })),
+      });
+      setActiveOrderId(response.order_id);
+      clearCart();
+      router.push(`/tracking?id=${response.order_id}`);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError("Failed to place order. Please sign in and try again.");
+      }
+    }
+  };
+
+  return (
+    <div className="customer-animate-in px-4 pt-6">
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">Checkout</h1>
+
+      {isClosed && (
+        <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          🔴 We are currently closed and not accepting orders. Please check back later.
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <CustomerInput label="Name" autoComplete="name" error={errors.name?.message} {...register("name")} />
+        <CustomerInput
+          label="Phone number"
+          type="tel"
+          autoComplete="tel"
+          error={errors.phone?.message}
+          {...register("phone")}
+        />
+
+        <section>
+          <p className="mb-3 text-sm font-medium">Order type</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(["pickup", "delivery"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setValue("order_type", type)}
+                className={cn(
+                  "customer-press rounded-xl border px-4 py-3 text-sm font-medium capitalize transition-colors duration-200",
+                  orderType === type
+                    ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                    : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/30",
+                )}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {orderType === "delivery" && (
+          <CustomerInput
+            label="Delivery address"
+            autoComplete="street-address"
+            error={errors.address?.message}
+            {...register("address")}
+          />
+        )}
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-[var(--border)] accent-[var(--secondary)]"
+            checked={whatsappOptIn}
+            onChange={(e) => setValue("whatsapp_opt_in", e.target.checked)}
+          />
+          <div>
+            <p className="text-sm font-medium">WhatsApp updates</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              Receive order status on WhatsApp (optional)
+            </p>
+          </div>
+        </label>
+
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="mb-3 font-semibold">Order summary</h2>
+          <div className="space-y-2">
+            {items.map((item, i) => (
+              <div key={i} className="text-sm">
+                <div className="flex justify-between gap-2">
+                  <span>
+                    {item.quantity}× {item.mealName}
+                  </span>
+                  <span className="price shrink-0">{formatCurrency(getLinePrice(item))}</span>
+                </div>
+                {item.selectedOptions.length > 0 && (
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    {item.selectedOptions.map((o) => o.name).join(", ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-between border-t border-[var(--border)] pt-3">
+            <span className="font-semibold">Total</span>
+            <span className="price text-lg text-[var(--primary)]">{formatCurrency(total)}</span>
+          </div>
+        </div>
+
+        {error && (
+          <p className="rounded-xl bg-[var(--primary)]/10 px-4 py-3 text-sm text-[var(--primary)]">
+            {error}
+          </p>
+        )}
+
+        <CustomerButton
+          type="submit"
+          className="w-full"
+          size="lg"
+          isLoading={placeOrder.isPending}
+          disabled={isClosed}
+        >
+          {isClosed ? "Currently closed" : `Place Order — ${formatCurrency(total)}`}
+        </CustomerButton>
+      </form>
+    </div>
+  );
+}
