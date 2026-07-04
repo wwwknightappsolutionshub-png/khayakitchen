@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class BrandingService
 {
+    public const DEFAULT_TICKER_TEXT = 'Welcome to our Kitchen, our delicious and freshly meals are ready for you to order now | Place your order now | Don\'t forget we run referral discounts and end of day special offer, turn on notification to get alert when we have it.';
+
     public function __construct(
         private TenantContext $tenantContext,
         private PermissionService $permissionService,
@@ -29,7 +31,7 @@ class BrandingService
                 'secondary_color' => '#81B29A',
                 'accent_color' => '#F2CC8F',
                 'ticker_enabled' => true,
-                'ticker_text' => 'Welcome to our Kitchen, our delicious and freshly meals are ready for you to order now | Place your order now | Don\'t forget we run referral discounts and end of day special offer, turn on notification to get alert when we have it.',
+                'ticker_text' => self::DEFAULT_TICKER_TEXT,
             ],
         );
     }
@@ -79,7 +81,11 @@ class BrandingService
             return $branding->ticker_text;
         }
 
-        return $platformSettings->ticker_text;
+        if ($platformSettings->ticker_text) {
+            return $platformSettings->ticker_text;
+        }
+
+        return self::DEFAULT_TICKER_TEXT;
     }
 
     public function hasPlatformOverride(TenantBranding $branding): bool
@@ -116,17 +122,25 @@ class BrandingService
     {
         $branding = $this->getForTenant($tenantId);
 
-        $branding->update([
+        $updates = [
             'platform_override_logo_url' => $data['logo_url'] ?? $branding->platform_override_logo_url,
             'platform_override_primary_color' => $data['primary_color'] ?? $branding->platform_override_primary_color,
             'platform_override_secondary_color' => $data['secondary_color'] ?? $branding->platform_override_secondary_color,
             'platform_override_accent_color' => $data['accent_color'] ?? $branding->platform_override_accent_color,
             'platform_override_banner_image' => $data['banner_image'] ?? $branding->platform_override_banner_image,
-            'platform_override_ticker_enabled' => array_key_exists('ticker_enabled', $data)
-                ? $data['ticker_enabled']
-                : $branding->platform_override_ticker_enabled,
-            'platform_override_ticker_text' => $data['ticker_text'] ?? $branding->platform_override_ticker_text,
-        ]);
+        ];
+
+        if (array_key_exists('ticker_enabled', $data)) {
+            $updates['platform_override_ticker_enabled'] = $data['ticker_enabled'];
+        }
+
+        if (array_key_exists('ticker_text', $data)) {
+            $updates['platform_override_ticker_text'] = filled($data['ticker_text'])
+                ? $data['ticker_text']
+                : null;
+        }
+
+        $branding->update($updates);
 
         $this->auditLogService->log(
             'branding.platform_override',

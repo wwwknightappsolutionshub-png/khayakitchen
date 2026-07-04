@@ -2,6 +2,7 @@
 
 namespace App\Modules\Platform\Application\Services;
 
+use App\Modules\TenantBranding\Application\Services\BrandingService;
 use App\Modules\Platform\Domain\Models\PlatformSettings;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Shared\Tenancy\TenantContext;
@@ -27,7 +28,7 @@ class PlatformSettingsService
             'splash_headline' => "LET'S GET STARTED",
             'splash_subheadline' => 'Order fresh meals from your favourite kitchen',
             'ticker_enabled' => true,
-            'ticker_text' => 'Welcome to our Kitchen, our delicious and freshly meals are ready for you to order now | Place your order now | Don\'t forget we run referral discounts and end of day special offer, turn on notification to get alert when we have it.',
+            'ticker_text' => BrandingService::DEFAULT_TICKER_TEXT,
         ]);
     }
 

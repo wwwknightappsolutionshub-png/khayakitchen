@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { useStorefront } from "@/hooks/useStorefront";
 import { NewsTicker } from "@/components/customer/NewsTicker";
-
-function parseTickerMessages(text?: string | null): string[] {
-  if (!text) return [];
-  return text
-    .split("|")
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
+import { parseTickerMessages } from "@/lib/ticker-defaults";
 
 export function CustomerHeader() {
   const { data } = useStorefront();
@@ -21,13 +14,13 @@ export function CustomerHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
-        <Link href="/" className="flex min-w-0 items-center gap-2">
+      <div className="mx-auto flex h-14 max-w-lg items-center px-4">
+        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logo} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
           ) : null}
-          <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
               {name}
             </span>
