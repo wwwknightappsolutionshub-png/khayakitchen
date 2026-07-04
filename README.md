@@ -75,6 +75,18 @@ docker compose up --build
 | Dashboard | ✅ |
 | Notifications | ✅ |
 
+## Implementation Standard (Mandatory)
+
+**All features must follow the approved implementation approach.** No exceptions.
+
+Read **`docs/IMPLEMENTATION_STANDARD.md`** before writing code. It defines:
+
+- Summary of the last production edit (Phase 1.0.2 SaaS Commercialization, commit `ffa9d2f`)
+- Mandatory rules: extend existing architecture, complete backend + frontend enforcement, audit logging, tests, build gates, and deployment steps
+- QA checklist and forbidden patterns (TODOs, UI-only gates, parallel services)
+
+Cursor agents load this automatically via `.cursor/rules/khayaos-implementation-standard.mdc`.
+
 ## Documentation
 
 Read `/docs` in numerical order before making changes:
@@ -88,6 +100,7 @@ Read `/docs` in numerical order before making changes:
 7. `06-authentication-tenant-system.md` — Auth & tenancy
 8. `07-implementation-strategy.md` — Build rules
 9. `08-cursor-bootstrap-prompt.md` — Agent bootstrap
+10. **`IMPLEMENTATION_STANDARD.md`** — **Mandatory feature implementation standard (read first)**
 
 ## Architecture Highlights
 

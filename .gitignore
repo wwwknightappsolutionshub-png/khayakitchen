@@ -4,6 +4,8 @@ Thumbs.db
 .idea/
 .vscode/
 .cursor/
+!.cursor/rules/
+!.cursor/rules/**
 
 # Backend (Laravel)
 backend/vendor/
