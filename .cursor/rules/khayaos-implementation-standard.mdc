@@ -1,0 +1,21 @@
+---
+description: Mandatory KhayaOS implementation standard — extend existing architecture, complete production features only
+alwaysApply: true
+---
+
+# KhayaOS Implementation Standard (Mandatory)
+
+Before any code change, read `docs/IMPLEMENTATION_STANDARD.md`.
+
+## Non-negotiable rules
+
+1. **Extend, don't replace** — reuse existing services, controllers, RBAC, feature flags, migrations, and UI components. No parallel implementations.
+2. **Complete production work only** — no TODOs, placeholders, scaffolds, or UI-only features. Backend must enforce limits and permissions.
+3. **Architecture** — Laravel modular monolith; business logic in services (`Controller → Service → Repository`); module communication via events; tenant isolation on every query.
+4. **Stack** — Laravel + Next.js PWA + PostgreSQL + Sanctum. Additive API changes only.
+5. **Backend deliverables** — migrations, services, thin controllers, audit logs on mutations, PHPUnit feature tests.
+6. **Frontend deliverables** — types in `lib/types.ts`, API in `services/`, KhayaOS UI (Card, Button, Anek font), `npm run build` must pass.
+7. **QA gate** — `php artisan test` and `npm run build` pass before considering work done.
+8. **Deploy** — migrate from `backend/`, rebuild frontend, restart PM2 (`khayaos-frontend`, `khayaos-queue`, `khayaos-reverb`).
+
+Reference implementation: Phase 1.0.2 SaaS Commercialization (`ffa9d2f`). Follow the same depth and completeness for all future features.
