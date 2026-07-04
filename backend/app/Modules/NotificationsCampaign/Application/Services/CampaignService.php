@@ -43,6 +43,7 @@ class CampaignService
     {
         $this->authorizeManage($permissions);
         $this->ensureEnabled();
+        app(\App\Modules\Pricing\Application\Services\PlanLimitService::class)->assertCampaignLimit();
 
         $user = $this->tenantContext->user();
         $role = $user?->role;

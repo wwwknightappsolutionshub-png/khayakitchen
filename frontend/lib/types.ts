@@ -195,6 +195,18 @@ export interface PlatformModule {
   sort_order: number;
 }
 
+export interface PlanDistribution {
+  plan_id: string;
+  plan_name: string;
+  count: number;
+}
+
+export interface FeatureAdoption {
+  key: string;
+  name: string;
+  plan_count: number;
+}
+
 export interface PlatformDashboardOverview {
   total_tenants: number;
   active_tenants: number;
@@ -203,6 +215,28 @@ export interface PlatformDashboardOverview {
   modules_completed_pct: number;
   modules_completed: number;
   modules_total: number;
+  mrr?: number;
+  arr?: number;
+  plan_distribution?: PlanDistribution[];
+  upgrade_requests?: number;
+  average_menu_count?: number;
+  average_orders?: number;
+  average_revenue?: number;
+  feature_adoption?: FeatureAdoption[];
+  expired_plans?: number;
+  pending_renewals?: number;
+  newest_tenants?: PlatformTenant[];
+}
+
+export interface PlatformBillingMetrics {
+  mrr: number;
+  arr: number;
+  plan_distribution: PlanDistribution[];
+  upgrade_requests: number;
+  average_menu_count: number;
+  expired_plans: number;
+  pending_renewals: number;
+  feature_adoption: FeatureAdoption[];
 }
 
 export interface PlatformTenant {
@@ -221,16 +255,61 @@ export interface PlatformTenantFlags {
   flags: Record<string, boolean>;
 }
 
+export const PLAN_LIMIT_KEYS = [
+  "max_menu_items",
+  "max_categories",
+  "max_staff",
+  "max_campaigns_per_month",
+  "max_push_notifications_per_month",
+  "max_storage_mb",
+  "max_images",
+  "max_branches",
+  "max_drivers",
+  "max_customers",
+  "max_products",
+  "max_loyalty_members",
+  "max_active_promotions",
+  "max_delivery_zones",
+  "max_orders_per_day",
+] as const;
+
+export type PlanLimitKey = (typeof PLAN_LIMIT_KEYS)[number];
+
+export type UnlimitedFlags = Partial<Record<PlanLimitKey, boolean>>;
+
 export interface PricingPlan {
   id: string;
   name: string;
+  slug?: string;
+  description?: string | null;
   price_monthly: number;
   price_yearly: number;
+  currency?: string;
+  cta_text?: string | null;
+  plan_color?: string | null;
+  plan_icon?: string | null;
   is_active?: boolean;
   is_visible?: boolean;
+  is_recommended?: boolean;
+  display_order?: number;
+  marketing_features?: string[];
   max_menu_items: number;
   max_orders_per_day: number;
   max_customers: number;
+  max_categories?: number;
+  max_staff?: number;
+  max_campaigns_per_month?: number;
+  max_push_notifications_per_month?: number;
+  max_storage_mb?: number;
+  max_images?: number;
+  max_branches?: number;
+  max_drivers?: number;
+  max_products?: number;
+  max_loyalty_members?: number;
+  max_active_promotions?: number;
+  max_delivery_zones?: number;
+  unlimited_flags?: UnlimitedFlags;
+  deleted_at?: string | null;
   features?: PricingFeature[];
 }
 
@@ -240,6 +319,11 @@ export interface PricingFeature {
   name: string;
   description?: string;
   category: string;
+  icon?: string | null;
+  module?: string | null;
+  status?: string;
+  internal_notes?: string | null;
+  deleted_at?: string | null;
   pivot?: { enabled: boolean };
 }
 
@@ -248,19 +332,93 @@ export interface TenantSubscription {
   tenant_id: string;
   plan_id: string;
   status: string;
+  billing_status?: string;
   started_at: string;
   ends_at?: string;
   plan?: PricingPlan;
   tenant?: PlatformTenant;
 }
 
+export interface EntitlementsUsageItem {
+  current: number;
+  max: number | null;
+  unlimited: boolean;
+}
+
+export type EntitlementsUsage = Record<string, EntitlementsUsageItem>;
+
 export interface Entitlements {
   flags: Record<string, boolean>;
-  limits?: {
-    max_menu_items: number;
-    max_orders_per_day: number;
-    max_customers: number;
-  };
+  limits?: Record<string, number | null>;
+  unlimited?: Record<string, boolean>;
+  usage?: EntitlementsUsage;
+  plan?: PricingPlan | null;
+  subscription?: TenantSubscription | null;
+}
+
+export interface TenantEntitlementOverride {
+  id: string;
+  tenant_id: string;
+  override_type: "feature" | "limit";
+  override_key: string;
+  value_bool?: boolean | null;
+  value_int?: number | null;
+  is_unlimited?: boolean;
+  is_permanent?: boolean;
+  expires_at?: string | null;
+  reason?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+}
+
+export interface SubscriptionHistoryEntry {
+  id: string;
+  tenant_id: string;
+  plan_id: string;
+  previous_plan_id?: string | null;
+  action: string;
+  metadata?: Record<string, unknown>;
+  created_by?: string | null;
+  created_at: string;
+}
+
+export interface TenantEntitlementsDetail {
+  subscription?: TenantSubscription | null;
+  plan?: PricingPlan | null;
+  history?: SubscriptionHistoryEntry[];
+  overrides?: TenantEntitlementOverride[];
+  usage?: EntitlementsUsage;
+}
+
+export interface UpgradeRequest {
+  id: string;
+  tenant_id: string;
+  current_plan_id?: string | null;
+  requested_plan_id?: string | null;
+  status: string;
+  message?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  tenant?: PlatformTenant;
+  currentPlan?: PricingPlan;
+  requestedPlan?: PricingPlan;
+}
+
+export interface PublicPricingPlan {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  price_monthly: number;
+  price_yearly: number;
+  currency: string;
+  cta_text?: string | null;
+  plan_color?: string | null;
+  plan_icon?: string | null;
+  is_recommended: boolean;
+  marketing_features: string[];
+  limits: Record<string, number | UnlimitedFlags> & { unlimited_flags?: UnlimitedFlags };
+  features: Pick<PricingFeature, "key" | "name" | "category" | "icon">[];
 }
 
 export type RestaurantOperationalStatus = "open" | "closing_soon" | "closed" | "promo_mode";
@@ -290,6 +448,7 @@ export interface PlatformSettings {
   splash_image_url?: string | null;
   ticker_enabled: boolean;
   ticker_text?: string | null;
+  public_pricing_enabled?: boolean;
 }
 
 export interface RestaurantStatus {

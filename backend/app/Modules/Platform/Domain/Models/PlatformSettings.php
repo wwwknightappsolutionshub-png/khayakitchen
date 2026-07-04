@@ -22,6 +22,7 @@ class PlatformSettings extends Model
         'splash_image_url',
         'ticker_enabled',
         'ticker_text',
+        'public_pricing_enabled',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class PlatformSettings extends Model
         return [
             'splash_enabled' => 'boolean',
             'ticker_enabled' => 'boolean',
+            'public_pricing_enabled' => 'boolean',
         ];
     }
 }

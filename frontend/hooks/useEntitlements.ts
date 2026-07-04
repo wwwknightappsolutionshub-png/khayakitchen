@@ -15,7 +15,21 @@ export function useEntitlements() {
   });
 
   const flags = query.data?.flags ?? {};
+  const limits = query.data?.limits;
+  const usage = query.data?.usage;
+  const plan = query.data?.plan ?? null;
+  const subscription = query.data?.subscription ?? null;
   const isEnabled = (module: string) => flags[module] !== false;
 
-  return { flags, limits: query.data?.limits, isEnabled, isLoading: query.isLoading, error: query.error };
+  return {
+    flags,
+    limits,
+    usage,
+    plan,
+    subscription,
+    isEnabled,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  };
 }

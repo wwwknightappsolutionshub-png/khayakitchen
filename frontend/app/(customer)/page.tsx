@@ -40,7 +40,7 @@ export default function CustomerHomePage() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Featured</h2>
+          <h2 className="featured-section-title text-lg font-bold tracking-tight">Our Featured Meal</h2>
           <Link href="/menu" className="text-sm text-[var(--primary)]">
             Full menu
           </Link>

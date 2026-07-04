@@ -41,15 +41,19 @@ export function useFeatureFlags() {
   });
 
   const flags: FeatureFlags = query.data?.flags ?? fallback.data?.flags ?? DEFAULT_FLAGS;
+  const usage = query.data?.usage;
+  const limits = query.data?.limits;
+  const plan = query.data?.plan ?? null;
 
   const isEnabled = (module: string): boolean => flags[module] !== false;
 
   return {
     flags,
-    limits: query.data?.limits,
+    usage,
+    limits,
+    plan,
     isEnabled,
     isLoading: query.isLoading,
     error: query.error,
   };
 }
-

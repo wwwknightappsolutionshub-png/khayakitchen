@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { UpgradeLimitModal } from "@/components/shared/UpgradeLimitModal";
 import { menuAdminService } from "@/services/menu-admin.service";
 import type { AdminMeal, AdminOptionGroup } from "@/lib/types";
+import { parseLimitError, type LimitErrorInfo } from "@/lib/limit-error";
 import { formatCurrency, toNumber } from "@/lib/utils";
 
 type MealForm = {
@@ -38,6 +40,8 @@ export default function MenuAdminPage() {
   const [optionForms, setOptionForms] = useState<Record<string, { name: string; price_delta: string }>>({});
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState<string | null>(null);
+  const [limitError, setLimitError] = useState<LimitErrorInfo | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["menu", "admin"],
@@ -67,6 +71,13 @@ export default function MenuAdminPage() {
       setShowMealForm(false);
       setEditingMeal(null);
       setMealForm(emptyMealForm);
+    },
+    onError: (err) => {
+      const parsed = parseLimitError(err);
+      if (parsed && !editingMeal) {
+        setLimitError(parsed);
+        setShowLimitModal(true);
+      }
     },
   });
 
@@ -315,6 +326,12 @@ export default function MenuAdminPage() {
           </table>
         </div>
       </Card>
+
+      <UpgradeLimitModal
+        open={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        limitError={limitError}
+      />
     </div>
   );
 }

@@ -57,6 +57,7 @@ export function FeaturedMealCard({
         </div>
         <CustomerButton
           size="lg"
+          className="featured-order-btn shrink-0"
           disabled={isClosed}
           onClick={() => onOrder(meal)}
         >

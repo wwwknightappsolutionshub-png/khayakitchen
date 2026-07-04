@@ -15,6 +15,7 @@ class TenantSubscription extends Model
         'tenant_id',
         'plan_id',
         'status',
+        'billing_status',
         'started_at',
         'ends_at',
     ];

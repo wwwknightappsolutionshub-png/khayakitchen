@@ -25,6 +25,7 @@ use App\Modules\Platform\Interfaces\Controllers\PlatformSettingsController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformTenantController;
 use App\Modules\Pricing\Interfaces\Controllers\AuditLogController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
+use App\Modules\Pricing\Interfaces\Controllers\PlatformEntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformFeatureController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformPlanController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformSubscriptionController;
@@ -163,6 +164,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/feature-flags', [FeatureFlagController::class, 'index']);
         Route::get('/entitlements', [EntitlementController::class, 'index']);
+        Route::post('/entitlements/upgrade-request', [EntitlementController::class, 'requestUpgrade']);
         Route::get('/branding', [BrandingController::class, 'show']);
         Route::patch('/branding', [BrandingController::class, 'update']);
         Route::post('/branding/logo', [BrandingController::class, 'uploadLogo']);
@@ -206,17 +208,31 @@ Route::prefix('v1')->group(function () {
             Route::prefix('pricing')->group(function () {
                 Route::get('/plans', [PlatformPlanController::class, 'index']);
                 Route::post('/plans', [PlatformPlanController::class, 'store']);
+                Route::post('/plans/reorder', [PlatformPlanController::class, 'reorder']);
+                Route::get('/plans/{id}', [PlatformPlanController::class, 'show']);
                 Route::put('/plans/{id}', [PlatformPlanController::class, 'update']);
                 Route::delete('/plans/{id}', [PlatformPlanController::class, 'destroy']);
+                Route::post('/plans/{id}/archive', [PlatformPlanController::class, 'archive']);
+                Route::post('/plans/{id}/restore', [PlatformPlanController::class, 'restore']);
+                Route::post('/plans/{id}/duplicate', [PlatformPlanController::class, 'duplicate']);
                 Route::patch('/plans/{id}/visibility', [PlatformPlanController::class, 'visibility']);
+                Route::patch('/plans/{id}/active', [PlatformPlanController::class, 'active']);
                 Route::put('/plans/{id}/features', [PlatformPlanController::class, 'syncFeatures']);
                 Route::get('/features', [PlatformFeatureController::class, 'index']);
+                Route::get('/features/{id}', [PlatformFeatureController::class, 'show']);
                 Route::post('/features', [PlatformFeatureController::class, 'store']);
                 Route::put('/features/{id}', [PlatformFeatureController::class, 'update']);
+                Route::delete('/features/{id}', [PlatformFeatureController::class, 'destroy']);
+                Route::post('/features/{id}/restore', [PlatformFeatureController::class, 'restore']);
                 Route::get('/subscriptions', [PlatformSubscriptionController::class, 'index']);
                 Route::post('/subscriptions', [PlatformSubscriptionController::class, 'assign']);
                 Route::patch('/subscriptions/{tenantId}/status', [PlatformSubscriptionController::class, 'updateStatus']);
                 Route::post('/override', [PlatformSubscriptionController::class, 'override']);
+                Route::get('/upgrade-requests', [PlatformSubscriptionController::class, 'upgradeRequests']);
+                Route::get('/tenants/{tenantId}/entitlements', [PlatformEntitlementController::class, 'show']);
+                Route::post('/tenants/{tenantId}/entitlements/features', [PlatformEntitlementController::class, 'setFeatureOverride']);
+                Route::post('/tenants/{tenantId}/entitlements/limits', [PlatformEntitlementController::class, 'setLimitOverride']);
+                Route::post('/tenants/{tenantId}/entitlements/reset', [PlatformEntitlementController::class, 'reset']);
             });
         });
 });

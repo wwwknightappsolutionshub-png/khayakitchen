@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ModalPortal } from "@/components/ui/ModalPortal";
 import { platformService } from "@/services/platform.service";
+import { pricingService } from "@/services/pricing.service";
 import type { RestaurantOperationalStatus } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 
 const STATUS_OPTIONS: RestaurantOperationalStatus[] = [
   "open",
@@ -47,10 +49,57 @@ export default function PlatformTenantsPage() {
   const [overrideStatus, setOverrideStatus] = useState<RestaurantOperationalStatus>("open");
   const [overrideReason, setOverrideReason] = useState("");
   const [disablePromoAlerts, setDisablePromoAlerts] = useState(false);
+  const [entitlementsTenantId, setEntitlementsTenantId] = useState<string | null>(null);
+  const [overrideFeatureKey, setOverrideFeatureKey] = useState("");
+  const [overrideFeatureEnabled, setOverrideFeatureEnabled] = useState(true);
+  const [overrideLimitKey, setOverrideLimitKey] = useState("max_menu_items");
+  const [overrideLimitValue, setOverrideLimitValue] = useState("");
+  const [overrideLimitUnlimited, setOverrideLimitUnlimited] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["platform", "tenants"],
     queryFn: () => platformService.getTenants(),
+  });
+
+  const entitlementsQuery = useQuery({
+    queryKey: ["tenant-entitlements", entitlementsTenantId],
+    queryFn: () => pricingService.getTenantEntitlements(entitlementsTenantId!),
+    enabled: !!entitlementsTenantId,
+  });
+
+  const resetEntitlementsMutation = useMutation({
+    mutationFn: (tenantId: string) =>
+      pricingService.resetEntitlements(tenantId, "Super admin reset to plan defaults"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-entitlements", entitlementsTenantId] });
+    },
+  });
+
+  const featureOverrideMutation = useMutation({
+    mutationFn: (tenantId: string) =>
+      pricingService.setFeatureOverride(tenantId, {
+        feature_key: overrideFeatureKey,
+        enabled: overrideFeatureEnabled,
+        reason: "Super admin override",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-entitlements", entitlementsTenantId] });
+      setOverrideFeatureKey("");
+    },
+  });
+
+  const limitOverrideMutation = useMutation({
+    mutationFn: (tenantId: string) =>
+      pricingService.setLimitOverride(tenantId, {
+        limit_key: overrideLimitKey,
+        value: overrideLimitUnlimited ? null : Number(overrideLimitValue) || 0,
+        is_unlimited: overrideLimitUnlimited,
+        reason: "Super admin override",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-entitlements", entitlementsTenantId] });
+      setOverrideLimitValue("");
+    },
   });
 
   const overrideMutation = useMutation({
@@ -234,6 +283,13 @@ export default function PlatformTenantsPage() {
                           >
                             Override branding
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEntitlementsTenantId(tenant.id)}
+                          >
+                            Entitlements
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -363,6 +419,165 @@ export default function PlatformTenantsPage() {
                 Cancel
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {entitlementsTenantId && (
+        <Card className="mt-6 border-violet-500/20 bg-[#0f1117]">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Tenant entitlements</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setEntitlementsTenantId(null)}>
+              Close
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {entitlementsQuery.isLoading ? (
+              <p className="text-sm text-muted">Loading entitlements…</p>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-[var(--radius)] border border-border p-4">
+                    <p className="text-xs uppercase tracking-wider text-muted">Current plan</p>
+                    <p className="mt-1 font-semibold">
+                      {entitlementsQuery.data?.plan?.name ?? "No plan assigned"}
+                    </p>
+                    {entitlementsQuery.data?.subscription && (
+                      <Badge variant="outline" className="mt-2 capitalize">
+                        {entitlementsQuery.data.subscription.status}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="rounded-[var(--radius)] border border-border p-4 sm:col-span-2">
+                    <p className="mb-2 text-xs uppercase tracking-wider text-muted">Usage</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {Object.entries(entitlementsQuery.data?.usage ?? {})
+                        .slice(0, 6)
+                        .map(([key, item]) => (
+                          <div key={key} className="text-sm">
+                            <span className="text-muted capitalize">
+                              {key.replace(/^max_/, "").replace(/_/g, " ")}
+                            </span>
+                            <p className="font-mono">
+                              {item.current}
+                              {item.unlimited ? " / ∞" : ` / ${item.max ?? "—"}`}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium">Subscription history</p>
+                  <ul className="max-h-40 space-y-1 overflow-y-auto text-sm text-muted">
+                    {(entitlementsQuery.data?.history ?? []).map((entry) => (
+                      <li key={entry.id} className="flex justify-between gap-2 border-b border-border py-1">
+                        <span className="capitalize">{entry.action.replace(/\./g, " ")}</span>
+                        <span>{entry.created_at ? formatDate(entry.created_at) : "—"}</span>
+                      </li>
+                    ))}
+                    {(entitlementsQuery.data?.history ?? []).length === 0 && (
+                      <li>No history recorded</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium">Active overrides</p>
+                  <ul className="space-y-1 text-sm">
+                    {(entitlementsQuery.data?.overrides ?? []).map((o) => (
+                      <li
+                        key={o.id}
+                        className="flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border px-3 py-2"
+                      >
+                        <Badge variant="outline">{o.override_type}</Badge>
+                        <span className="font-mono">{o.override_key}</span>
+                        {o.override_type === "feature" && (
+                          <span>{o.value_bool ? "enabled" : "disabled"}</span>
+                        )}
+                        {o.override_type === "limit" && (
+                          <span>{o.is_unlimited ? "unlimited" : o.value_int}</span>
+                        )}
+                      </li>
+                    ))}
+                    {(entitlementsQuery.data?.overrides ?? []).length === 0 && (
+                      <p className="text-sm text-muted">No overrides — using plan defaults</p>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-[var(--radius)] border border-dashed border-border p-4 space-y-3">
+                    <p className="text-sm font-medium">Feature override</p>
+                    <Input
+                      label="Feature key"
+                      value={overrideFeatureKey}
+                      onChange={(e) => setOverrideFeatureKey(e.target.value)}
+                      placeholder="delivery"
+                    />
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={overrideFeatureEnabled}
+                        onChange={(e) => setOverrideFeatureEnabled(e.target.checked)}
+                      />
+                      Enabled
+                    </label>
+                    <Button
+                      size="sm"
+                      onClick={() => featureOverrideMutation.mutate(entitlementsTenantId)}
+                      disabled={!overrideFeatureKey.trim()}
+                      isLoading={featureOverrideMutation.isPending}
+                    >
+                      Apply feature override
+                    </Button>
+                  </div>
+                  <div className="rounded-[var(--radius)] border border-dashed border-border p-4 space-y-3">
+                    <p className="text-sm font-medium">Limit override</p>
+                    <Input
+                      label="Limit key"
+                      value={overrideLimitKey}
+                      onChange={(e) => setOverrideLimitKey(e.target.value)}
+                    />
+                    <Input
+                      label="Value"
+                      type="number"
+                      value={overrideLimitValue}
+                      disabled={overrideLimitUnlimited}
+                      onChange={(e) => setOverrideLimitValue(e.target.value)}
+                    />
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={overrideLimitUnlimited}
+                        onChange={(e) => setOverrideLimitUnlimited(e.target.checked)}
+                      />
+                      Unlimited
+                    </label>
+                    <Button
+                      size="sm"
+                      onClick={() => limitOverrideMutation.mutate(entitlementsTenantId)}
+                      isLoading={limitOverrideMutation.isPending}
+                    >
+                      Apply limit override
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    if (confirm("Reset all overrides to plan defaults?")) {
+                      resetEntitlementsMutation.mutate(entitlementsTenantId);
+                    }
+                  }}
+                  isLoading={resetEntitlementsMutation.isPending}
+                >
+                  Reset to plan defaults
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

@@ -29,6 +29,7 @@ class PlatformSettingsService
             'splash_subheadline' => 'Order fresh meals from your favourite kitchen',
             'ticker_enabled' => true,
             'ticker_text' => BrandingService::DEFAULT_TICKER_TEXT,
+            'public_pricing_enabled' => true,
         ]);
     }
 
@@ -50,6 +51,7 @@ class PlatformSettingsService
             'splash_image_url' => $settings->splash_image_url,
             'ticker_enabled' => $settings->ticker_enabled,
             'ticker_text' => $settings->ticker_text,
+            'public_pricing_enabled' => $settings->public_pricing_enabled ?? true,
         ];
     }
 

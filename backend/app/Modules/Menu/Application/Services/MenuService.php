@@ -99,6 +99,7 @@ class MenuService
     public function createOptionGroup(array $data, array $permissions): OptionGroup
     {
         $this->permissionService->authorize($permissions, 'menu.manage');
+        $this->planLimitService->assertCategoryLimit();
 
         return OptionGroup::create([
             'tenant_id' => $this->tenantContext->id(),
@@ -169,6 +170,7 @@ class MenuService
     public function uploadMealImage(string $id, UploadedFile $file, array $permissions): Meal
     {
         $this->permissionService->authorize($permissions, 'menu.manage');
+        $this->planLimitService->assertImageLimit();
 
         $path = $file->store('meals', 'public');
         $url = Storage::disk('public')->url($path);

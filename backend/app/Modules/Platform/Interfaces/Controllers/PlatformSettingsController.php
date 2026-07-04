@@ -33,6 +33,7 @@ class PlatformSettingsController extends Controller
             'splash_subheadline' => ['nullable', 'string', 'max:255'],
             'ticker_enabled' => ['sometimes', 'boolean'],
             'ticker_text' => ['nullable', 'string', 'max:2000'],
+            'public_pricing_enabled' => ['sometimes', 'boolean'],
         ]);
 
         $settings = $this->platformSettingsService->update($data);

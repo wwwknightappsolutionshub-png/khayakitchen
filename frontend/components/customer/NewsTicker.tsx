@@ -11,9 +11,9 @@ export function NewsTicker({ messages }: NewsTickerProps) {
   const loop = `${label}   •   ${label}`;
 
   return (
-    <div className="relative mt-0.5 h-5 w-full min-w-0 overflow-hidden">
+    <div className="relative h-7 w-full overflow-hidden">
       <div
-        className="news-ticker-track absolute whitespace-nowrap text-xs font-medium leading-5 text-[var(--foreground)]"
+        className="news-ticker-track absolute whitespace-nowrap text-sm font-bold leading-7 text-[var(--foreground)]"
         aria-live="polite"
       >
         {loop}

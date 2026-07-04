@@ -402,6 +402,34 @@ export default function PlatformSettingsPage() {
 
         <Card className="border-violet-500/15 bg-[#0f1117] lg:col-span-2">
           <CardHeader>
+            <CardTitle>Public pricing page</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {settingsLoading || !settings ? (
+              <p className="text-sm text-muted">Loading pricing settings…</p>
+            ) : (
+              <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius)] border border-border p-4">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-primary"
+                  checked={displayedSettings.public_pricing_enabled ?? true}
+                  onChange={(e) =>
+                    setSplashForm((f) => ({ ...f, public_pricing_enabled: e.target.checked }))
+                  }
+                />
+                <div>
+                  <p className="text-sm font-medium">Show public pricing page</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    When disabled, /pricing returns 404 for visitors. Saved with splash settings.
+                  </p>
+                </div>
+              </label>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-violet-500/15 bg-[#0f1117] lg:col-span-2">
+          <CardHeader>
             <CardTitle>Storefront news ticker</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
