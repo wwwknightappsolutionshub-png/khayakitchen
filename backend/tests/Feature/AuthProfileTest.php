@@ -11,6 +11,22 @@ class AuthProfileTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_super_admin_can_login_with_tenant_slug_header(): void
+    {
+        $this->seed();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'admin@khayaos.com',
+            'password' => 'password',
+        ], [
+            'X-Tenant-Slug' => 'pilot',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'super_admin');
+        $response->assertJsonPath('user.tenant_id', null);
+    }
+
     public function test_tenant_owner_can_update_email_with_current_password(): void
     {
         $this->seed();

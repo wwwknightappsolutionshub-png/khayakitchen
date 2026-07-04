@@ -76,8 +76,9 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
   }
 
   const isPlatformRoute = endpoint.startsWith("/platform");
+  const isAuthLoginRoute = endpoint === "/auth/login";
 
-  if (!isPlatformRoute) {
+  if (!isPlatformRoute && !isAuthLoginRoute) {
     const tenantId = getStoredTenantId();
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
 

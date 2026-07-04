@@ -19,7 +19,7 @@ class AuthController extends Controller
             'tenant_slug' => ['nullable', 'string'],
         ]);
 
-        $tenantSlug = $data['tenant_slug'] ?? $request->header('X-Tenant-Slug');
+        $tenantSlug = $data['tenant_slug'] ?? null;
 
         return ApiResponse::success(
             $this->authService->login($data['email'], $data['password'], $tenantSlug),
