@@ -208,6 +208,8 @@ export default function BrandingPage() {
                     restaurant_name: String(formData.get("restaurant_name") ?? ""),
                     primary_color: String(formData.get("primary_color") ?? "") || null,
                     secondary_color: String(formData.get("secondary_color") ?? "") || null,
+                    ticker_enabled: formData.get("ticker_enabled") === "on",
+                    ticker_text: String(formData.get("ticker_text") ?? "") || null,
                   });
                 }}
               >
@@ -286,6 +288,31 @@ export default function BrandingPage() {
                       )}
                     </>
                   )}
+                </div>
+
+                <div className="rounded-[var(--radius)] border border-border p-4">
+                  <p className="text-sm font-medium">Header news ticker</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Shown below your restaurant name on the customer app. Separate messages with | .
+                  </p>
+                  <label className="mt-3 flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      name="ticker_enabled"
+                      defaultChecked={branding.ticker_enabled ?? true}
+                      disabled={!canManage}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <span className="text-sm">Show news ticker</span>
+                  </label>
+                  <textarea
+                    name="ticker_text"
+                    rows={3}
+                    defaultValue={branding.ticker_text ?? ""}
+                    disabled={!canManage}
+                    placeholder="Welcome message | Place your order now | Special offers"
+                    className="mt-3 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 py-2 text-sm"
+                  />
                 </div>
 
                 {canManage && (

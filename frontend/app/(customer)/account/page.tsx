@@ -74,7 +74,7 @@ export default function AccountPage() {
     localStorage.setItem(NAME_STORAGE_KEY, trimmedName);
     localStorage.setItem(WELCOME_STORAGE_KEY, "1");
     setSubmittedPhone(trimmedPhone);
-    router.replace("/home");
+    router.replace("/");
   };
 
   const handleOrderAgain = async (orderId: string) => {

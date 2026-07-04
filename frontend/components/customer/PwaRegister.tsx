@@ -6,9 +6,11 @@ export function PwaRegister() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Service worker registration is optional in development
-    });
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .catch(() => {
+        // Service worker registration is optional in development
+      });
   }, []);
 
   return null;

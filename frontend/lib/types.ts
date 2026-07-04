@@ -272,6 +272,8 @@ export interface TenantBranding {
   secondary_color?: string | null;
   accent_color?: string | null;
   banner_image?: string | null;
+  ticker_enabled?: boolean;
+  ticker_text?: string | null;
   has_platform_override?: boolean;
 }
 
@@ -286,6 +288,8 @@ export interface PlatformSettings {
   splash_headline?: string | null;
   splash_subheadline?: string | null;
   splash_image_url?: string | null;
+  ticker_enabled: boolean;
+  ticker_text?: string | null;
 }
 
 export interface RestaurantStatus {

@@ -176,6 +176,19 @@ h1, h2, h3, h4, h5, h6 {
   animation-play-state: paused;
 }
 
+@keyframes news-ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.news-ticker-track {
+  animation: news-ticker-scroll 28s linear infinite;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

@@ -24,5 +24,9 @@ class TenantBranding extends Model
         'platform_override_secondary_color',
         'platform_override_accent_color',
         'platform_override_banner_image',
+        'platform_override_ticker_enabled',
+        'platform_override_ticker_text',
+        'ticker_enabled',
+        'ticker_text',
     ];
 }

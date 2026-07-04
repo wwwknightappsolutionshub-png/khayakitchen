@@ -19,6 +19,8 @@ class PlatformBrandingController extends Controller
             'secondary_color' => ['nullable', 'string', 'max:32'],
             'accent_color' => ['nullable', 'string', 'max:32'],
             'banner_image' => ['nullable', 'string', 'max:2048'],
+            'ticker_enabled' => ['nullable', 'boolean'],
+            'ticker_text' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $branding = $this->brandingService->updatePlatformOverride($tenantId, $data);

@@ -28,6 +28,8 @@ class BrandingService
                 'primary_color' => '#E07A5F',
                 'secondary_color' => '#81B29A',
                 'accent_color' => '#F2CC8F',
+                'ticker_enabled' => true,
+                'ticker_text' => 'Welcome to our Kitchen, our delicious and freshly meals are ready for you to order now | Place your order now | Don\'t forget we run referral discounts and end of day special offer, turn on notification to get alert when we have it.',
             ],
         );
     }
@@ -37,6 +39,8 @@ class BrandingService
      */
     public function resolveEffective(TenantBranding $branding): array
     {
+        $platformSettings = app(\App\Modules\Platform\Application\Services\PlatformSettingsService::class)->get();
+
         return [
             'id' => $branding->id,
             'tenant_id' => $branding->tenant_id,
@@ -46,8 +50,36 @@ class BrandingService
             'secondary_color' => $branding->platform_override_secondary_color ?? $branding->secondary_color,
             'accent_color' => $branding->platform_override_accent_color ?? $branding->accent_color,
             'banner_image' => $branding->platform_override_banner_image ?? $branding->banner_image,
+            'ticker_enabled' => $this->resolveTickerEnabled($branding, $platformSettings),
+            'ticker_text' => $this->resolveTickerText($branding, $platformSettings),
             'has_platform_override' => $this->hasPlatformOverride($branding),
         ];
+    }
+
+    private function resolveTickerEnabled(TenantBranding $branding, $platformSettings): bool
+    {
+        if ($branding->platform_override_ticker_enabled !== null) {
+            return (bool) $branding->platform_override_ticker_enabled;
+        }
+
+        if (! ($platformSettings->ticker_enabled ?? true)) {
+            return false;
+        }
+
+        return (bool) ($branding->ticker_enabled ?? true);
+    }
+
+    private function resolveTickerText(TenantBranding $branding, $platformSettings): ?string
+    {
+        if ($branding->platform_override_ticker_text) {
+            return $branding->platform_override_ticker_text;
+        }
+
+        if ($branding->ticker_text) {
+            return $branding->ticker_text;
+        }
+
+        return $platformSettings->ticker_text;
     }
 
     public function hasPlatformOverride(TenantBranding $branding): bool
@@ -56,7 +88,9 @@ class BrandingService
             || $branding->platform_override_primary_color
             || $branding->platform_override_secondary_color
             || $branding->platform_override_accent_color
-            || $branding->platform_override_banner_image;
+            || $branding->platform_override_banner_image
+            || $branding->platform_override_ticker_enabled !== null
+            || $branding->platform_override_ticker_text;
     }
 
     public function update(array $data, array $permissions): TenantBranding
@@ -88,6 +122,10 @@ class BrandingService
             'platform_override_secondary_color' => $data['secondary_color'] ?? $branding->platform_override_secondary_color,
             'platform_override_accent_color' => $data['accent_color'] ?? $branding->platform_override_accent_color,
             'platform_override_banner_image' => $data['banner_image'] ?? $branding->platform_override_banner_image,
+            'platform_override_ticker_enabled' => array_key_exists('ticker_enabled', $data)
+                ? $data['ticker_enabled']
+                : $branding->platform_override_ticker_enabled,
+            'platform_override_ticker_text' => $data['ticker_text'] ?? $branding->platform_override_ticker_text,
         ]);
 
         $this->auditLogService->log(
@@ -112,6 +150,8 @@ class BrandingService
             'platform_override_secondary_color' => null,
             'platform_override_accent_color' => null,
             'platform_override_banner_image' => null,
+            'platform_override_ticker_enabled' => null,
+            'platform_override_ticker_text' => null,
         ]);
 
         $this->auditLogService->log(

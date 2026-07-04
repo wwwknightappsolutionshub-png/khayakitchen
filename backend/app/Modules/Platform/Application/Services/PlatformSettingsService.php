@@ -26,6 +26,8 @@ class PlatformSettingsService
             'splash_enabled' => true,
             'splash_headline' => "LET'S GET STARTED",
             'splash_subheadline' => 'Order fresh meals from your favourite kitchen',
+            'ticker_enabled' => true,
+            'ticker_text' => 'Welcome to our Kitchen, our delicious and freshly meals are ready for you to order now | Place your order now | Don\'t forget we run referral discounts and end of day special offer, turn on notification to get alert when we have it.',
         ]);
     }
 
@@ -45,6 +47,8 @@ class PlatformSettingsService
             'splash_headline' => $settings->splash_headline,
             'splash_subheadline' => $settings->splash_subheadline,
             'splash_image_url' => $settings->splash_image_url,
+            'ticker_enabled' => $settings->ticker_enabled,
+            'ticker_text' => $settings->ticker_text,
         ];
     }
 

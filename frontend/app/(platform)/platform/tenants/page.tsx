@@ -37,6 +37,8 @@ export default function PlatformTenantsPage() {
     secondary_color: "",
     accent_color: "",
     banner_image: "",
+    ticker_enabled: true,
+    ticker_text: "",
   });
   const [logoUploadProgress, setLogoUploadProgress] = useState<string | null>(null);
   const [bannerUploadProgress, setBannerUploadProgress] = useState<string | null>(null);
@@ -71,6 +73,8 @@ export default function PlatformTenantsPage() {
         primary_color: brandingForm.primary_color || undefined,
         secondary_color: brandingForm.secondary_color || undefined,
         accent_color: brandingForm.accent_color || undefined,
+        ticker_enabled: brandingForm.ticker_enabled,
+        ticker_text: brandingForm.ticker_text || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
@@ -222,6 +226,8 @@ export default function PlatformTenantsPage() {
                                 secondary_color: "",
                                 accent_color: "",
                                 banner_image: "",
+                                ticker_enabled: true,
+                                ticker_text: "",
                               });
                               setBrandingTenantId(tenant.id);
                             }}
@@ -315,6 +321,29 @@ export default function PlatformTenantsPage() {
               {bannerUploadProgress && (
                 <p className="mt-1 text-xs text-muted">{bannerUploadProgress}</p>
               )}
+            </div>
+            <div className="rounded-[var(--radius)] border border-border p-4">
+              <p className="text-sm font-medium">News ticker override</p>
+              <p className="mt-1 text-xs text-muted">
+                Override or disable the scrolling header ticker for this tenant only.
+              </p>
+              <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={brandingForm.ticker_enabled}
+                  onChange={(e) =>
+                    setBrandingForm((f) => ({ ...f, ticker_enabled: e.target.checked }))
+                  }
+                />
+                Show news ticker
+              </label>
+              <textarea
+                rows={3}
+                value={brandingForm.ticker_text}
+                onChange={(e) => setBrandingForm((f) => ({ ...f, ticker_text: e.target.value }))}
+                placeholder="Message one | Message two | Message three"
+                className="mt-3 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 py-2 text-sm"
+              />
             </div>
             <div className="flex flex-wrap gap-2">
               <Button

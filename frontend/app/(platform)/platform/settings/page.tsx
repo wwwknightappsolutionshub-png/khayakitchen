@@ -399,6 +399,47 @@ export default function PlatformSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <Card className="border-violet-500/15 bg-[#0f1117] lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Storefront news ticker</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {settingsLoading || !settings ? (
+              <p className="text-sm text-muted">Loading ticker settings…</p>
+            ) : (
+              <>
+                <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius)] border border-border p-4">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-primary"
+                    checked={displayedSettings.ticker_enabled ?? true}
+                    onChange={(e) =>
+                      setSplashForm((f) => ({ ...f, ticker_enabled: e.target.checked }))
+                    }
+                  />
+                  <div>
+                    <p className="text-sm font-medium">Show default news ticker</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      Platform default for all tenants unless overridden or disabled per tenant
+                    </p>
+                  </div>
+                </label>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Ticker messages</label>
+                  <textarea
+                    rows={4}
+                    value={displayedSettings.ticker_text ?? ""}
+                    onChange={(e) => setSplashForm((f) => ({ ...f, ticker_text: e.target.value }))}
+                    placeholder="Message one | Message two | Message three"
+                    className="w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted">Separate messages with | . Saved with splash settings above.</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 
 const navItems = [
-  { href: "/home", label: "Home", icon: Home },
+  { href: "/", label: "Home", icon: Home },
   { href: "/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/account", label: "Account", icon: User },
@@ -23,7 +23,7 @@ export function CustomerNav() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
-            item.href === "/home"
+            item.href === "/"
               ? pathname === "/" || pathname === "/home"
               : pathname.startsWith(item.href);
           const showBadge = item.href === "/cart" && itemCount > 0;

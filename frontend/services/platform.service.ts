@@ -94,6 +94,8 @@ export const platformService = {
       secondary_color?: string;
       accent_color?: string;
       banner_image?: string;
+      ticker_enabled?: boolean;
+      ticker_text?: string;
     },
   ) {
     return api.patch(`/platform/tenants/${tenantId}/branding`, payload);

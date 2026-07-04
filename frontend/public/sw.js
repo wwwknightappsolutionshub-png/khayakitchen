@@ -22,7 +22,7 @@ const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, "/manifest.json", "/icon.svg"])),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, "/", "/manifest.json", "/icon.svg"])),
   );
   self.skipWaiting();
 });
@@ -48,7 +48,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response.ok && url.pathname.startsWith("/menu")) {
+        if (response.ok && (url.pathname === "/" || url.pathname.startsWith("/menu"))) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }

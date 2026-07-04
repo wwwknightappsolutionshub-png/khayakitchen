@@ -20,12 +20,15 @@ class PlatformSettings extends Model
         'splash_headline',
         'splash_subheadline',
         'splash_image_url',
+        'ticker_enabled',
+        'ticker_text',
     ];
 
     protected function casts(): array
     {
         return [
             'splash_enabled' => 'boolean',
+            'ticker_enabled' => 'boolean',
         ];
     }
 }

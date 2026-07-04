@@ -26,6 +26,8 @@ class BrandingController extends Controller
             'primary_color' => ['nullable', 'string', 'max:20'],
             'secondary_color' => ['nullable', 'string', 'max:20'],
             'banner_image' => ['nullable', 'string', 'max:2048'],
+            'ticker_enabled' => ['sometimes', 'boolean'],
+            'ticker_text' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $branding = $this->brandingService->update($data, $request->get('permissions', []));

@@ -14,6 +14,16 @@ import { RealtimeProvider } from "@/providers/RealtimeProvider";
 export const metadata: Metadata = {
   title: "Order",
   description: "Order from Khaya Kitchen",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Khaya Kitchen",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {

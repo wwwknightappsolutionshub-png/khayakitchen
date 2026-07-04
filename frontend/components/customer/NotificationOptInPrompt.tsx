@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ModalPortal } from "@/components/ui/ModalPortal";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
 import { realtimeService } from "@/services/realtime.service";
+import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
 
 const STORAGE_KEY = "khayaos-opt-in-dismissed";
+const PROMPT_DELAY_MS = 45_000;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -21,6 +23,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export function NotificationOptInPrompt() {
   const [open, setOpen] = useState(false);
+  const scheduledRef = useRef(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [phone, setPhone] = useState("");
@@ -29,8 +32,22 @@ export function NotificationOptInPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (localStorage.getItem(STORAGE_KEY)) return;
-    const timer = setTimeout(() => setOpen(true), 1200);
-    return () => clearTimeout(timer);
+
+    let timer: number | undefined;
+
+    const schedulePrompt = () => {
+      if (scheduledRef.current) return;
+      scheduledRef.current = true;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setOpen(true), PROMPT_DELAY_MS);
+    };
+
+    window.addEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
+
+    return () => {
+      window.removeEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   const dismiss = () => {
