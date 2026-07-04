@@ -35,12 +35,24 @@ function defaultDateTime(kind: StatusTimerKind): string {
   return local.toISOString().slice(0, 16);
 }
 
+function toDateTimeLocal(iso?: string | null): string | undefined {
+  if (!iso) return undefined;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return undefined;
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60 * 1000);
+  return local.toISOString().slice(0, 16);
+}
+
 interface RestaurantStatusTimeModalProps {
   open: boolean;
   kind: StatusTimerKind;
   onClose: () => void;
   onConfirm: (payload: StatusTimerConfirmPayload) => void;
   isLoading?: boolean;
+  initialEndsAt?: string | null;
+  initialDiscountPercent?: number;
+  initialMealIds?: string[];
 }
 
 export function RestaurantStatusTimeModal({
@@ -49,6 +61,9 @@ export function RestaurantStatusTimeModal({
   onClose,
   onConfirm,
   isLoading,
+  initialEndsAt,
+  initialDiscountPercent,
+  initialMealIds,
 }: RestaurantStatusTimeModalProps) {
   const [value, setValue] = useState(defaultDateTime(kind));
   const [discountPercent, setDiscountPercent] = useState("15");
@@ -64,11 +79,11 @@ export function RestaurantStatusTimeModal({
 
   useEffect(() => {
     if (open) {
-      setValue(defaultDateTime(kind));
-      setDiscountPercent("15");
-      setSelectedMealIds([]);
+      setValue(toDateTimeLocal(initialEndsAt) ?? defaultDateTime(kind));
+      setDiscountPercent(String(initialDiscountPercent ?? 15));
+      setSelectedMealIds(initialMealIds ?? []);
     }
-  }, [open, kind]);
+  }, [open, kind, initialEndsAt, initialDiscountPercent, initialMealIds]);
 
   const title = kind === "closing" ? "Set closing time" : "Set promo & discounted meals";
   const description =

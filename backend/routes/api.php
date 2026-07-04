@@ -23,7 +23,6 @@ use App\Modules\Platform\Interfaces\Controllers\PlatformFeatureFlagController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformModuleController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformSettingsController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformTenantController;
-use App\Modules\Pricing\Interfaces\Controllers\AuditLogController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformEntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformFeatureController;
@@ -157,7 +156,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/campaigns/{id}/send', [CampaignController::class, 'send']);
         });
 
-        Route::get('/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/staff', [StaffUserController::class, 'index']);
         Route::post('/staff', [StaffUserController::class, 'store']);
         Route::put('/staff/{id}', [StaffUserController::class, 'update']);

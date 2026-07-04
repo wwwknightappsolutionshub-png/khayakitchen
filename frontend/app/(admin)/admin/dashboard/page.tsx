@@ -10,9 +10,12 @@ import { LiveOrdersFeed } from "@/components/admin/LiveOrdersFeed";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function LiveRestaurantDashboardPage() {
   const { summary, status } = useLiveDashboard();
+  const role = useAuthStore((s) => s.user?.role);
+  const canManage = role === "owner" || role === "super_admin";
   const data = summary.data;
   const restaurantStatus = status.data?.status;
 
@@ -48,23 +51,27 @@ export default function LiveRestaurantDashboardPage() {
         )}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Restaurant Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {status.isLoading ? (
-              <CardSkeleton />
-            ) : (
-              <LiveDashboardStatusControl
-                currentStatus={restaurantStatus?.status}
-                isAcceptingOrders={restaurantStatus?.is_accepting_orders}
-              />
-            )}
-          </CardContent>
-        </Card>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Restaurant Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {status.isLoading ? (
+            <CardSkeleton />
+          ) : (
+            <LiveDashboardStatusControl
+              currentStatus={restaurantStatus?.status}
+              isAcceptingOrders={restaurantStatus?.is_accepting_orders}
+              closingAt={restaurantStatus?.closing_at}
+              promoEndsAt={restaurantStatus?.promo_ends_at}
+              promoMeals={restaurantStatus?.promo_meals}
+              disabled={!canManage}
+            />
+          )}
+        </CardContent>
+      </Card>
 
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg">Top Selling Today</CardTitle>

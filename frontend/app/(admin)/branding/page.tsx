@@ -129,6 +129,9 @@ export default function BrandingPage() {
                 <LiveDashboardStatusControl
                   currentStatus={status?.status}
                   isAcceptingOrders={status?.is_accepting_orders}
+                  closingAt={status?.closing_at}
+                  promoEndsAt={status?.promo_ends_at}
+                  promoMeals={status?.promo_meals}
                   disabled={!canManage}
                   showDescriptions
                 />

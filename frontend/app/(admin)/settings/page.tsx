@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList, Settings, Users } from "lucide-react";
+import { Settings, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -364,23 +363,6 @@ export default function SettingsPage() {
                 </tbody>
               </table>
             </TableScroll>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
-              Audit & compliance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-muted">
-              Review who changed what across menu, inventory, orders, and settings.
-            </p>
-            <Link href="/audit">
-              <Button variant="secondary">View audit logs</Button>
-            </Link>
           </CardContent>
         </Card>
 

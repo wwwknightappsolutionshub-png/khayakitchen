@@ -15,7 +15,6 @@ import {
   Megaphone,
   Store,
   UtensilsCrossed,
-  ClipboardList,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +33,6 @@ const navItems = [
   { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },
   { href: "/reports", label: "Reports", icon: BarChart3, flag: "reporting" },
-  { href: "/audit", label: "Audit", icon: ClipboardList, flag: null },
   { href: "/settings", label: "Settings", icon: Settings, flag: null },
 ];
 
