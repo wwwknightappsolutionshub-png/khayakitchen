@@ -21,6 +21,7 @@ use App\Modules\Platform\Interfaces\Controllers\PlatformAuditLogController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformDashboardController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformFeatureFlagController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformModuleController;
+use App\Modules\Platform\Interfaces\Controllers\PlatformSettingsController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformTenantController;
 use App\Modules\Pricing\Interfaces\Controllers\AuditLogController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
@@ -40,6 +41,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
+    Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
 
     Route::middleware(['tenant.resolve'])->group(function () {
         Route::get('/storefront', [StorefrontController::class, 'show']);
@@ -48,6 +50,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::patch('/auth/email', [AuthController::class, 'updateEmail']);
+        Route::patch('/auth/password', [AuthController::class, 'updatePassword']);
     });
 
     // Public customer endpoints (tenant resolved via header/subdomain)
@@ -161,6 +165,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/entitlements', [EntitlementController::class, 'index']);
         Route::get('/branding', [BrandingController::class, 'show']);
         Route::patch('/branding', [BrandingController::class, 'update']);
+        Route::post('/branding/logo', [BrandingController::class, 'uploadLogo']);
+        Route::post('/branding/banner', [BrandingController::class, 'uploadBanner']);
         Route::get('/restaurant-status', [RestaurantStatusController::class, 'show']);
         Route::patch('/restaurant-status', [RestaurantStatusController::class, 'update']);
         Route::patch('/feature-flags', [FeatureFlagController::class, 'update']);
@@ -186,9 +192,16 @@ Route::prefix('v1')->group(function () {
             Route::get('/audit-logs', [PlatformAuditLogController::class, 'index']);
             Route::patch('/tenants/{tenantId}/restaurant-status', [PlatformRestaurantStatusController::class, 'update']);
             Route::patch('/tenants/{tenantId}/branding', [PlatformBrandingController::class, 'update']);
+            Route::post('/tenants/{tenantId}/branding/logo', [PlatformBrandingController::class, 'uploadLogo']);
+            Route::post('/tenants/{tenantId}/branding/banner', [PlatformBrandingController::class, 'uploadBanner']);
             Route::delete('/tenants/{tenantId}/branding', [PlatformBrandingController::class, 'clear']);
             Route::get('/feature-flags', [PlatformFeatureFlagController::class, 'index']);
             Route::patch('/feature-flags/{tenantId}', [PlatformFeatureFlagController::class, 'update']);
+
+            Route::get('/settings', [PlatformSettingsController::class, 'show']);
+            Route::patch('/settings', [PlatformSettingsController::class, 'update']);
+            Route::post('/settings/logo', [PlatformSettingsController::class, 'uploadLogo']);
+            Route::post('/settings/splash-image', [PlatformSettingsController::class, 'uploadSplashImage']);
 
             Route::prefix('pricing')->group(function () {
                 Route::get('/plans', [PlatformPlanController::class, 'index']);

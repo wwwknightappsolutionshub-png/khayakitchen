@@ -28,6 +28,38 @@ class PlatformBrandingController extends Controller
         ]);
     }
 
+    public function uploadLogo(Request $request, string $tenantId)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $branding = $this->brandingService->uploadPlatformOverrideLogo(
+            $tenantId,
+            $request->file('image'),
+        );
+
+        return ApiResponse::success([
+            'branding' => $this->brandingService->resolveEffective($branding),
+        ]);
+    }
+
+    public function uploadBanner(Request $request, string $tenantId)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $branding = $this->brandingService->uploadPlatformOverrideBanner(
+            $tenantId,
+            $request->file('image'),
+        );
+
+        return ApiResponse::success([
+            'branding' => $this->brandingService->resolveEffective($branding),
+        ]);
+    }
+
     public function clear(string $tenantId)
     {
         $branding = $this->brandingService->clearPlatformOverride($tenantId);

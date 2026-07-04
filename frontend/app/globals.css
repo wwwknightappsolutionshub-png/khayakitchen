@@ -159,6 +159,23 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+@keyframes popular-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.popular-scroll-track {
+  animation: popular-scroll linear infinite;
+}
+
+.popular-scroll-track:hover {
+  animation-play-state: paused;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

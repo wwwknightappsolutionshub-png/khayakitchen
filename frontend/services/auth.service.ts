@@ -34,4 +34,24 @@ export const authService = {
   async me(): Promise<User> {
     return api.get<User>("/auth/me");
   },
+
+  async updateEmail(email: string, currentPassword: string): Promise<User> {
+    const response = await api.patch<{ user: User }>("/auth/email", {
+      email,
+      current_password: currentPassword,
+    });
+    return response.user;
+  },
+
+  async updatePassword(
+    currentPassword: string,
+    password: string,
+    passwordConfirmation: string,
+  ): Promise<void> {
+    await api.patch("/auth/password", {
+      current_password: currentPassword,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  },
 };

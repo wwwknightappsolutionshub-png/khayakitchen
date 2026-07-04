@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { ApiClientError } from "@/lib/api-client";
+import { authService } from "@/services/auth.service";
 import { featureFlagsService } from "@/services/feature-flags.service";
 import { staffService } from "@/services/staff.service";
 
@@ -18,15 +20,27 @@ const ROLES = ["owner", "manager", "kitchen", "staff"] as const;
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { flags } = useFeatureFlags();
   const [showStaffForm, setShowStaffForm] = useState(false);
+  const [emailForm, setEmailForm] = useState({ email: "", currentPassword: "" });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    password: "",
+    passwordConfirmation: "",
+  });
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [staffForm, setStaffForm] = useState({
     name: "",
     email: "",
     password: "",
     role: "staff" as (typeof ROLES)[number],
   });
+
+  const displayedEmail = emailForm.email || user?.email || "";
 
   const { data: flagsData } = useQuery({
     queryKey: ["feature-flags"],
@@ -45,6 +59,43 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       setShowStaffForm(false);
       setStaffForm({ name: "", email: "", password: "", role: "staff" });
+    },
+  });
+
+  const updateEmailMutation = useMutation({
+    mutationFn: () => authService.updateEmail(displayedEmail, emailForm.currentPassword),
+    onSuccess: (updatedUser) => {
+      setUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+      setEmailForm({ email: updatedUser.email ?? "", currentPassword: "" });
+      setEmailError(null);
+      setEmailSuccess("Email updated successfully.");
+    },
+    onError: (err) => {
+      setEmailSuccess(null);
+      setEmailError(err instanceof ApiClientError ? err.message : "Failed to update email.");
+    },
+  });
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: () =>
+      authService.updatePassword(
+        passwordForm.currentPassword,
+        passwordForm.password,
+        passwordForm.passwordConfirmation,
+      ),
+    onSuccess: () => {
+      setPasswordForm({
+        currentPassword: "",
+        password: "",
+        passwordConfirmation: "",
+      });
+      setPasswordError(null);
+      setPasswordSuccess("Password updated successfully.");
+    },
+    onError: (err) => {
+      setPasswordSuccess(null);
+      setPasswordError(err instanceof ApiClientError ? err.message : "Failed to update password.");
     },
   });
 
@@ -73,6 +124,10 @@ export default function SettingsPage() {
               <span className="font-medium">{user?.name ?? "—"}</span>
             </div>
             <div className="flex justify-between text-sm">
+              <span className="text-muted">Email</span>
+              <span className="font-medium">{user?.email ?? "—"}</span>
+            </div>
+            <div className="flex justify-between text-sm">
               <span className="text-muted">Role</span>
               <Badge variant="primary" className="capitalize">
                 {user?.role ?? "—"}
@@ -82,6 +137,103 @@ export default function SettingsPage() {
               <span className="text-muted">Tenant ID</span>
               <span className="font-mono text-xs">{user?.tenant_id ?? "—"}</span>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Change email</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              label="New email"
+              type="email"
+              autoComplete="email"
+              value={displayedEmail}
+              onChange={(e) => setEmailForm((f) => ({ ...f, email: e.target.value }))}
+            />
+            <Input
+              label="Current password"
+              type="password"
+              autoComplete="current-password"
+              value={emailForm.currentPassword}
+              onChange={(e) => setEmailForm((f) => ({ ...f, currentPassword: e.target.value }))}
+            />
+            {emailError && (
+              <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
+                {emailError}
+              </p>
+            )}
+            {emailSuccess && (
+              <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                {emailSuccess}
+              </p>
+            )}
+            <Button
+              onClick={() => updateEmailMutation.mutate()}
+              isLoading={updateEmailMutation.isPending}
+              disabled={
+                !displayedEmail.trim() ||
+                !emailForm.currentPassword ||
+                displayedEmail === user?.email
+              }
+            >
+              Update email
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Change password</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              label="Current password"
+              type="password"
+              autoComplete="current-password"
+              value={passwordForm.currentPassword}
+              onChange={(e) =>
+                setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))
+              }
+            />
+            <Input
+              label="New password"
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.password}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, password: e.target.value }))}
+            />
+            <Input
+              label="Confirm new password"
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.passwordConfirmation}
+              onChange={(e) =>
+                setPasswordForm((f) => ({ ...f, passwordConfirmation: e.target.value }))
+              }
+            />
+            {passwordError && (
+              <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
+                {passwordError}
+              </p>
+            )}
+            {passwordSuccess && (
+              <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                {passwordSuccess}
+              </p>
+            )}
+            <Button
+              onClick={() => updatePasswordMutation.mutate()}
+              isLoading={updatePasswordMutation.isPending}
+              disabled={
+                !passwordForm.currentPassword ||
+                passwordForm.password.length < 8 ||
+                passwordForm.password !== passwordForm.passwordConfirmation
+              }
+            >
+              Update password
+            </Button>
           </CardContent>
         </Card>
 

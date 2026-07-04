@@ -270,7 +270,22 @@ export interface TenantBranding {
   logo_url?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
+  accent_color?: string | null;
   banner_image?: string | null;
+  has_platform_override?: boolean;
+}
+
+export interface PlatformSettings {
+  app_name: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  accent_color?: string | null;
+  background_color?: string | null;
+  splash_enabled: boolean;
+  splash_headline?: string | null;
+  splash_subheadline?: string | null;
+  splash_image_url?: string | null;
 }
 
 export interface RestaurantStatus {

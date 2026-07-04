@@ -37,4 +37,36 @@ class AuthController extends Controller
     {
         return ApiResponse::success($this->authService->me($request->user()));
     }
+
+    public function updateEmail(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'current_password' => ['required', 'string'],
+        ]);
+
+        return ApiResponse::success([
+            'user' => $this->authService->updateEmail(
+                $request->user(),
+                $data['email'],
+                $data['current_password'],
+            ),
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $this->authService->updatePassword(
+            $request->user(),
+            $data['current_password'],
+            $data['password'],
+        );
+
+        return ApiResponse::success(['message' => 'Password updated successfully']);
+    }
 }

@@ -32,4 +32,32 @@ class BrandingController extends Controller
 
         return ApiResponse::success(['branding' => $branding]);
     }
+
+    public function uploadLogo(Request $request)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $branding = $this->brandingService->uploadLogo(
+            $request->file('image'),
+            $request->get('permissions', []),
+        );
+
+        return ApiResponse::success(['branding' => $branding]);
+    }
+
+    public function uploadBanner(Request $request)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $branding = $this->brandingService->uploadBanner(
+            $request->file('image'),
+            $request->get('permissions', []),
+        );
+
+        return ApiResponse::success(['branding' => $branding]);
+    }
 }

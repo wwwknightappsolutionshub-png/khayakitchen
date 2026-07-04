@@ -12,6 +12,7 @@ import {
   LogOut,
   Shield,
   ClipboardList,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/platform/feature-flags", label: "Feature Flags", icon: Flag, available: true },
   { href: "/platform/pricing", label: "Pricing", icon: CreditCard, available: true },
   { href: "/platform/audit", label: "Audit", icon: ClipboardList, available: true },
+  { href: "/platform/settings", label: "Settings", icon: Settings, available: true },
 ];
 
 export function PlatformSidebar() {

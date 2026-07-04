@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useState } from "react";
 import { Palette, Store } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -41,6 +42,10 @@ export default function BrandingPage() {
 
   const branding = brandingData?.branding;
   const status = statusData?.status;
+  const [logoUploadProgress, setLogoUploadProgress] = useState<string | null>(null);
+  const [bannerUploadProgress, setBannerUploadProgress] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
 
   const brandingMutation = useMutation({
     mutationFn: tenantBrandingService.updateBranding,
@@ -59,6 +64,38 @@ export default function BrandingPage() {
   });
 
   const isLoading = brandingLoading || statusLoading;
+
+  const handleLogoUpload = async (file: File) => {
+    setLogoUploading(true);
+    setLogoUploadProgress("Uploading…");
+    try {
+      await tenantBrandingService.uploadLogo(file);
+      setLogoUploadProgress("Upload complete");
+      queryClient.invalidateQueries({ queryKey: ["branding"] });
+      queryClient.invalidateQueries({ queryKey: ["storefront"] });
+    } catch {
+      setLogoUploadProgress("Upload failed — try again");
+    } finally {
+      setLogoUploading(false);
+      setTimeout(() => setLogoUploadProgress(null), 3000);
+    }
+  };
+
+  const handleBannerUpload = async (file: File) => {
+    setBannerUploading(true);
+    setBannerUploadProgress("Uploading…");
+    try {
+      await tenantBrandingService.uploadBanner(file);
+      setBannerUploadProgress("Upload complete");
+      queryClient.invalidateQueries({ queryKey: ["branding"] });
+      queryClient.invalidateQueries({ queryKey: ["storefront"] });
+    } catch {
+      setBannerUploadProgress("Upload failed — try again");
+    } finally {
+      setBannerUploading(false);
+      setTimeout(() => setBannerUploadProgress(null), 3000);
+    }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -169,10 +206,8 @@ export default function BrandingPage() {
                   const formData = new FormData(e.currentTarget);
                   brandingMutation.mutate({
                     restaurant_name: String(formData.get("restaurant_name") ?? ""),
-                    logo_url: String(formData.get("logo_url") ?? "") || null,
                     primary_color: String(formData.get("primary_color") ?? "") || null,
                     secondary_color: String(formData.get("secondary_color") ?? "") || null,
-                    banner_image: String(formData.get("banner_image") ?? "") || null,
                   });
                 }}
               >
@@ -182,13 +217,34 @@ export default function BrandingPage() {
                   defaultValue={branding.restaurant_name}
                   disabled={!canManage}
                 />
-                <Input
-                  name="logo_url"
-                  label="Logo URL"
-                  defaultValue={branding.logo_url ?? ""}
-                  disabled={!canManage}
-                  placeholder="https://…"
-                />
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Logo</label>
+                  {branding.logo_url && (
+                    <img
+                      src={branding.logo_url}
+                      alt="Logo preview"
+                      className="mb-2 h-16 w-16 rounded-lg border border-border object-cover"
+                    />
+                  )}
+                  {canManage && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={logoUploading}
+                        className="block w-full text-sm text-muted file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void handleLogoUpload(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {logoUploadProgress && (
+                        <p className="mt-1 text-xs text-muted">{logoUploadProgress}</p>
+                      )}
+                    </>
+                  )}
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     name="primary_color"
@@ -203,13 +259,34 @@ export default function BrandingPage() {
                     disabled={!canManage}
                   />
                 </div>
-                <Input
-                  name="banner_image"
-                  label="Banner image URL"
-                  defaultValue={branding.banner_image ?? ""}
-                  disabled={!canManage}
-                  placeholder="https://…"
-                />
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Banner image</label>
+                  {branding.banner_image && (
+                    <img
+                      src={branding.banner_image}
+                      alt="Banner preview"
+                      className="mb-2 h-24 w-full rounded-lg border border-border object-cover"
+                    />
+                  )}
+                  {canManage && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={bannerUploading}
+                        className="block w-full text-sm text-muted file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void handleBannerUpload(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {bannerUploadProgress && (
+                        <p className="mt-1 text-xs text-muted">{bannerUploadProgress}</p>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {canManage && (
                   <Button type="submit" isLoading={brandingMutation.isPending}>

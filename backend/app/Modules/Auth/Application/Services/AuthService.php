@@ -106,4 +106,68 @@ class AuthService
             'status' => $user->status,
         ];
     }
+
+    public function updateEmail(User $user, string $email, string $currentPassword): array
+    {
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $duplicateQuery = User::withoutGlobalScopes()
+            ->where('email', $email)
+            ->where('id', '!=', $user->id);
+
+        if ($user->tenant_id) {
+            $duplicateQuery->where('tenant_id', $user->tenant_id);
+        } else {
+            $duplicateQuery->whereNull('tenant_id');
+        }
+
+        if ($duplicateQuery->exists()) {
+            throw ValidationException::withMessages([
+                'email' => ['Email already in use.'],
+            ]);
+        }
+
+        $user->update(['email' => $email]);
+
+        DB::table('activity_logs')->insert([
+            'id' => (string) Str::uuid(),
+            'tenant_id' => $user->tenant_id ?? $user->id,
+            'user_id' => $user->id,
+            'action' => 'auth.email_updated',
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'metadata' => json_encode([
+                'email' => $email,
+            ]),
+            'created_at' => now(),
+        ]);
+
+        return $this->me($user->fresh());
+    }
+
+    public function updatePassword(User $user, string $currentPassword, string $newPassword): void
+    {
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => $newPassword]);
+
+        DB::table('activity_logs')->insert([
+            'id' => (string) Str::uuid(),
+            'tenant_id' => $user->tenant_id ?? $user->id,
+            'user_id' => $user->id,
+            'action' => 'auth.password_updated',
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'metadata' => json_encode([]),
+            'created_at' => now(),
+        ]);
+    }
 }

@@ -38,6 +38,10 @@ export default function PlatformTenantsPage() {
     accent_color: "",
     banner_image: "",
   });
+  const [logoUploadProgress, setLogoUploadProgress] = useState<string | null>(null);
+  const [bannerUploadProgress, setBannerUploadProgress] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [overrideStatus, setOverrideStatus] = useState<RestaurantOperationalStatus>("open");
   const [overrideReason, setOverrideReason] = useState("");
   const [disablePromoAlerts, setDisablePromoAlerts] = useState(false);
@@ -64,17 +68,54 @@ export default function PlatformTenantsPage() {
   const brandingMutation = useMutation({
     mutationFn: (tenantId: string) =>
       platformService.overrideBranding(tenantId, {
-        logo_url: brandingForm.logo_url || undefined,
         primary_color: brandingForm.primary_color || undefined,
         secondary_color: brandingForm.secondary_color || undefined,
         accent_color: brandingForm.accent_color || undefined,
-        banner_image: brandingForm.banner_image || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
       setBrandingTenantId(null);
     },
   });
+
+  const handleBrandingLogoUpload = async (tenantId: string, file: File) => {
+    setLogoUploading(true);
+    setLogoUploadProgress("Uploading…");
+    try {
+      const response = (await platformService.uploadTenantBrandingLogo(tenantId, file)) as {
+        branding?: { logo_url?: string | null };
+      };
+      setBrandingForm((f) => ({ ...f, logo_url: response.branding?.logo_url ?? f.logo_url }));
+      setLogoUploadProgress("Upload complete");
+      queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
+    } catch {
+      setLogoUploadProgress("Upload failed — try again");
+    } finally {
+      setLogoUploading(false);
+      setTimeout(() => setLogoUploadProgress(null), 3000);
+    }
+  };
+
+  const handleBrandingBannerUpload = async (tenantId: string, file: File) => {
+    setBannerUploading(true);
+    setBannerUploadProgress("Uploading…");
+    try {
+      const response = (await platformService.uploadTenantBrandingBanner(tenantId, file)) as {
+        branding?: { banner_image?: string | null };
+      };
+      setBrandingForm((f) => ({
+        ...f,
+        banner_image: response.branding?.banner_image ?? f.banner_image,
+      }));
+      setBannerUploadProgress("Upload complete");
+      queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
+    } catch {
+      setBannerUploadProgress("Upload failed — try again");
+    } finally {
+      setBannerUploading(false);
+      setTimeout(() => setBannerUploadProgress(null), 3000);
+    }
+  };
 
   const clearBrandingMutation = useMutation({
     mutationFn: (tenantId: string) => platformService.clearBrandingOverride(tenantId),
@@ -207,11 +248,28 @@ export default function PlatformTenantsPage() {
             <p className="text-sm text-muted">
               Platform branding overrides owner settings on the customer PWA. All changes are audit logged.
             </p>
-            <Input
-              label="Logo URL"
-              value={brandingForm.logo_url}
-              onChange={(e) => setBrandingForm((f) => ({ ...f, logo_url: e.target.value }))}
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Logo</label>
+              {brandingForm.logo_url && (
+                <img
+                  src={brandingForm.logo_url}
+                  alt="Logo preview"
+                  className="mb-2 h-16 w-16 rounded-lg border border-border object-cover"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={logoUploading}
+                className="block w-full text-sm text-muted file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && brandingTenantId) void handleBrandingLogoUpload(brandingTenantId, file);
+                  e.target.value = "";
+                }}
+              />
+              {logoUploadProgress && <p className="mt-1 text-xs text-muted">{logoUploadProgress}</p>}
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
                 label="Primary color"
@@ -232,11 +290,32 @@ export default function PlatformTenantsPage() {
                 placeholder="#F2CC8F"
               />
             </div>
-            <Input
-              label="Brand banner URL"
-              value={brandingForm.banner_image}
-              onChange={(e) => setBrandingForm((f) => ({ ...f, banner_image: e.target.value }))}
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Brand banner</label>
+              {brandingForm.banner_image && (
+                <img
+                  src={brandingForm.banner_image}
+                  alt="Banner preview"
+                  className="mb-2 h-24 w-full rounded-lg border border-border object-cover"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={bannerUploading}
+                className="block w-full text-sm text-muted file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && brandingTenantId) {
+                    void handleBrandingBannerUpload(brandingTenantId, file);
+                  }
+                  e.target.value = "";
+                }}
+              />
+              {bannerUploadProgress && (
+                <p className="mt-1 text-xs text-muted">{bannerUploadProgress}</p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => brandingMutation.mutate(brandingTenantId)}

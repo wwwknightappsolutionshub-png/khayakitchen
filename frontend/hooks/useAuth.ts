@@ -14,7 +14,7 @@ export function useAuth() {
   const meQuery = useQuery({
     queryKey: ["auth", "me"],
     queryFn: () => authService.me(),
-    enabled: isAuthenticated && user?.role !== "super_admin",
+    enabled: isAuthenticated,
     retry: false,
   });
 

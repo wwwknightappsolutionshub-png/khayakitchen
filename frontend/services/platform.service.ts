@@ -102,4 +102,16 @@ export const platformService = {
   async clearBrandingOverride(tenantId: string) {
     return api.delete(`/platform/tenants/${tenantId}/branding`);
   },
+
+  async uploadTenantBrandingLogo(tenantId: string, file: File) {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.upload(`/platform/tenants/${tenantId}/branding/logo`, formData);
+  },
+
+  async uploadTenantBrandingBanner(tenantId: string, file: File) {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.upload(`/platform/tenants/${tenantId}/branding/banner`, formData);
+  },
 };

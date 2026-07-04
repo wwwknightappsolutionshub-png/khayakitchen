@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Package, Gift } from "lucide-react";
@@ -13,6 +13,8 @@ import { loyaltyService } from "@/services/loyalty.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
+const NAME_STORAGE_KEY = "khayaos-customer-name";
+const WELCOME_STORAGE_KEY = "khayaos-welcome-seen";
 
 function readStoredPhone(): string {
   if (typeof window === "undefined") return "";
@@ -21,8 +23,14 @@ function readStoredPhone(): string {
 
 export default function AccountPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isSignup = searchParams.get("signup") === "1";
   const activeOrderId = useCartStore((s) => s.activeOrderId);
   const loadOrderIntoCart = useCartStore((s) => s.loadOrderIntoCart);
+  const [name, setName] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(NAME_STORAGE_KEY) ?? "";
+  });
   const [phone, setPhone] = useState(readStoredPhone);
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(() => {
     const stored = readStoredPhone();
@@ -58,6 +66,17 @@ export default function AccountPage() {
     setSubmittedPhone(trimmed);
   };
 
+  const completeSignup = () => {
+    const trimmedPhone = phone.trim();
+    const trimmedName = name.trim();
+    if (!trimmedPhone || !trimmedName) return;
+    localStorage.setItem(PHONE_STORAGE_KEY, trimmedPhone);
+    localStorage.setItem(NAME_STORAGE_KEY, trimmedName);
+    localStorage.setItem(WELCOME_STORAGE_KEY, "1");
+    setSubmittedPhone(trimmedPhone);
+    router.replace("/home");
+  };
+
   const handleOrderAgain = async (orderId: string) => {
     if (!submittedPhone) return;
     setReorderLoading(true);
@@ -81,8 +100,14 @@ export default function AccountPage() {
   return (
     <div className="customer-animate-in px-4 pt-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Account</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">Track orders and manage preferences</p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isSignup ? "Create your account" : "Account"}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {isSignup
+            ? "Save your details for faster checkout and order tracking"
+            : "Track orders and manage preferences"}
+        </p>
       </header>
 
       {activeOrderId && (
@@ -99,6 +124,17 @@ export default function AccountPage() {
       )}
 
       <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        {isSignup && (
+          <>
+            <label className="mb-2 block text-sm font-medium">Your name</label>
+            <CustomerInput
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+              className="mb-4 w-full"
+            />
+          </>
+        )}
         <label className="mb-2 block text-sm font-medium">Your phone number</label>
         <div className="flex gap-2">
           <CustomerInput
@@ -108,12 +144,23 @@ export default function AccountPage() {
             placeholder="+44..."
             className="flex-1"
           />
-          <CustomerButton onClick={loadHistory} disabled={!phone.trim()}>
-            Load
-          </CustomerButton>
+          {isSignup ? (
+            <CustomerButton
+              onClick={completeSignup}
+              disabled={!phone.trim() || !name.trim()}
+            >
+              Sign up
+            </CustomerButton>
+          ) : (
+            <CustomerButton onClick={loadHistory} disabled={!phone.trim()}>
+              Load
+            </CustomerButton>
+          )}
         </div>
         <p className="mt-2 text-xs text-[var(--muted)]">
-          Saved on this device to show your order history
+          {isSignup
+            ? "Saved on this device for checkout and loyalty"
+            : "Saved on this device to show your order history"}
         </p>
       </div>
 

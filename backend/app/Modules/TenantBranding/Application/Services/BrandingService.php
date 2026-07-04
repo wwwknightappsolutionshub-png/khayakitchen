@@ -6,6 +6,8 @@ use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class BrandingService
 {
@@ -119,6 +121,92 @@ class BrandingService
             'tenant_branding',
             $branding->id,
             [],
+        );
+
+        return $branding->fresh();
+    }
+
+    public function uploadLogo(UploadedFile $file, array $permissions): TenantBranding
+    {
+        $this->permissionService->authorize($permissions, 'branding.manage');
+
+        $branding = $this->getForTenant();
+        $tenantId = $branding->tenant_id;
+        $path = $file->store("branding/{$tenantId}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $branding->update(['logo_url' => $url]);
+
+        $this->auditLogService->log(
+            'branding.logo_uploaded',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            ['logo_url' => $url],
+        );
+
+        return $branding->fresh();
+    }
+
+    public function uploadBanner(UploadedFile $file, array $permissions): TenantBranding
+    {
+        $this->permissionService->authorize($permissions, 'branding.manage');
+
+        $branding = $this->getForTenant();
+        $tenantId = $branding->tenant_id;
+        $path = $file->store("branding/{$tenantId}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $branding->update(['banner_image' => $url]);
+
+        $this->auditLogService->log(
+            'branding.banner_uploaded',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            ['banner_image' => $url],
+        );
+
+        return $branding->fresh();
+    }
+
+    public function uploadPlatformOverrideLogo(string $tenantId, UploadedFile $file): TenantBranding
+    {
+        $branding = $this->getForTenant($tenantId);
+        $path = $file->store("branding/platform/{$tenantId}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $branding->update(['platform_override_logo_url' => $url]);
+
+        $this->auditLogService->log(
+            'branding.platform_logo_uploaded',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            ['logo_url' => $url],
+        );
+
+        return $branding->fresh();
+    }
+
+    public function uploadPlatformOverrideBanner(string $tenantId, UploadedFile $file): TenantBranding
+    {
+        $branding = $this->getForTenant($tenantId);
+        $path = $file->store("branding/platform/{$tenantId}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $branding->update(['platform_override_banner_image' => $url]);
+
+        $this->auditLogService->log(
+            'branding.platform_banner_uploaded',
+            $tenantId,
+            $this->tenantContext->user()?->id,
+            'tenant_branding',
+            $branding->id,
+            ['banner_image' => $url],
         );
 
         return $branding->fresh();
