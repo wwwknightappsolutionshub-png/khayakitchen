@@ -83,6 +83,7 @@ Read **`docs/IMPLEMENTATION_STANDARD.md`** before writing code. It defines:
 
 - Summary of the last production edit (Phase 1.0.2 SaaS Commercialization, commit `ffa9d2f`)
 - Mandatory rules: extend existing architecture, complete backend + frontend enforcement, audit logging, tests, build gates, and deployment steps
+- **VPS deploy:** `docs/VPS_DEPLOY.md` — always use `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud` on production server
 - QA checklist and forbidden patterns (TODOs, UI-only gates, parallel services)
 
 Cursor agents load this automatically via `.cursor/rules/khayaos-implementation-standard.mdc`.
@@ -101,6 +102,7 @@ Read `/docs` in numerical order before making changes:
 8. `07-implementation-strategy.md` — Build rules
 9. `08-cursor-bootstrap-prompt.md` — Agent bootstrap
 10. **`IMPLEMENTATION_STANDARD.md`** — **Mandatory feature implementation standard (read first)**
+11. **`VPS_DEPLOY.md`** — **Production VPS deploy snippet (git safe.directory required)**
 
 ## Architecture Highlights
 

@@ -35,15 +35,18 @@ The most recent production work landed in commit **`ffa9d2f`** on `main`. It com
 
 ### VPS deploy (production)
 
+> **CRITICAL — Git on VPS:** The repo at `/www/wwwroot/khayaos.prohost.cloud` triggers `fatal: detected dubious ownership` when running as root. **Always prefix git commands** with `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. Never give deploy snippets with bare `git pull` or `git log`. Full reference: `docs/VPS_DEPLOY.md`.
+
 ```bash
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
+git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && /www/server/php/83/bin/php artisan migrate --force
 cd ../frontend && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```
 
-Verify: `git log -1` → `ffa9d2f` (or later). Live checks: platform sidebar shows Feature Library / Billing; customer header shows full-width ticker; featured section reads “Our Featured Meal”.
+Verify: `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline` → latest commit on `main`. Hard-refresh browser after deploy.
 
 ---
 
