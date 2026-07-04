@@ -16,10 +16,12 @@ import {
   Layers,
   Grid3X3,
   Receipt,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ComingSoonModal } from "./ComingSoonModal";
+import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 
 const navItems = [
   { href: "/platform/dashboard", label: "Dashboard", icon: LayoutDashboard, available: true },
@@ -34,25 +36,43 @@ const navItems = [
   { href: "/platform/settings", label: "Settings", icon: Settings, available: true },
 ];
 
-export function PlatformSidebar() {
+export function PlatformSidebar({ mobileOpen = false, onMobileClose }: MobileNavProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [comingSoonLabel, setComingSoonLabel] = useState<string | null>(null);
 
   return (
     <>
-      <aside className="flex h-full w-64 flex-col border-r border-violet-500/20 bg-[#0a0c10]">
+      <aside
+        className={cn(
+          "flex h-full w-64 max-w-[85vw] flex-col border-r border-violet-500/20 bg-[#0a0c10]",
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:max-w-none lg:translate-x-0",
+          mobileOpen
+            ? "translate-x-0"
+            : "-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0",
+        )}
+      >
         <div className="flex h-16 items-center gap-2 border-b border-violet-500/20 px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-sm font-bold text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-sm font-bold text-white">
             <Shield className="h-4 w-4" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-violet-100">KhayaOS Platform</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-violet-100">KhayaOS Platform</p>
             <p className="text-xs text-violet-300/70">Super Admin</p>
           </div>
+          {onMobileClose ? (
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={onMobileClose}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius)] text-violet-200/70 transition-colors hover:bg-violet-500/10 hover:text-violet-100 lg:hidden"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          ) : null}
         </div>
 
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -63,7 +83,10 @@ export function PlatformSidebar() {
                 <button
                   key={item.href}
                   type="button"
-                  onClick={() => setComingSoonLabel(item.label)}
+                  onClick={() => {
+                    onMobileClose?.();
+                    setComingSoonLabel(item.label);
+                  }}
                   className="flex w-full cursor-not-allowed items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium text-muted/50"
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -77,6 +100,7 @@ export function PlatformSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onMobileClose}
                 className={cn(
                   "flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive

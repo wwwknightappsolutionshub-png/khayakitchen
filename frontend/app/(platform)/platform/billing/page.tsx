@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { pricingService } from "@/services/pricing.service";
 import { platformService } from "@/services/platform.service";
 import { formatDate } from "@/lib/utils";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 
 export default function PlatformBillingPage() {
   const queryClient = useQueryClient();
@@ -68,7 +70,7 @@ export default function PlatformBillingPage() {
   const upgradeRequests = upgradesQuery.data?.requests ?? [];
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-6 flex items-center gap-3">
         <Receipt className="h-7 w-7 text-violet-400" />
         <div>
@@ -85,7 +87,7 @@ export default function PlatformBillingPage() {
               Assign plan to tenant
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 lg:grid-cols-5">
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <select
               className="h-10 rounded-[var(--radius)] border border-violet-500/20 bg-[#0a0c10] px-3 text-sm text-violet-100"
               value={assignTenant}
@@ -142,8 +144,9 @@ export default function PlatformBillingPage() {
           <CardHeader>
             <CardTitle className="text-violet-50">Subscriptions</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <CardContent>
+            <TableScroll>
+            <table className={BACKEND_TABLE_CLASS}>
               <thead>
                 <tr className="border-b border-violet-500/20 text-left text-violet-300/60">
                   <th className="pb-3 font-medium">Tenant</th>
@@ -213,6 +216,7 @@ export default function PlatformBillingPage() {
                 )}
               </tbody>
             </table>
+            </TableScroll>
           </CardContent>
         </Card>
 
@@ -220,8 +224,9 @@ export default function PlatformBillingPage() {
           <CardHeader>
             <CardTitle className="text-violet-50">Upgrade requests</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <CardContent>
+            <TableScroll>
+            <table className={BACKEND_TABLE_CLASS}>
               <thead>
                 <tr className="border-b border-violet-500/20 text-left text-violet-300/60">
                   <th className="pb-3 font-medium">Tenant</th>
@@ -262,9 +267,10 @@ export default function PlatformBillingPage() {
                 )}
               </tbody>
             </table>
+            </TableScroll>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </BackendPage>
   );
 }

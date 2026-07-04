@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { dashboardService } from "@/services/dashboard.service";
 import { formatCurrency } from "@/lib/utils";
@@ -21,12 +22,14 @@ export function ReportsContent() {
   const totalOrders = trends?.trends?.reduce((sum, d) => sum + d.orders, 0) ?? 0;
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex items-center gap-3">
-        <BarChart3 className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="text-sm text-muted">Sales and inventory analytics</p>
+    <BackendPage>
+      <header className="backend-header">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-7 w-7 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Reports</h1>
+            <p className="text-sm text-muted">Sales and inventory analytics</p>
+          </div>
         </div>
       </header>
 
@@ -100,6 +103,6 @@ export function ReportsContent() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

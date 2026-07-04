@@ -17,6 +17,11 @@ class PlatformRestaurantStatusController extends Controller
             'status' => ['required', 'in:open,closing_soon,closed,promo_mode'],
             'promo_alerts_enabled' => ['nullable', 'boolean'],
             'reason' => ['nullable', 'string', 'max:500'],
+            'closing_at' => ['nullable', 'date', 'after:now'],
+            'promo_ends_at' => ['nullable', 'date', 'after:now'],
+            'promo_meals' => ['nullable', 'array'],
+            'promo_meals.*.meal_id' => ['required', 'uuid'],
+            'promo_meals.*.discount_percent' => ['required', 'integer', 'min:1', 'max:90'],
         ]);
 
         app(\App\Shared\Tenancy\TenantContext::class)->setTenant(
@@ -29,6 +34,9 @@ class PlatformRestaurantStatusController extends Controller
             $data['promo_alerts_enabled'] ?? null,
             $data['reason'] ?? null,
             true,
+            isset($data['closing_at']) ? \Carbon\Carbon::parse($data['closing_at']) : null,
+            isset($data['promo_ends_at']) ? \Carbon\Carbon::parse($data['promo_ends_at']) : null,
+            $data['promo_meals'] ?? null,
         );
 
         return ApiResponse::success(['status' => $status]);

@@ -12,6 +12,7 @@ import { ApiClientError } from "@/lib/api-client";
 import { authService } from "@/services/auth.service";
 import { platformSettingsService } from "@/services/platform-settings.service";
 import type { PlatformSettings } from "@/lib/types";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 export default function PlatformSettingsPage() {
   const queryClient = useQueryClient();
@@ -121,7 +122,7 @@ export default function PlatformSettingsPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8 flex items-center gap-3">
         <Settings className="h-7 w-7 text-violet-400" />
         <div>
@@ -469,6 +470,6 @@ export default function PlatformSettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </BackendPage>
   );
 }

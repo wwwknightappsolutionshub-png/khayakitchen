@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { ModalPortal } from "@/components/ui/ModalPortal";
+import { ModalFrame } from "@/components/ui/ModalFrame";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import type { PricingFeature } from "@/lib/types";
 import { pricingService } from "@/services/pricing.service";
 import { ApiClientError } from "@/lib/api-client";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 const CATEGORIES = ["core", "operations", "marketing", "analytics", "integrations"];
 
@@ -93,7 +95,7 @@ export default function PlatformFeaturesPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Layers className="h-7 w-7 text-violet-400" />
@@ -120,8 +122,8 @@ export default function PlatformFeaturesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-hidden rounded-[var(--radius)] border border-border">
-                <table className="w-full text-sm">
+              <TableScroll>
+                <table className={BACKEND_TABLE_CLASS}>
                   <thead>
                     <tr className="border-b border-border bg-surface-elevated/50 text-left text-muted">
                       <th className="px-4 py-3 font-medium">Name</th>
@@ -180,7 +182,7 @@ export default function PlatformFeaturesPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             </CardContent>
           </Card>
         ))}
@@ -189,15 +191,8 @@ export default function PlatformFeaturesPage() {
         )}
       </div>
 
-      <ModalPortal open={showModal} onClose={() => setShowModal(false)}>
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/70"
-            onClick={() => setShowModal(false)}
-            aria-label="Close"
-          />
-          <Card className="relative z-10 w-full max-w-lg border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame open={showModal} onClose={() => setShowModal(false)}>
+          <Card className="w-full border-violet-500/20 bg-[#0f1117]">
             <CardHeader>
               <CardTitle>{editing ? "Edit feature" : "Create feature"}</CardTitle>
             </CardHeader>
@@ -292,8 +287,7 @@ export default function PlatformFeaturesPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </ModalPortal>
-    </div>
+      </ModalFrame>
+    </BackendPage>
   );
 }

@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { ModalPortal } from "@/components/ui/ModalPortal";
+import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
   PLAN_LIMIT_KEYS,
   type PlanLimitKey,
@@ -31,6 +31,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { pricingService } from "@/services/pricing.service";
 import { ApiClientError } from "@/lib/api-client";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 type PlanTab = "details" | "limits" | "marketing" | "features";
 
@@ -248,7 +249,7 @@ export default function PlatformPricingPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <CreditCard className="h-7 w-7 text-violet-400" />
@@ -257,7 +258,7 @@ export default function PlatformPricingPage() {
             <p className="text-sm text-violet-200/60">Create and manage subscription plans</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href="/pricing"
             target="_blank"
@@ -412,15 +413,8 @@ export default function PlatformPricingPage() {
         })}
       </div>
 
-      <ModalPortal open={showModal} onClose={closeModal}>
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/70"
-            onClick={closeModal}
-            aria-label="Close"
-          />
-          <Card className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame open={showModal} onClose={closeModal} maxWidth="sm:max-w-2xl">
+          <Card className="flex w-full flex-col border-violet-500/20 bg-[#0f1117]">
             <CardHeader className="shrink-0 border-b border-violet-500/10">
               <CardTitle>{editingPlan ? `Edit ${editingPlan.name}` : "Create plan"}</CardTitle>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -671,8 +665,7 @@ export default function PlatformPricingPage() {
               </Button>
             </div>
           </Card>
-        </div>
-      </ModalPortal>
-    </div>
+      </ModalFrame>
+    </BackendPage>
   );
 }

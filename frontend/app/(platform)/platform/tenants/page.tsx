@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { ModalPortal } from "@/components/ui/ModalPortal";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { ModalFrame } from "@/components/ui/ModalFrame";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { platformService } from "@/services/platform.service";
 import { pricingService } from "@/services/pricing.service";
 import type { RestaurantOperationalStatus } from "@/lib/types";
@@ -205,7 +207,7 @@ export default function PlatformTenantsPage() {
   const tenants = data?.tenants ?? [];
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-violet-50">Tenants</h1>
@@ -227,8 +229,8 @@ export default function PlatformTenantsPage() {
           ) : tenants.length === 0 ? (
             <p className="text-sm text-muted">No tenants registered yet.</p>
           ) : (
-            <div className="overflow-hidden rounded-[var(--radius)] border border-border">
-              <table className="w-full text-sm">
+            <TableScroll>
+              <table className={BACKEND_TABLE_CLASS}>
                 <thead>
                   <tr className="border-b border-border bg-surface-elevated/50 text-left text-muted">
                     <th className="px-4 py-3 font-medium">Name</th>
@@ -296,7 +298,7 @@ export default function PlatformTenantsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           )}
         </CardContent>
       </Card>
@@ -425,7 +427,7 @@ export default function PlatformTenantsPage() {
 
       {entitlementsTenantId && (
         <Card className="mt-6 border-violet-500/20 bg-[#0f1117]">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>Tenant entitlements</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setEntitlementsTenantId(null)}>
               Close
@@ -624,7 +626,7 @@ export default function PlatformTenantsPage() {
               />
               Disable promo alerts for this override
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => overrideMutation.mutate(overrideTenantId)}
                 isLoading={overrideMutation.isPending}
@@ -639,15 +641,8 @@ export default function PlatformTenantsPage() {
         </Card>
       )}
 
-      <ModalPortal open={showCreateModal} onClose={() => setShowCreateModal(false)}>
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/70"
-            onClick={() => setShowCreateModal(false)}
-            aria-label="Close"
-          />
-          <Card className="relative z-10 w-full max-w-lg border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame open={showCreateModal} onClose={() => setShowCreateModal(false)}>
+          <Card className="w-full border-violet-500/20 bg-[#0f1117]">
             <CardHeader>
               <CardTitle>Create tenant</CardTitle>
             </CardHeader>
@@ -705,8 +700,7 @@ export default function PlatformTenantsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </ModalPortal>
-    </div>
+      </ModalFrame>
+    </BackendPage>
   );
 }

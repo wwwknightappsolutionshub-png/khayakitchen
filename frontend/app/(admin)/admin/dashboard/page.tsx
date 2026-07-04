@@ -8,6 +8,7 @@ import { LiveDashboardStatusControl } from "@/components/admin/LiveDashboardStat
 import { TopSellingItems } from "@/components/admin/TopSellingItems";
 import { LiveOrdersFeed } from "@/components/admin/LiveOrdersFeed";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 
 export default function LiveRestaurantDashboardPage() {
@@ -16,8 +17,8 @@ export default function LiveRestaurantDashboardPage() {
   const restaurantStatus = status.data?.status;
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <BackendPage>
+      <header className="backend-header items-start">
         <div className="flex items-center gap-3">
           <Activity className="h-7 w-7 text-primary" />
           <div>
@@ -25,7 +26,9 @@ export default function LiveRestaurantDashboardPage() {
             <p className="text-sm text-muted">Mobile POS · hybrid real-time</p>
           </div>
         </div>
-        <ReconnectingIndicator />
+        <div className="backend-header-actions">
+          <ReconnectingIndicator />
+        </div>
       </header>
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -93,6 +96,6 @@ export default function LiveRestaurantDashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </BackendPage>
   );
 }

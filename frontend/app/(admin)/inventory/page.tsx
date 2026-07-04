@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
+import { ScrollTabs } from "@/components/ui/ScrollTabs";
 import { inventoryService } from "@/services/inventory.service";
 import { cn, formatDate, toNumber } from "@/lib/utils";
 
@@ -130,8 +133,8 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <BackendPage>
+      <header className="backend-header">
         <div className="flex items-center gap-3">
           <Package className="h-7 w-7 text-primary" />
           <div>
@@ -139,20 +142,22 @@ export default function InventoryPage() {
             <p className="text-sm text-muted">Stock levels, movements, and adjustments</p>
           </div>
         </div>
-        <Button onClick={() => setShowAddItem(true)}>
-          <Plus className="h-4 w-4" />
-          Add item
-        </Button>
+        <div className="backend-header-actions">
+          <Button onClick={() => setShowAddItem(true)}>
+            <Plus className="h-4 w-4" />
+            Add item
+          </Button>
+        </div>
       </header>
 
-      <div className="mb-6 flex flex-wrap gap-1 rounded-[var(--radius)] border border-border bg-surface p-1">
+      <ScrollTabs className="mb-6">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
             className={cn(
-              "rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition-colors",
+              "shrink-0 whitespace-nowrap rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition-colors",
               tab === t.id
                 ? "bg-primary/15 text-primary"
                 : "text-muted hover:bg-surface-elevated hover:text-foreground",
@@ -161,7 +166,7 @@ export default function InventoryPage() {
             {t.label}
           </button>
         ))}
-      </div>
+      </ScrollTabs>
 
       {showAddItem && (
         <Card className="mb-6">
@@ -320,8 +325,8 @@ export default function InventoryPage() {
       {(tab === "levels" || tab === "history") && (
         <Card>
           {tab === "history" ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <TableScroll bordered={false}>
+              <table className={BACKEND_TABLE_CLASS}>
                 <thead>
                   <tr className="border-b border-border text-left text-muted">
                     <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Date</th>
@@ -360,10 +365,10 @@ export default function InventoryPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <TableScroll bordered={false}>
+              <table className={BACKEND_TABLE_CLASS}>
                 <thead>
                   <tr className="border-b border-border text-left text-muted">
                     <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Item</th>
@@ -411,10 +416,10 @@ export default function InventoryPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           )}
         </Card>
       )}
-    </div>
+    </BackendPage>
   );
 }

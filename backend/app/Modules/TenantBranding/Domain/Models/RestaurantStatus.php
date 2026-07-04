@@ -22,6 +22,9 @@ class RestaurantStatus extends Model
     protected $fillable = [
         'tenant_id',
         'status',
+        'closing_at',
+        'promo_ends_at',
+        'promo_meals',
         'is_accepting_orders',
         'promo_alerts_enabled',
         'last_promo_alert_at',
@@ -35,6 +38,9 @@ class RestaurantStatus extends Model
             'is_accepting_orders' => 'boolean',
             'promo_alerts_enabled' => 'boolean',
             'last_promo_alert_at' => 'datetime',
+            'closing_at' => 'datetime',
+            'promo_ends_at' => 'datetime',
+            'promo_meals' => 'array',
         ];
     }
 }

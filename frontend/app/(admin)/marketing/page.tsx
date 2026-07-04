@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, Send } from "lucide-react";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { campaignService } from "@/services/campaign.service";
 import { useAuthStore } from "@/stores/auth-store";
 import type { CreateCampaignPayload } from "@/services/campaign.service";
@@ -46,8 +48,8 @@ export default function MarketingPage() {
   const campaigns = data?.campaigns ?? [];
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6">
+    <BackendPage>
+      <header className="backend-header">
         <div className="flex items-center gap-3">
           <Megaphone className="h-7 w-7 text-primary" />
           <div>
@@ -134,8 +136,8 @@ export default function MarketingPage() {
         <CardHeader>
           <CardTitle className="text-lg">Campaigns</CardTitle>
         </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <TableScroll bordered={false}>
+          <table className={BACKEND_TABLE_CLASS}>
             <thead>
               <tr className="border-b border-border text-left text-muted">
                 <th className="px-4 py-3 font-medium">Title</th>
@@ -183,8 +185,8 @@ export default function MarketingPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

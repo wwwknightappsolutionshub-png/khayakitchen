@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCustomerHome } from "@/hooks/useCustomerHome";
-import { HomeStatusHero } from "@/components/customer/HomeStatusHero";
 import { FeaturedMealCard } from "@/components/customer/FeaturedMealCard";
 import { PopularMealsRow } from "@/components/customer/PopularMealsRow";
+import { PromoMealsSection } from "@/components/customer/PromoMealsSection";
 import { PopularAddonsChips } from "@/components/customer/PopularAddonsChips";
 import { MealCustomizeFlow } from "@/components/customer/MealCustomizeFlow";
+import { usePromoMeals } from "@/hooks/usePromoMeals";
 import type { Meal } from "@/lib/types";
 import type { AddonPopularity } from "@/lib/order-analytics";
+import type { PromoMealItem } from "@/lib/types";
 
 export default function CustomerHomePage() {
   const {
@@ -23,10 +25,16 @@ export default function CustomerHomePage() {
     isClosed,
     hasLiveSalesData,
   } = useCustomerHome();
+  const { isPromo, promoEndsAt, promoItems, isClosed: promoClosed, isLoading: promoLoading, resolveMealForCustomize } =
+    usePromoMeals();
 
   const [customizingMeal, setCustomizingMeal] = useState<Meal | null>(null);
-  const status = storefront.data?.status?.status ?? "open";
   const isLoading = storefront.isLoading || menu.isLoading || analytics.isLoading;
+
+  const handlePromoSelect = (item: PromoMealItem) => {
+    const meal = resolveMealForCustomize(item);
+    if (meal) setCustomizingMeal(meal);
+  };
 
   const handleAddonSelect = (addon: AddonPopularity) => {
     if (!addon.mealId) return;
@@ -36,8 +44,6 @@ export default function CustomerHomePage() {
 
   return (
     <div className="customer-animate-in space-y-8 px-4 pt-4 pb-4">
-      <HomeStatusHero status={status} isLoading={storefront.isLoading} />
-
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="featured-section-title text-lg font-bold tracking-tight">Our Featured Meal</h2>
@@ -54,8 +60,18 @@ export default function CustomerHomePage() {
         />
       </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Popular today</h2>
+      {isPromo && (
+        <PromoMealsSection
+          promoEndsAt={promoEndsAt}
+          items={promoItems}
+          isLoading={promoLoading || menu.isLoading}
+          isClosed={promoClosed}
+          onSelect={handlePromoSelect}
+        />
+      )}
+
+      <section className="overflow-hidden">
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">Popular today</h2>
         <PopularMealsRow
           meals={popularMeals}
           meta={popularMealsMeta}

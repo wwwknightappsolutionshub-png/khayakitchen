@@ -36,21 +36,21 @@ export function MenuCard({ meal, onSelect, highlighted, priority }: MenuCardProp
           sizes="(max-width: 512px) 100vw, 512px"
           priority={priority}
         />
+      </div>
+
+      <div className="relative p-4">
         {badges.length > 0 && (
-          <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
             {badges.map((badge) => (
               <MealBadge key={badge} type={badge} />
             ))}
           </div>
         )}
-      </div>
-
-      <div className="relative p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold leading-tight">{meal.name}</h3>
             {meal.description && (
-              <p className="mt-1 truncate text-sm text-[var(--muted)]">{meal.description}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-[var(--muted)]">{meal.description}</p>
             )}
             {pairing && (
               <p className="mt-2 text-xs text-[var(--secondary)]">{pairing}</p>

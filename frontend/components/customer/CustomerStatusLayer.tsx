@@ -1,10 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { RestaurantStatusBanner } from "@/components/customer/RestaurantStatusBanner";
-
+/** Status is shown inline in CustomerHeader — this layer is kept for layout compatibility. */
 export function CustomerStatusLayer() {
-  const pathname = usePathname();
-  if (pathname === "/home" || pathname === "/") return null;
-  return <RestaurantStatusBanner />;
+  return null;
 }

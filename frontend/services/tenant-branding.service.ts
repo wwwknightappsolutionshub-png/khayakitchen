@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { RestaurantOperationalStatus, Storefront, TenantBranding } from "@/lib/types";
+import type { PromoMealSelection, RestaurantOperationalStatus, Storefront, TenantBranding } from "@/lib/types";
 
 export const tenantBrandingService = {
   async getStorefront(): Promise<Storefront> {
@@ -21,6 +21,9 @@ export const tenantBrandingService = {
   async updateRestaurantStatus(payload: {
     status: RestaurantOperationalStatus;
     promo_alerts_enabled?: boolean;
+    closing_at?: string;
+    promo_ends_at?: string;
+    promo_meals?: PromoMealSelection[];
   }) {
     return api.patch<{ status: Storefront["status"] }>("/restaurant-status", payload);
   },

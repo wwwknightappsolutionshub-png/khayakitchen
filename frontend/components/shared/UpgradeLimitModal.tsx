@@ -6,7 +6,7 @@ import { ArrowUpCircle, Mail, Sparkles, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { ModalPortal } from "@/components/ui/ModalPortal";
+import { ModalFrame } from "@/components/ui/ModalFrame";
 import { formatLimitLabel, type LimitErrorInfo } from "@/lib/limit-error";
 import { formatCurrency } from "@/lib/utils";
 import { useEntitlements } from "@/hooks/useEntitlements";
@@ -49,15 +49,8 @@ export function UpgradeLimitModal({ open, onClose, limitError }: UpgradeLimitMod
   const recommendedName = recommended?.name ?? limitError.recommendedPlanName;
 
   return (
-    <ModalPortal open={open} onClose={onClose}>
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-        <button
-          type="button"
-          className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-          onClick={onClose}
-          aria-label="Close"
-        />
-        <Card className="relative z-10 w-full max-w-lg overflow-hidden border-violet-500/30 bg-gradient-to-b from-[#14141f] to-[#0f1117] shadow-2xl shadow-violet-950/50">
+    <ModalFrame open={open} onClose={onClose}>
+        <Card className="overflow-hidden border-violet-500/30 bg-gradient-to-b from-[#14141f] to-[#0f1117] shadow-2xl shadow-violet-950/50">
           <div
             className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-amber-400"
             aria-hidden
@@ -173,7 +166,6 @@ export function UpgradeLimitModal({ open, onClose, limitError }: UpgradeLimitMod
             </p>
           </CardContent>
         </Card>
-      </div>
-    </ModalPortal>
+    </ModalFrame>
   );
 }

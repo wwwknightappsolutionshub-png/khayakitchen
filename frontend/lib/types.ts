@@ -421,6 +421,21 @@ export interface PublicPricingPlan {
   features: Pick<PricingFeature, "key" | "name" | "category" | "icon">[];
 }
 
+export interface PromoMealItem {
+  meal_id: string;
+  discount_percent: number;
+  name?: string;
+  description?: string;
+  image_url?: string;
+  base_price?: number | string;
+  promo_price?: number | string;
+}
+
+export interface PromoMealSelection {
+  meal_id: string;
+  discount_percent: number;
+}
+
 export type RestaurantOperationalStatus = "open" | "closing_soon" | "closed" | "promo_mode";
 
 export interface TenantBranding {
@@ -455,6 +470,10 @@ export interface RestaurantStatus {
   status: RestaurantOperationalStatus;
   is_accepting_orders: boolean;
   promo_alerts_enabled: boolean;
+  closing_at?: string | null;
+  promo_ends_at?: string | null;
+  promo_meals?: PromoMealItem[];
+  updated_at?: string;
 }
 
 export interface Storefront {

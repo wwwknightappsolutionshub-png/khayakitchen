@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { crmService } from "@/services/crm.service";
@@ -16,12 +17,14 @@ export default function LoyaltyPage() {
   const customers = customersData?.customers?.slice(0, 10) ?? [];
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex items-center gap-3">
-        <Gift className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Loyalty</h1>
-          <p className="text-sm text-muted">Points balances and rewards</p>
+    <BackendPage>
+      <header className="backend-header">
+        <div className="flex items-center gap-3">
+          <Gift className="h-7 w-7 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Loyalty</h1>
+            <p className="text-sm text-muted">Points balances and rewards</p>
+          </div>
         </div>
       </header>
 
@@ -37,7 +40,7 @@ export default function LoyaltyPage() {
           </Card>
         )}
       </div>
-    </div>
+    </BackendPage>
   );
 }
 

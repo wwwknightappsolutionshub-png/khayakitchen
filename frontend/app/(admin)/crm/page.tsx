@@ -2,9 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { crmService } from "@/services/crm.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -22,8 +24,8 @@ export default function CrmPage() {
   const customers = customersData?.customers ?? [];
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6">
+    <BackendPage>
+      <header className="backend-header">
         <div className="flex items-center gap-3">
           <Users className="h-7 w-7 text-primary" />
           <div>
@@ -86,8 +88,8 @@ export default function CrmPage() {
       )}
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <TableScroll bordered={false}>
+          <table className={BACKEND_TABLE_CLASS}>
             <thead>
               <tr className="border-b border-border text-left text-muted">
                 <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Name</th>
@@ -135,8 +137,8 @@ export default function CrmPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

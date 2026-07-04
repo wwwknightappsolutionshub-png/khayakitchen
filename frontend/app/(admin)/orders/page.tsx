@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { ordersService } from "@/services/orders.service";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 
@@ -30,10 +32,12 @@ export default function OrdersPage() {
   const orders = data?.orders ?? [];
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <p className="text-sm text-muted">Manage and update order status</p>
+    <BackendPage>
+      <header className="backend-header">
+        <div>
+          <h1 className="text-2xl font-bold">Orders</h1>
+          <p className="text-sm text-muted">Manage and update order status</p>
+        </div>
       </header>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -54,8 +58,8 @@ export default function OrdersPage() {
       </div>
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <TableScroll bordered={false}>
+          <table className={BACKEND_TABLE_CLASS}>
             <thead>
               <tr className="border-b border-border text-left text-muted">
                 <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Order</th>
@@ -117,8 +121,8 @@ export default function OrdersPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

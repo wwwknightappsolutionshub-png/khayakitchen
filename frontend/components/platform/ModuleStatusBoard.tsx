@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import type { ModuleStatus } from "@/lib/types";
 import { ComingSoonModal } from "./ComingSoonModal";
 
@@ -55,8 +56,8 @@ export function ModuleStatusBoard({ modules, onLockedClick }: ModuleStatusBoardP
 
   return (
     <>
-      <div className="overflow-hidden rounded-[var(--radius)] border border-border">
-        <table className="w-full text-sm">
+      <TableScroll>
+        <table className={BACKEND_TABLE_CLASS}>
           <thead>
             <tr className="border-b border-border bg-surface-elevated/50 text-left text-muted">
               <th className="px-4 py-3 font-medium">Module</th>
@@ -92,7 +93,7 @@ export function ModuleStatusBoard({ modules, onLockedClick }: ModuleStatusBoardP
             })}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
 
       <ComingSoonModal
         open={lockedModule !== null}

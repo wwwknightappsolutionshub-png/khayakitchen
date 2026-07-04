@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { LiveDashboardStatusControl } from "@/components/admin/LiveDashboardStatusControl";
 import { tenantBrandingService } from "@/services/tenant-branding.service";
 import { useAuthStore } from "@/stores/auth-store";
 import type { RestaurantOperationalStatus } from "@/lib/types";
@@ -98,8 +100,8 @@ export default function BrandingPage() {
   };
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <BackendPage>
+      <header className="backend-header items-start">
         <div className="flex items-center gap-3">
           <Store className="h-7 w-7 text-primary" />
           <div>
@@ -107,9 +109,11 @@ export default function BrandingPage() {
             <p className="text-sm text-muted">Control how customers see your storefront</p>
           </div>
         </div>
-        <Link href="/menu" target="_blank">
-          <Button variant="secondary">Preview menu page</Button>
-        </Link>
+        <div className="backend-header-actions">
+          <Link href="/menu" target="_blank">
+            <Button variant="secondary">Preview menu page</Button>
+          </Link>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -122,36 +126,12 @@ export default function BrandingPage() {
               <p className="text-sm text-muted">Loading status…</p>
             ) : (
               <>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {STATUS_OPTIONS.map((option) => {
-                    const active = status?.status === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        disabled={!canManage || statusMutation.isPending}
-                        onClick={() =>
-                          statusMutation.mutate({
-                            status: option.value,
-                            promo_alerts_enabled: status?.promo_alerts_enabled,
-                          })
-                        }
-                        className={cn(
-                          "rounded-[var(--radius)] border p-4 text-left transition-colors",
-                          active
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/30",
-                          !canManage && "cursor-not-allowed opacity-60",
-                        )}
-                      >
-                        <p className="font-medium">
-                          {option.emoji} {option.label}
-                        </p>
-                        <p className="mt-1 text-xs text-muted">{option.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <LiveDashboardStatusControl
+                  currentStatus={status?.status}
+                  isAcceptingOrders={status?.is_accepting_orders}
+                  disabled={!canManage}
+                  showDescriptions
+                />
 
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-muted">Accepting orders:</span>
@@ -362,6 +342,6 @@ export default function BrandingPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

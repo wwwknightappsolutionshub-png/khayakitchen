@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ApiClientError } from "@/lib/api-client";
@@ -104,12 +106,14 @@ export default function SettingsPage() {
   const canManageStaff = user?.role === "owner" || user?.role === "manager";
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex items-center gap-3">
-        <Settings className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-sm text-muted">Account and system configuration</p>
+    <BackendPage>
+      <header className="backend-header">
+        <div className="flex items-center gap-3">
+          <Settings className="h-7 w-7 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Settings</h1>
+            <p className="text-sm text-muted">Account and system configuration</p>
+          </div>
         </div>
       </header>
 
@@ -259,7 +263,7 @@ export default function SettingsPage() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               <CardTitle>Staff users</CardTitle>
@@ -325,8 +329,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <TableScroll bordered={false}>
+              <table className={BACKEND_TABLE_CLASS}>
                 <thead>
                   <tr className="border-b border-border text-left text-muted">
                     <th className="px-4 py-3 font-medium">Name</th>
@@ -359,7 +363,7 @@ export default function SettingsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           </CardContent>
         </Card>
 
@@ -398,6 +402,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </BackendPage>
   );
 }

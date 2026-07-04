@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ModuleStatusBoard } from "@/components/platform/ModuleStatusBoard";
 import { ModuleTile } from "@/components/platform/ModuleTile";
 import { platformService } from "@/services/platform.service";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 export default function PlatformModulesPage() {
   const { data, isLoading } = useQuery({
@@ -19,7 +20,7 @@ export default function PlatformModulesPage() {
   );
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-violet-50">Module Registry</h1>
         <p className="text-sm text-violet-200/60">
@@ -66,6 +67,6 @@ export default function PlatformModulesPage() {
           </div>
         </section>
       )}
-    </div>
+    </BackendPage>
   );
 }

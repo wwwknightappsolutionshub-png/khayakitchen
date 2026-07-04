@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MenuCard } from "@/components/customer/MenuCard";
 import { MealCustomizeFlow } from "@/components/customer/MealCustomizeFlow";
+import { PromoMealsSection } from "@/components/customer/PromoMealsSection";
 import { SocialProof } from "@/components/customer/SocialProof";
 import { useMenu } from "@/hooks/useMenu";
-import type { Meal } from "@/lib/types";
+import { usePromoMeals } from "@/hooks/usePromoMeals";
+import type { Meal, PromoMealItem } from "@/lib/types";
 
 function MenuCardSkeleton() {
   return (
@@ -26,15 +28,34 @@ export default function MenuPage() {
   const highlightId = searchParams.get("meal");
   const [customizingMeal, setCustomizingMeal] = useState<Meal | null>(null);
   const { data, isLoading, error } = useMenu();
+  const { isPromo, promoEndsAt, promoItems, isClosed, isLoading: promoLoading, resolveMealForCustomize } =
+    usePromoMeals();
 
   const meals = data?.meals ?? [];
 
+  const handlePromoSelect = (item: PromoMealItem) => {
+    const meal = resolveMealForCustomize(item);
+    if (meal) setCustomizingMeal(meal);
+  };
+
   return (
-    <div className="customer-animate-in px-4 pt-6">
+    <div className="customer-animate-in overflow-hidden px-4 pt-6">
       <header className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Menu</h1>
         <SocialProof className="mt-2" />
       </header>
+
+      {isPromo && (
+        <div className="mb-6">
+          <PromoMealsSection
+            promoEndsAt={promoEndsAt}
+            items={promoItems}
+            isLoading={promoLoading || isLoading}
+            isClosed={isClosed}
+            onSelect={handlePromoSelect}
+          />
+        </div>
+      )}
 
       {isLoading && (
         <div className="space-y-4">

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { platformService } from "@/services/platform.service";
 import { formatDate } from "@/lib/utils";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 
 export default function PlatformAuditPage() {
   const { data, isLoading } = useQuery({
@@ -17,7 +19,7 @@ export default function PlatformAuditPage() {
   const logs = data?.logs ?? [];
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8">
         <div className="flex items-center gap-3">
           <ClipboardList className="h-7 w-7 text-violet-400" />
@@ -29,8 +31,8 @@ export default function PlatformAuditPage() {
       </header>
 
       <Card className="border-violet-500/15 bg-[#0f1117]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <TableScroll>
+          <table className={BACKEND_TABLE_CLASS}>
             <thead>
               <tr className="border-b border-border bg-surface-elevated/50 text-left text-muted">
                 <th className="px-4 py-3 font-medium">Time</th>
@@ -81,8 +83,8 @@ export default function PlatformAuditPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </Card>
-    </div>
+    </BackendPage>
   );
 }

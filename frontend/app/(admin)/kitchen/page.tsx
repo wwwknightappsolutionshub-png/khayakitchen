@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { StatusBadge, getKitchenCardClass } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 import { kitchenService } from "@/services/kitchen.service";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
@@ -51,8 +52,8 @@ export default function KitchenPage() {
   const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <BackendPage>
+      <header className="backend-header items-start">
         <div className="flex items-center gap-3">
           <ChefHat className="h-8 w-8 text-primary" />
           <div>
@@ -60,7 +61,9 @@ export default function KitchenPage() {
             <p className="text-sm text-muted">New orders appear immediately · tap-friendly</p>
           </div>
         </div>
-        <ReconnectingIndicator />
+        <div className="backend-header-actions">
+          <ReconnectingIndicator />
+        </div>
       </header>
 
       {newTicketId && (
@@ -133,7 +136,7 @@ export default function KitchenPage() {
           </div>
         </div>
       )}
-    </div>
+    </BackendPage>
   );
 }
 

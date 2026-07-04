@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { platformService } from "@/services/platform.service";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 export default function PlatformFeatureFlagsPage() {
   const queryClient = useQueryClient();
@@ -52,7 +53,7 @@ export default function PlatformFeatureFlagsPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-violet-50">Feature Flags</h1>
         <p className="text-sm text-violet-200/60">
@@ -72,7 +73,7 @@ export default function PlatformFeatureFlagsPage() {
 
             return (
               <Card key={tenant.tenant_id} className="border-violet-500/15 bg-[#0f1117]">
-                <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
                   <div>
                     <CardTitle>{tenant.tenant_name}</CardTitle>
                     <p className="text-xs text-muted">
@@ -81,6 +82,7 @@ export default function PlatformFeatureFlagsPage() {
                   </div>
                   {hasPending && (
                     <Button
+                      className="w-full sm:w-auto"
                       size="sm"
                       onClick={() => saveTenant(tenant.tenant_id)}
                       isLoading={mutation.isPending}
@@ -116,6 +118,6 @@ export default function PlatformFeatureFlagsPage() {
           })}
         </div>
       )}
-    </div>
+    </BackendPage>
   );
 }

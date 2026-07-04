@@ -26,23 +26,32 @@ export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
   const triggerCartBounce = useUiStore((s) => s.triggerCartBounce);
   const [step, setStep] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [radioSelections, setRadioSelections] = useState<Record<string, MealOption>>({});
+  const [configureSelections, setConfigureSelections] = useState<Record<string, MealOption[]>>({});
   const [checkboxSelections, setCheckboxSelections] = useState<Record<string, MealOption[]>>({});
 
-  const radioGroups = useMemo(() => getRadioOptionGroups(meal.options), [meal.options]);
+  const configureGroups = useMemo(() => getRadioOptionGroups(meal.options), [meal.options]);
   const checkboxGroups = useMemo(() => getCheckboxOptionGroups(meal.options), [meal.options]);
 
   const allSelectedOptions = useMemo(() => {
-    const fromRadio = Object.values(radioSelections);
-    const fromCheckbox = Object.values(checkboxSelections).flat();
-    return [...fromRadio, ...fromCheckbox];
-  }, [radioSelections, checkboxSelections]);
+    const fromConfigure = Object.values(configureSelections).flat();
+    const fromExtras = Object.values(checkboxSelections).flat();
+    return [...fromConfigure, ...fromExtras];
+  }, [configureSelections, checkboxSelections]);
 
   const optionsTotal = allSelectedOptions.reduce((sum, o) => sum + toNumber(o.price_delta), 0);
   const lineTotal = (toNumber(meal.base_price) + optionsTotal) * quantity;
 
-  const selectRadio = (groupName: string, option: MealOption) => {
-    setRadioSelections((prev) => ({ ...prev, [groupName]: option }));
+  const toggleConfigure = (groupName: string, option: MealOption) => {
+    setConfigureSelections((prev) => {
+      const current = prev[groupName] ?? [];
+      const exists = current.some((o) => o.id === option.id);
+      return {
+        ...prev,
+        [groupName]: exists
+          ? current.filter((o) => o.id !== option.id)
+          : [...current, option],
+      };
+    });
   };
 
   const toggleCheckbox = (groupName: string, option: MealOption) => {
@@ -150,23 +159,26 @@ export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
                 </p>
                 <h2 className="mt-2 text-lg font-semibold">{meal.name}</h2>
 
-                {radioGroups.length === 0 ? (
+                {configureGroups.length === 0 ? (
                   <p className="mt-6 text-sm text-[var(--muted)]">
                     Standard preparation — no options to configure.
                   </p>
                 ) : (
                   <div className="mt-6 space-y-6">
-                    {radioGroups.map((group) => (
+                    {configureGroups.map((group) => (
                       <div key={group.group}>
-                        <h3 className="mb-3 text-sm font-semibold">{group.group}</h3>
+                        <h3 className="mb-1 text-sm font-semibold">{group.group}</h3>
+                        <p className="mb-3 text-xs text-[var(--muted)]">Select one or more</p>
                         <div className="space-y-2">
                           {group.options.map((option) => {
-                            const selected = radioSelections[group.group]?.id === option.id;
+                            const selected = (configureSelections[group.group] ?? []).some(
+                              (o) => o.id === option.id,
+                            );
                             return (
                               <button
                                 key={option.id}
                                 type="button"
-                                onClick={() => selectRadio(group.group, option)}
+                                onClick={() => toggleConfigure(group.group, option)}
                                 className={cn(
                                   "customer-press flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors duration-200",
                                   selected
@@ -176,14 +188,19 @@ export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
                               >
                                 <span
                                   className={cn(
-                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
+                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                                     selected
-                                      ? "border-[var(--primary)]"
+                                      ? "border-[var(--primary)] bg-[var(--primary)]"
                                       : "border-[var(--muted)]",
                                   )}
                                 >
                                   {selected && (
-                                    <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
+                                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[var(--background)]">
+                                      <path
+                                        fill="currentColor"
+                                        d="M10.3 3.3a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4L4.6 7.6l4.3-4.3a1 1 0 0 1 1.4 0z"
+                                      />
+                                    </svg>
                                   )}
                                 </span>
                                 <span className="flex-1">{option.name}</span>

@@ -7,6 +7,7 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { ModuleStatusBoard } from "@/components/platform/ModuleStatusBoard";
 import { ModuleTile } from "@/components/platform/ModuleTile";
 import { platformService } from "@/services/platform.service";
+import { BackendPage } from "@/components/shared/BackendPage";
 
 export default function PlatformDashboardPage() {
   const { data: overview, isLoading: overviewLoading } = useQuery({
@@ -23,7 +24,7 @@ export default function PlatformDashboardPage() {
   const comingSoon = modules.filter((m) => m.status === "coming-soon");
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-8">
         <p className="text-xs font-medium uppercase tracking-widest text-violet-400">
           Platform Control
@@ -160,6 +161,6 @@ export default function PlatformDashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </BackendPage>
   );
 }

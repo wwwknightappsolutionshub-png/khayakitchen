@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
+import { BackendPage } from "@/components/shared/BackendPage";
 import { UpgradeLimitModal } from "@/components/shared/UpgradeLimitModal";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { menuAdminService } from "@/services/menu-admin.service";
 import type { AdminMeal, AdminOptionGroup } from "@/lib/types";
 import { parseLimitError, type LimitErrorInfo } from "@/lib/limit-error";
@@ -162,8 +164,8 @@ export default function MenuAdminPage() {
   };
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <BackendPage>
+      <header className="backend-header">
         <div className="flex items-center gap-3">
           <UtensilsCrossed className="h-7 w-7 text-primary" />
           <div>
@@ -171,10 +173,12 @@ export default function MenuAdminPage() {
             <p className="text-sm text-muted">Meals, option groups, and customizations</p>
           </div>
         </div>
-        <Button onClick={openCreateMeal}>
-          <Plus className="h-4 w-4" />
-          Add meal
-        </Button>
+        <div className="backend-header-actions">
+          <Button onClick={openCreateMeal}>
+            <Plus className="h-4 w-4" />
+            Add meal
+          </Button>
+        </div>
       </header>
 
       {showMealForm && (
@@ -267,8 +271,8 @@ export default function MenuAdminPage() {
       )}
 
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <TableScroll bordered={false}>
+          <table className={BACKEND_TABLE_CLASS}>
             <thead>
               <tr className="border-b border-border text-left text-muted">
                 <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Meal</th>
@@ -324,7 +328,7 @@ export default function MenuAdminPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </Card>
 
       <UpgradeLimitModal
@@ -332,7 +336,7 @@ export default function MenuAdminPage() {
         onClose={() => setShowLimitModal(false)}
         limitError={limitError}
       />
-    </div>
+    </BackendPage>
   );
 }
 
@@ -434,7 +438,7 @@ function MealRow({
                   label="New group name"
                   value={groupForm.name}
                   onChange={(e) => onGroupFormChange({ ...groupForm, name: e.target.value })}
-                  className="min-w-[160px] flex-1"
+                  className="w-full min-w-0 sm:min-w-[160px] flex-1"
                 />
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Type</label>
@@ -490,7 +494,7 @@ function OptionGroupBlock({
 
   return (
     <div className="rounded-[var(--radius)] border border-border bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="font-medium">{group.name}</span>
           <Badge variant="outline" className="capitalize">

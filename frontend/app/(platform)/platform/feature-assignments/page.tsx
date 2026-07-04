@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import type { PricingFeature, PricingPlan } from "@/lib/types";
+import { BackendPage } from "@/components/shared/BackendPage";
+import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { pricingService } from "@/services/pricing.service";
 
 export default function PlatformFeatureAssignmentsPage() {
@@ -84,7 +86,7 @@ export default function PlatformFeatureAssignmentsPage() {
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   return (
-    <div className="animate-fade-in">
+    <BackendPage>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Grid3X3 className="h-7 w-7 text-violet-400" />
@@ -125,13 +127,14 @@ export default function PlatformFeatureAssignmentsPage() {
             )}
           </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {plansQuery.isLoading || featuresQuery.isLoading ? (
             <p className="text-sm text-muted">Loading matrix…</p>
           ) : features.length === 0 ? (
             <p className="text-sm text-muted">Add features in the Feature Library first.</p>
           ) : (
-            <table className="w-full min-w-[640px] text-sm">
+            <TableScroll>
+            <table className={BACKEND_TABLE_CLASS}>
               <thead>
                 <tr className="border-b border-violet-500/20 text-left text-violet-300/60">
                   <th className="sticky left-0 bg-[#0f1118] px-3 py-3 font-medium">Feature</th>
@@ -168,6 +171,7 @@ export default function PlatformFeatureAssignmentsPage() {
                 ))}
               </tbody>
             </table>
+            </TableScroll>
           )}
           {plans.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-violet-500/10 pt-4">
@@ -188,6 +192,6 @@ export default function PlatformFeatureAssignmentsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </BackendPage>
   );
 }
