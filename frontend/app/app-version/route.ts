@@ -12,6 +12,7 @@ function readBuildId(): string {
   }
 }
 
+/** Not under /api — nginx proxies /api/* to Laravel on this VPS. */
 export async function GET() {
   const build = readBuildId();
 
