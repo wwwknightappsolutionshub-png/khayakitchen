@@ -1,5 +1,8 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
 
+/** Static file first — survives nginx /api routing; route handler is dev fallback. */
+const VERSION_URLS = ["/app-version.json", "/app-version"] as const;
+
 export async function clearPwaCaches(): Promise<void> {
   if (!("caches" in window)) return;
   const keys = await caches.keys();
@@ -24,14 +27,18 @@ export async function hardResetPwa(nextBuildId?: string): Promise<void> {
 }
 
 export async function fetchServerBuildId(): Promise<string | null> {
-  try {
-    const response = await fetch("/app-version", { cache: "no-store" });
-    if (!response.ok) return null;
-    const payload = (await response.json()) as { build?: string };
-    return payload.build ?? null;
-  } catch {
-    return null;
+  for (const url of VERSION_URLS) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as { build?: string };
+      if (payload.build) return payload.build;
+    } catch {
+      // try next source
+    }
   }
+
+  return null;
 }
 
 /**

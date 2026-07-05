@@ -60,11 +60,27 @@ After deploy:
 **Verify after deploy:**
 
 ```bash
-curl -s http://127.0.0.1:3004/app-version
-curl -s https://khayaos.prohost.cloud/app-version
+curl -s http://127.0.0.1:3004/app-version.json
+curl -s https://khayaos.prohost.cloud/app-version.json
 ```
 
-Both must return JSON like `{"build":"..."}` — not HTML.
+Both must return JSON like `{"build":"..."}` — not HTML or `Not found`.
+
+If the public URL fails but port 3004 works, add this **before** the Laravel `/api` block in aaPanel → Website → Config:
+
+```nginx
+location = /app-version.json {
+    proxy_pass http://127.0.0.1:3004;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+
+location = /app-version {
+    proxy_pass http://127.0.0.1:3004;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+```
+
+Then `nginx -t && nginx -s reload`.
 
 ---
 
@@ -74,6 +90,11 @@ KhayaOS frontend nginx `proxy_pass` should target **port 3004**. Ensure HTML and
 
 ```nginx
 location /sw.js {
+    proxy_pass http://127.0.0.1:3004;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+
+location /app-version.json {
     proxy_pass http://127.0.0.1:3004;
     add_header Cache-Control "no-cache, no-store, must-revalidate";
 }
