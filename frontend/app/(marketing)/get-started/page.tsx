@@ -3,6 +3,8 @@
 import { Suspense, useState } from "react";
 import { SignupWizard } from "@/components/marketing/SignupWizard";
 import { KitchenSignupSplash } from "@/components/marketing/KitchenSignupSplash";
+import { marketingTheme } from "@/lib/marketing-theme";
+import { cn } from "@/lib/utils";
 
 function GetStartedContent() {
   const [showSplash, setShowSplash] = useState(true);
@@ -12,7 +14,9 @@ function GetStartedContent() {
       {showSplash && <KitchenSignupSplash onComplete={() => setShowSplash(false)} />}
       <div className={showSplash ? "invisible" : "visible"}>
         <div className="mb-8 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">Get started</p>
+          <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+            Get started
+          </p>
           <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
             Discover KhayaOS, then launch your kitchen
           </h1>

@@ -7,6 +7,8 @@ import { z } from "zod";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { PublicPricingPlan } from "@/lib/types";
+import { marketingTheme } from "@/lib/marketing-theme";
+import { cn } from "@/lib/utils";
 
 const signupSchema = z
   .object({
@@ -130,7 +132,9 @@ export function EnterpriseSignupForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">Step 5 of 5</p>
+        <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+          Step 5 of 5
+        </p>
         <h2 className="mt-2 text-3xl font-bold tracking-tight text-white">Create your KhayaOS workspace</h2>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400">
           Enterprise onboarding captures the business, operational, branding, and account details KhayaOS needs to
@@ -138,7 +142,7 @@ export function EnterpriseSignupForm({
         </p>
       </div>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle
           title="Business identity"
           description="Legal and public-facing details for your restaurant workspace."
@@ -174,7 +178,7 @@ export function EnterpriseSignupForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Location & locale" description="Where you operate and how you price orders." />
         <div className="grid gap-4 md:grid-cols-2">
           <Input label="Country" error={errors.country?.message} {...register("country")} />
@@ -191,7 +195,7 @@ export function EnterpriseSignupForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Owner account" description="Primary administrator credentials for your tenant." />
         <div className="grid gap-4 md:grid-cols-2">
           <Input label="Owner full name" error={errors.owner_name?.message} {...register("owner_name")} />
@@ -218,18 +222,18 @@ export function EnterpriseSignupForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Operations profile" description="How your kitchen runs day to day." />
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <p className="mb-2 text-sm font-medium">Order types offered</p>
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm text-zinc-300">
-                <input type="checkbox" className="accent-violet-500" {...register("order_types_pickup")} />
+                <input type="checkbox" className={marketingTheme.checkbox} {...register("order_types_pickup")} />
                 Pickup
               </label>
               <label className="flex items-center gap-2 text-sm text-zinc-300">
-                <input type="checkbox" className="accent-violet-500" {...register("order_types_delivery")} />
+                <input type="checkbox" className={marketingTheme.checkbox} {...register("order_types_delivery")} />
                 Delivery
               </label>
             </div>
@@ -265,7 +269,7 @@ export function EnterpriseSignupForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Branding & plan" description="Launch appearance and subscription tier." />
         <div className="grid gap-4 md:grid-cols-2">
           <Input label="Tagline (optional)" error={errors.tagline?.message} {...register("tagline")} />
@@ -289,9 +293,9 @@ export function EnterpriseSignupForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[#141418] p-5">
+      <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <label className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-violet-500" {...register("terms_accepted")} />
+          <input type="checkbox" className={cn("mt-1", marketingTheme.checkbox)} {...register("terms_accepted")} />
           <span className="text-sm text-zinc-300">
             I agree to the KhayaOS terms of service and confirm the information provided is accurate for tenant
             provisioning.
@@ -301,14 +305,14 @@ export function EnterpriseSignupForm({
           <p className="text-sm text-red-400">{errors.terms_accepted.message}</p>
         ) : null}
         <label className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-violet-500" {...register("marketing_opt_in")} />
+          <input type="checkbox" className={cn("mt-1", marketingTheme.checkbox)} {...register("marketing_opt_in")} />
           <span className="text-sm text-zinc-300">
             Keep me updated about KhayaOS product news, campaigns, and best practices.
           </span>
         </label>
       </section>
 
-      <Button type="submit" className="w-full sm:w-auto" size="lg" isLoading={isSubmitting}>
+      <Button type="submit" className={cn("w-full sm:w-auto", marketingTheme.primaryButton)} size="lg" isLoading={isSubmitting}>
         Create my KhayaOS workspace
       </Button>
     </form>

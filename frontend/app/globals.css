@@ -483,3 +483,14 @@ h1, h2, h3, h4, h5, h6 {
 .signup-splash-fade-up-delay {
   animation: signup-splash-fade-up 0.8s ease-out 0.45s both;
 }
+
+/* Public signup wizard — matches KitchenSignupSplash palette */
+.marketing-app {
+  --background: #0a0806;
+  --foreground: #ffffff;
+  --surface: #14100c;
+  --surface-elevated: #1c1612;
+  --primary: #e07a5f;
+  --primary-hover: #e89078;
+  --border: rgba(255, 255, 255, 0.1);
+}

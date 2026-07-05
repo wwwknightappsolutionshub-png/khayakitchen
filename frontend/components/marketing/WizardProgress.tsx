@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 interface WizardProgressProps {
   steps: string[];
@@ -20,9 +21,9 @@ export function WizardProgress({ steps, currentStep }: WizardProgressProps) {
               <div
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition-colors",
-                  isComplete && "border-violet-500 bg-violet-600 text-white",
-                  isCurrent && "border-violet-400 bg-violet-500/20 text-violet-200",
-                  !isComplete && !isCurrent && "border-white/10 bg-[#141418] text-zinc-500",
+                  isComplete && marketingTheme.stepComplete,
+                  isCurrent && marketingTheme.stepCurrent,
+                  !isComplete && !isCurrent && marketingTheme.stepPending,
                 )}
               >
                 {index + 1}
@@ -30,7 +31,7 @@ export function WizardProgress({ steps, currentStep }: WizardProgressProps) {
               <p
                 className={cn(
                   "hidden text-center text-[11px] font-medium sm:block",
-                  isCurrent ? "text-white" : "text-zinc-500",
+                  isCurrent ? "text-amber-50" : "text-zinc-500",
                 )}
               >
                 {label}
@@ -41,7 +42,7 @@ export function WizardProgress({ steps, currentStep }: WizardProgressProps) {
       </div>
       <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 transition-all duration-300"
+          className={cn("h-full rounded-full transition-all duration-300", marketingTheme.progressBar)}
           style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
         />
       </div>

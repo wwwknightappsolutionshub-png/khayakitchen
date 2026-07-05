@@ -16,6 +16,7 @@ import { pricingService } from "@/services/pricing.service";
 import { signupService } from "@/services/signup.service";
 import { useToast } from "@/providers/ToastProvider";
 import { ApiClientError } from "@/lib/api-client";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const WIZARD_STEPS = [...WIZARD_STEP_LABELS];
 
@@ -124,13 +125,17 @@ export function SignupWizard() {
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="secondary"
+            className={marketingTheme.secondaryButton}
             onClick={() => setStep((current) => Math.max(0, current - 1))}
             disabled={step === 0}
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <Button onClick={() => setStep((current) => Math.min(WIZARD_STEPS.length - 1, current + 1))}>
+          <Button
+            className={marketingTheme.primaryButton}
+            onClick={() => setStep((current) => Math.min(WIZARD_STEPS.length - 1, current + 1))}
+          >
             Continue
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -139,7 +144,7 @@ export function SignupWizard() {
 
       {isLastStep && step > 0 && (
         <div className="mt-6">
-          <Button variant="secondary" onClick={() => setStep((current) => current - 1)}>
+          <Button variant="secondary" className={marketingTheme.secondaryButton} onClick={() => setStep((current) => current - 1)}>
             <ArrowLeft className="h-4 w-4" />
             Back to features
           </Button>
