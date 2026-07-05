@@ -22,7 +22,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(clients.openWindow(targetUrl));
 });
 
-const CACHE_NAME = "khaya-kitchen-v1";
+const CACHE_NAME = "khaya-kitchen-v2";
 const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {

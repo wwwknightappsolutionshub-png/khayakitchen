@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
         source: "/manifest.json",
         headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
       },
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\..*).*)",
+        headers: [{ key: "Cache-Control", value: "no-cache, must-revalidate" }],
+      },
     ];
   },
   images: {

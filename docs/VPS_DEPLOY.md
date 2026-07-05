@@ -35,11 +35,15 @@ cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && /www/server/php/83/bin/php artisan migrate --force
-cd ../frontend && npm run build
+cd ../frontend && rm -rf .next && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```
 
-After deploy: hard-refresh the browser (Ctrl+Shift+R) to avoid stale PWA/cache.
+After deploy:
+
+1. Hard-refresh the browser (Ctrl+Shift+R), or open an **Incognito/Private** window.
+2. If styles are still stale: DevTools → Application → **Clear site data** for `khayaos.prohost.cloud`, then reload.
+3. Confirm the deploy commit with `git log -1` on the VPS matches the expected hash below.
 
 ---
 
