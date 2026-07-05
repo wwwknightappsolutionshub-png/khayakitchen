@@ -17,6 +17,7 @@ const DEFAULT_FLAGS: FeatureFlags = {
   notifications: true,
   "notifications.campaigns": true,
   "notifications.whatsapp": true,
+  revenue_recovery: true,
   delivery: false,
   reporting: true,
 };

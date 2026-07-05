@@ -77,8 +77,9 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
 
   const isPlatformRoute = endpoint.startsWith("/platform");
   const isAuthLoginRoute = endpoint === "/auth/login";
+  const isPublicSignupRoute = endpoint === "/signup";
 
-  if (!isPlatformRoute && !isAuthLoginRoute) {
+  if (!isPlatformRoute && !isAuthLoginRoute && !isPublicSignupRoute) {
     const tenantId = getStoredTenantId();
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
 
@@ -162,7 +163,7 @@ async function uploadFormData<T>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  if (!endpoint.startsWith("/platform")) {
+  if (!endpoint.startsWith("/platform") && endpoint !== "/signup") {
     const tenantId = getStoredTenantId();
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
     const tenantSlug = getStoredTenantSlug();

@@ -351,3 +351,135 @@ h1, h2, h3, h4, h5, h6 {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes signup-splash-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes signup-splash-ember {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-18px) scale(1.08);
+    opacity: 0.6;
+  }
+}
+
+@keyframes signup-splash-steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.8);
+  }
+  20% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px) scale(1.2);
+  }
+}
+
+@keyframes signup-splash-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes signup-splash-logo-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.15);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(251, 191, 36, 0.35),
+      0 0 40px rgba(224, 122, 95, 0.25);
+  }
+}
+
+@keyframes signup-splash-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.signup-splash-glow {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(224, 122, 95, 0.18), transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(129, 178, 154, 0.08), transparent 40%);
+  animation: signup-splash-glow 4s ease-in-out infinite;
+}
+
+.signup-splash-ember {
+  animation: signup-splash-ember 5s ease-in-out infinite;
+}
+
+.signup-splash-ember-delay {
+  animation: signup-splash-ember 6s ease-in-out infinite 1.5s;
+}
+
+.signup-splash-steam {
+  position: absolute;
+  bottom: 28%;
+  width: 18px;
+  height: 64px;
+  border-radius: 999px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.08), transparent);
+  filter: blur(2px);
+  animation: signup-splash-steam-rise 4.5s ease-out infinite;
+}
+
+.signup-splash-steam-1 {
+  left: 42%;
+}
+
+.signup-splash-steam-2 {
+  left: 50%;
+  animation-delay: 1.2s;
+  height: 80px;
+}
+
+.signup-splash-steam-3 {
+  left: 58%;
+  animation-delay: 2.4s;
+}
+
+.signup-splash-logo-float {
+  animation: signup-splash-logo-float 3s ease-in-out infinite;
+}
+
+.signup-splash-logo-pulse {
+  animation: signup-splash-logo-pulse 2.5s ease-in-out infinite;
+}
+
+.signup-splash-logo-ring {
+  animation: signup-splash-fade-up 0.8s ease-out both;
+}
+
+.signup-splash-fade-up {
+  animation: signup-splash-fade-up 0.8s ease-out 0.2s both;
+}
+
+.signup-splash-fade-up-delay {
+  animation: signup-splash-fade-up 0.8s ease-out 0.45s both;
+}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Anek_Latin, Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { ToastProvider } from "@/providers/ToastProvider";
 import { AuthHydration } from "@/components/shared/AuthHydration";
 import "./globals.css";
 
@@ -63,7 +64,9 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <QueryProvider>
-          <AuthHydration>{children}</AuthHydration>
+          <ToastProvider>
+            <AuthHydration>{children}</AuthHydration>
+          </ToastProvider>
         </QueryProvider>
       </body>
     </html>

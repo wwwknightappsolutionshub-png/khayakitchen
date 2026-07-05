@@ -8,13 +8,18 @@ self.addEventListener("push", (event) => {
       body,
       icon: "/icon.svg",
       badge: "/icon.svg",
+      data: data.data ?? {},
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow("/tracking"));
+  const data = event.notification.data ?? {};
+  const targetUrl =
+    (typeof data.url === "string" && data.url) ||
+    (data.campaign_id ? `/menu?campaign=${data.campaign_id}` : "/menu");
+  event.waitUntil(clients.openWindow(targetUrl));
 });
 
 const CACHE_NAME = "khaya-kitchen-v1";

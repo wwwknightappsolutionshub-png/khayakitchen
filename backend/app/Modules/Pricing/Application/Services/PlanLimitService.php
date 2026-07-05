@@ -13,6 +13,7 @@ use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Pricing\Domain\Models\Plan;
 use App\Modules\Pricing\Domain\Models\TenantSubscription;
 use App\Modules\Pricing\Domain\ValueObjects\PlanLimits;
+use App\Modules\RevenueRecovery\Domain\Models\RevenueRecoveryCampaign;
 use App\Modules\TenantBranding\Domain\Models\RestaurantStatus;
 use App\Shared\Entitlements\FeatureAccessService;
 use App\Shared\Tenancy\TenantContext;
@@ -211,7 +212,14 @@ class PlanLimitService
             'max_active_promotions' => RestaurantStatus::withoutGlobalScopes()
                 ->where('tenant_id', $tenantId)
                 ->where('status', 'promo_mode')
-                ->count(),
+                ->count()
+                + RevenueRecoveryCampaign::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('status', [
+                        RevenueRecoveryCampaign::STATUS_ACTIVE,
+                        RevenueRecoveryCampaign::STATUS_SCHEDULED,
+                    ])
+                    ->count(),
             'max_delivery_zones' => DeliveryZone::withoutGlobalScopes()->where('tenant_id', $tenantId)->count(),
             'max_orders_per_day' => Order::withoutGlobalScopes()
                 ->where('tenant_id', $tenantId)

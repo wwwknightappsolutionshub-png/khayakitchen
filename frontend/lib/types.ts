@@ -89,6 +89,7 @@ export interface CreateOrderResponse {
   order_id: string;
   status: string;
   total: number;
+  discount_total?: number;
 }
 
 export interface Order {
@@ -98,6 +99,7 @@ export interface Order {
   order_type: string;
   scheduled_time?: string;
   total_amount: number;
+  discount_total?: number;
   created_at: string;
   items?: OrderItem[];
 }
@@ -108,6 +110,7 @@ export interface OrderItem {
   quantity: number;
   base_price: number;
   final_price: number;
+  discount_amount?: number;
   meal?: { name: string };
   options?: { option_id: string; price_delta?: number; option?: { id: string; name: string } }[];
 }
@@ -429,6 +432,63 @@ export interface PromoMealItem {
   image_url?: string;
   base_price?: number | string;
   promo_price?: number | string;
+  campaign_id?: string | null;
+  campaign_name?: string;
+  campaign_type?: string;
+  ends_at?: string | null;
+}
+
+export type RevenueRecoveryCampaignType = "closing_soon" | "happy_hour" | "slow_period" | "custom";
+
+export type RevenueRecoveryCampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "active"
+  | "paused"
+  | "deactivated"
+  | "archived";
+
+export type RevenueRecoveryDiscountType = "percent" | "fixed";
+
+export interface RevenueRecoveryCampaign {
+  id: string;
+  name: string;
+  campaign_type: RevenueRecoveryCampaignType;
+  discount_type: RevenueRecoveryDiscountType;
+  discount_value: number | string;
+  meal_ids?: string[];
+  category_ids?: string[];
+  starts_at: string;
+  ends_at: string;
+  status: RevenueRecoveryCampaignStatus;
+  notifications_enabled: boolean;
+  notification_title?: string | null;
+  notification_message?: string | null;
+  target_audience: "all" | "repeat_customers" | "active_customers";
+  redemption_limit?: number | null;
+  redemption_count: number;
+  orders_count: number;
+  recovered_revenue: number | string;
+  notifications_sent: number;
+  notifications_delivered: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RevenueRecoveryDashboard {
+  campaigns_total: number;
+  campaigns_active: number;
+  notifications_sent: number;
+  notifications_delivered: number;
+  notifications_opened: number;
+  notification_open_rate: number;
+  campaign_orders: number;
+  recovered_revenue: number;
+  meals_sold: number;
+  redemption_rate: number;
+  redemptions: number;
+  recent_campaigns: RevenueRecoveryCampaign[];
+  active_offers: PromoMealItem[];
 }
 
 export interface PromoMealSelection {
@@ -479,12 +539,21 @@ export interface RestaurantStatus {
 export interface Storefront {
   branding: TenantBranding;
   status: RestaurantStatus;
+  revenue_recovery?: {
+    offers: PromoMealItem[];
+    campaigns: Pick<
+      RevenueRecoveryCampaign,
+      "id" | "name" | "campaign_type" | "ends_at" | "discount_type" | "discount_value"
+    >[];
+  };
 }
 
 export interface CartItem {
   mealId: string;
   mealName: string;
   basePrice: number;
+  originalBasePrice?: number;
+  campaignId?: string | null;
   quantity: number;
   selectedOptions: { optionId: string; name: string; priceDelta: number }[];
 }

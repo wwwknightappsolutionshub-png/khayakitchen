@@ -4,6 +4,7 @@ namespace App\Modules\TenantBranding\Application\Services;
 
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Modules\Pricing\Application\Services\AuditLogService;
+use App\Modules\Pricing\Application\Services\PlanLimitService;
 use App\Modules\TenantBranding\Domain\Models\RestaurantStatus;
 use App\Modules\TenantBranding\Events\PromoModeActivated;
 use App\Modules\TenantBranding\Events\RestaurantStatusChanged;
@@ -18,6 +19,7 @@ class RestaurantStatusService
         private TenantContext $tenantContext,
         private PermissionService $permissionService,
         private AuditLogService $auditLogService,
+        private PlanLimitService $planLimitService,
     ) {}
 
     public function getForTenant(?string $tenantId = null): RestaurantStatus
@@ -127,6 +129,13 @@ class RestaurantStatusService
 
         if ($previous === $status && ! $hasTimerOrMealChange) {
             return $record;
+        }
+
+        if (
+            $status === RestaurantStatus::STATUS_PROMO_MODE
+            && $previous !== RestaurantStatus::STATUS_PROMO_MODE
+        ) {
+            $this->planLimitService->assertPromotionLimit();
         }
 
         $record->update($updates);

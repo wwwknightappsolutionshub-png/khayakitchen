@@ -1,12 +1,14 @@
 "use client";
 
 import { getCurrentStepIndex, getStatusSteps, getHumanStatusLabel, getEstimatedMinutes } from "@/lib/order-status";
-import { formatCurrency, cn } from "@/lib/utils";
+import { OrderSavingsSummary } from "@/components/customer/OrderSavingsSummary";
+import { cn } from "@/lib/utils";
 
 interface OrderStatusTrackerProps {
   status: string;
   orderType: string;
   totalAmount: number;
+  discountTotal?: number;
   orderId: string;
 }
 
@@ -14,6 +16,7 @@ export function OrderStatusTracker({
   status,
   orderType,
   totalAmount,
+  discountTotal,
   orderId,
 }: OrderStatusTrackerProps) {
   const steps = getStatusSteps(orderType);
@@ -75,9 +78,11 @@ export function OrderStatusTracker({
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-        <span className="text-sm text-[var(--muted)]">Total</span>
-        <span className="price text-lg">{formatCurrency(totalAmount)}</span>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <OrderSavingsSummary
+          total={totalAmount}
+          discountTotal={discountTotal}
+        />
       </div>
     </div>
   );

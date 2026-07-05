@@ -47,8 +47,14 @@ export default function PublicPricingPage() {
             Khaya Kitchen
           </Link>
           <div className="flex gap-4 text-sm">
+            <Link href="/get-started" className="text-violet-400 hover:text-violet-300">
+              Get started
+            </Link>
             <Link href="/menu" className="text-zinc-400 hover:text-white">
               Order
+            </Link>
+            <Link href="/pricing" className="text-zinc-400 hover:text-white">
+              Pricing
             </Link>
             {isSuperAdmin && (
               <Link href="/platform/pricing" className="text-violet-400 hover:text-violet-300">
@@ -155,7 +161,7 @@ export default function PublicPricingPage() {
                   className="mt-6 w-full"
                   style={{ backgroundColor: accent }}
                   onClick={() => {
-                    window.location.href = `mailto:sales@khayaos.com?subject=${encodeURIComponent(plan.name)}%20plan%20inquiry`;
+                    window.location.href = `/get-started?plan=${encodeURIComponent(plan.slug)}`;
                   }}
                 >
                   {plan.cta_text ?? "Get started"}

@@ -5,12 +5,12 @@ import { Minus, Plus, ArrowRight } from "lucide-react";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { useCartStore, getOptionsKey, getLinePrice } from "@/stores/cart-store";
 import { useStorefront } from "@/hooks/useStorefront";
+import { OrderSavingsSummary } from "@/components/customer/OrderSavingsSummary";
 import { formatCurrency } from "@/lib/utils";
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, getTotal } = useCartStore();
   const total = getTotal();
-  const subtotal = total;
   const { data: storefront } = useStorefront();
   const isClosed = storefront?.status?.is_accepting_orders === false;
 
@@ -57,7 +57,14 @@ export default function CartPage() {
                       ))}
                     </ul>
                   )}
-                  <p className="price mt-2 text-[var(--primary)]">{formatCurrency(unitPrice)} each</p>
+                  <p className="price mt-2 text-[var(--primary)]">
+                    {formatCurrency(unitPrice)} each
+                    {item.originalBasePrice && item.originalBasePrice > item.basePrice && (
+                      <span className="ml-2 text-sm text-[var(--muted)] line-through">
+                        {formatCurrency(item.originalBasePrice)}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -93,15 +100,8 @@ export default function CartPage() {
         })}
       </div>
 
-      <div className="mt-8 space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="flex justify-between text-sm">
-          <span className="text-[var(--muted)]">Subtotal</span>
-          <span className="price">{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="flex justify-between border-t border-[var(--border)] pt-3">
-          <span className="font-semibold">Total</span>
-          <span className="price text-xl text-[var(--primary)]">{formatCurrency(total)}</span>
-        </div>
+      <div className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <OrderSavingsSummary items={items} total={total} />
       </div>
 
       <Link href={isClosed ? "/menu" : "/checkout"} className="mt-6 block">

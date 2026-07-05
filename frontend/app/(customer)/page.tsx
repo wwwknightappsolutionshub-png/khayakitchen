@@ -6,9 +6,11 @@ import { useCustomerHome } from "@/hooks/useCustomerHome";
 import { FeaturedMealCard } from "@/components/customer/FeaturedMealCard";
 import { PopularMealsRow } from "@/components/customer/PopularMealsRow";
 import { PromoMealsSection } from "@/components/customer/PromoMealsSection";
+import { RevenueRecoveryOffersSection } from "@/components/customer/RevenueRecoveryOffersSection";
 import { PopularAddonsChips } from "@/components/customer/PopularAddonsChips";
 import { MealCustomizeFlow } from "@/components/customer/MealCustomizeFlow";
 import { usePromoMeals } from "@/hooks/usePromoMeals";
+import { useRevenueRecoveryOffers } from "@/hooks/useRevenueRecoveryOffers";
 import type { Meal } from "@/lib/types";
 import type { AddonPopularity } from "@/lib/order-analytics";
 import type { PromoMealItem } from "@/lib/types";
@@ -27,13 +29,39 @@ export default function CustomerHomePage() {
   } = useCustomerHome();
   const { isPromo, promoEndsAt, promoItems, isClosed: promoClosed, isLoading: promoLoading, resolveMealForCustomize } =
     usePromoMeals();
+  const {
+    offers: recoveryOffers,
+    isLoading: recoveryLoading,
+    isClosed: recoveryClosed,
+    resolveMealForCustomize: resolveRecoveryMeal,
+    getPromoUnitPrice,
+    getOfferForMeal,
+  } = useRevenueRecoveryOffers();
 
   const [customizingMeal, setCustomizingMeal] = useState<Meal | null>(null);
+  const [customizingOffer, setCustomizingOffer] = useState<PromoMealItem | null>(null);
   const isLoading = storefront.isLoading || menu.isLoading || analytics.isLoading;
+
+  const recoveryOnlyOffers = recoveryOffers.filter(
+    (offer) =>
+      offer.campaign_id &&
+      !promoItems.some((promo) => promo.meal_id === offer.meal_id && !offer.campaign_id),
+  );
 
   const handlePromoSelect = (item: PromoMealItem) => {
     const meal = resolveMealForCustomize(item);
-    if (meal) setCustomizingMeal(meal);
+    if (meal) {
+      setCustomizingOffer(item);
+      setCustomizingMeal(meal);
+    }
+  };
+
+  const handleRecoverySelect = (item: PromoMealItem) => {
+    const meal = resolveRecoveryMeal(item);
+    if (meal) {
+      setCustomizingOffer(item);
+      setCustomizingMeal(meal);
+    }
   };
 
   const handleAddonSelect = (addon: AddonPopularity) => {
@@ -53,12 +81,22 @@ export default function CustomerHomePage() {
         </div>
         <FeaturedMealCard
           meal={featuredMeal}
+          promoOffer={featuredMeal ? getOfferForMeal(featuredMeal.id) ?? null : null}
           isLoading={isLoading}
           isClosed={isClosed}
           showLiveBadge={hasLiveSalesData}
           onOrder={setCustomizingMeal}
         />
       </section>
+
+      {recoveryOnlyOffers.length > 0 && (
+        <RevenueRecoveryOffersSection
+          items={recoveryOnlyOffers}
+          isLoading={recoveryLoading || menu.isLoading}
+          isClosed={recoveryClosed}
+          onSelect={handleRecoverySelect}
+        />
+      )}
 
       {isPromo && (
         <PromoMealsSection
@@ -93,7 +131,21 @@ export default function CustomerHomePage() {
       </section>
 
       {customizingMeal && (
-        <MealCustomizeFlow meal={customizingMeal} onClose={() => setCustomizingMeal(null)} />
+        <MealCustomizeFlow
+          meal={customizingMeal}
+          promoUnitPrice={
+            customizingOffer?.promo_price
+              ? Number(customizingOffer.promo_price)
+              : getPromoUnitPrice(customizingMeal.id)
+          }
+          campaignId={
+            customizingOffer?.campaign_id ?? getOfferForMeal(customizingMeal.id)?.campaign_id ?? null
+          }
+          onClose={() => {
+            setCustomizingMeal(null);
+            setCustomizingOffer(null);
+          }}
+        />
       )}
     </div>
   );

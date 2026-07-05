@@ -16,6 +16,9 @@ use App\Modules\Orders\Events\OrderCreated;
 use App\Modules\Orders\Events\OrderStatusUpdated;
 use App\Modules\Orders\Infrastructure\Repositories\OrderRepository;
 use App\Modules\Pricing\Application\Services\PlanLimitService;
+use App\Modules\RevenueRecovery\Application\Services\RevenueRecoveryCampaignService;
+use App\Modules\RevenueRecovery\Application\Services\RevenueRecoveryPricingService;
+use App\Modules\RevenueRecovery\Domain\Models\RevenueRecoveryCampaign;
 use App\Modules\TenantBranding\Application\Services\RestaurantStatusService;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Entitlements\FeatureAccessService;
@@ -35,6 +38,8 @@ class OrderService
         private PlanLimitService $planLimitService,
         private FeatureAccessService $featureAccessService,
         private RestaurantStatusService $restaurantStatusService,
+        private RevenueRecoveryPricingService $revenueRecoveryPricingService,
+        private RevenueRecoveryCampaignService $revenueRecoveryCampaignService,
         private CrmService $crmService,
         private DeliveryService $deliveryService,
     ) {}
@@ -76,6 +81,9 @@ class OrderService
     ): array {
         return DB::transaction(function () use ($data, $customerId, $userId, $paymentMethod) {
             $total = 0;
+            $discountTotal = 0;
+            $primaryCampaign = null;
+            $discountedItemCount = 0;
 
             $order = $this->orderRepository->create([
                 'customer_id' => $customerId,
@@ -83,6 +91,7 @@ class OrderService
                 'order_type' => $data['order_type'] ?? 'pickup',
                 'scheduled_time' => $data['scheduled_time'] ?? null,
                 'total_amount' => 0,
+                'discount_total' => 0,
                 'created_by' => $userId,
                 'updated_by' => $userId,
             ]);
@@ -90,8 +99,21 @@ class OrderService
             foreach ($data['items'] as $itemData) {
                 $meal = Meal::findOrFail($itemData['meal_id']);
                 $quantity = $itemData['quantity'] ?? 1;
-                $itemPrice = (float) $meal->base_price;
                 $optionDelta = 0;
+
+                foreach ($itemData['options'] ?? [] as $optData) {
+                    $option = MealOption::findOrFail($optData['option_id']);
+                    $optionDelta += (float) $option->price_delta;
+                }
+
+                $pricing = $this->revenueRecoveryPricingService->resolveLinePricing($meal, $optionDelta, $quantity);
+                $lineTotal = round($pricing['unit_price'] * $quantity, 2);
+                $lineDiscount = round($pricing['discount_amount'] * $quantity, 2);
+
+                if ($pricing['campaign']) {
+                    $primaryCampaign = $pricing['campaign'];
+                    $discountedItemCount += $quantity;
+                }
 
                 $orderItem = OrderItem::create([
                     'tenant_id' => $order->tenant_id,
@@ -99,12 +121,13 @@ class OrderService
                     'meal_id' => $meal->id,
                     'quantity' => $quantity,
                     'base_price' => $meal->base_price,
-                    'final_price' => 0,
+                    'final_price' => $lineTotal,
+                    'discount_amount' => $lineDiscount,
+                    'revenue_recovery_campaign_id' => $pricing['campaign']?->id,
                 ]);
 
                 foreach ($itemData['options'] ?? [] as $optData) {
                     $option = MealOption::findOrFail($optData['option_id']);
-                    $optionDelta += (float) $option->price_delta;
                     OrderItemOption::create([
                         'tenant_id' => $order->tenant_id,
                         'order_item_id' => $orderItem->id,
@@ -113,12 +136,23 @@ class OrderService
                     ]);
                 }
 
-                $lineTotal = ($itemPrice + $optionDelta) * $quantity;
-                $orderItem->update(['final_price' => $lineTotal]);
                 $total += $lineTotal;
+                $discountTotal += $lineDiscount;
             }
 
-            $order->update(['total_amount' => $total]);
+            $order->update([
+                'total_amount' => $total,
+                'discount_total' => $discountTotal,
+                'revenue_recovery_campaign_id' => $primaryCampaign?->id,
+            ]);
+
+            if ($primaryCampaign instanceof RevenueRecoveryCampaign) {
+                $this->revenueRecoveryCampaignService->recordOrderMetrics(
+                    $primaryCampaign,
+                    $discountTotal,
+                    $discountedItemCount,
+                );
+            }
 
             if ($paymentMethod) {
                 Payment::create([
@@ -145,6 +179,7 @@ class OrderService
                 'customer_id' => $customerId,
                 'status' => $order->status,
                 'total' => (float) $order->total_amount,
+                'discount_total' => (float) $order->discount_total,
             ];
         });
     }
@@ -277,7 +312,7 @@ class OrderService
         $orders = Order::where('customer_id', $customer->id)
             ->orderByDesc('created_at')
             ->limit(20)
-            ->get(['id', 'status', 'order_type', 'total_amount', 'scheduled_time', 'created_at']);
+            ->get(['id', 'status', 'order_type', 'total_amount', 'discount_total', 'scheduled_time', 'created_at']);
 
         return ['orders' => $orders, 'customer_id' => $customer->id];
     }

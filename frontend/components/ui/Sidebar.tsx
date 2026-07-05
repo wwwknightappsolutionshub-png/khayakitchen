@@ -15,6 +15,7 @@ import {
   Megaphone,
   Store,
   UtensilsCrossed,
+  Leaf,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const navItems = [
   { href: "/crm", label: "CRM", icon: Users, flag: "crm" },
   { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
   { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
+  { href: "/revenue-recovery", label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },
   { href: "/reports", label: "Reports", icon: BarChart3, flag: "reporting" },
   { href: "/settings", label: "Settings", icon: Settings, flag: null },

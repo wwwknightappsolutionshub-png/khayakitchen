@@ -23,6 +23,7 @@ use App\Modules\Platform\Interfaces\Controllers\PlatformFeatureFlagController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformModuleController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformSettingsController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformTenantController;
+use App\Modules\Platform\Interfaces\Controllers\PublicSignupController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformEntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformFeatureController;
@@ -31,6 +32,7 @@ use App\Modules\Pricing\Interfaces\Controllers\PlatformSubscriptionController;
 use App\Modules\Pricing\Interfaces\Controllers\PublicPricingController;
 use App\Modules\Realtime\Interfaces\Controllers\RealtimeController;
 use App\Modules\Reporting\Interfaces\Controllers\DashboardController;
+use App\Modules\RevenueRecovery\Interfaces\Controllers\RevenueRecoveryCampaignController;
 use App\Modules\TenantBranding\Interfaces\Controllers\BrandingController;
 use App\Modules\TenantBranding\Interfaces\Controllers\PlatformBrandingController;
 use App\Modules\TenantBranding\Interfaces\Controllers\PlatformRestaurantStatusController;
@@ -40,11 +42,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/signup', [PublicSignupController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
 
     Route::middleware(['tenant.resolve'])->group(function () {
         Route::get('/storefront', [StorefrontController::class, 'show']);
+        Route::post('/storefront/revenue-recovery/campaigns/{id}/track-open', [StorefrontController::class, 'trackCampaignOpen']);
     });
 
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -154,6 +158,22 @@ Route::prefix('v1')->group(function () {
             Route::get('/campaigns', [CampaignController::class, 'index']);
             Route::post('/campaigns', [CampaignController::class, 'store']);
             Route::post('/campaigns/{id}/send', [CampaignController::class, 'send']);
+        });
+
+        Route::middleware('feature:revenue_recovery')->group(function () {
+            Route::get('/revenue-recovery/dashboard', [RevenueRecoveryCampaignController::class, 'dashboard']);
+            Route::get('/revenue-recovery/campaigns', [RevenueRecoveryCampaignController::class, 'index']);
+            Route::post('/revenue-recovery/campaigns', [RevenueRecoveryCampaignController::class, 'store']);
+            Route::get('/revenue-recovery/campaigns/{id}', [RevenueRecoveryCampaignController::class, 'show']);
+            Route::patch('/revenue-recovery/campaigns/{id}', [RevenueRecoveryCampaignController::class, 'update']);
+            Route::post('/revenue-recovery/campaigns/{id}/duplicate', [RevenueRecoveryCampaignController::class, 'duplicate']);
+            Route::post('/revenue-recovery/campaigns/{id}/activate', [RevenueRecoveryCampaignController::class, 'activate']);
+            Route::post('/revenue-recovery/campaigns/{id}/pause', [RevenueRecoveryCampaignController::class, 'pause']);
+            Route::post('/revenue-recovery/campaigns/{id}/resume', [RevenueRecoveryCampaignController::class, 'resume']);
+            Route::post('/revenue-recovery/campaigns/{id}/deactivate', [RevenueRecoveryCampaignController::class, 'deactivate']);
+            Route::post('/revenue-recovery/campaigns/{id}/archive', [RevenueRecoveryCampaignController::class, 'archive']);
+            Route::delete('/revenue-recovery/campaigns/{id}', [RevenueRecoveryCampaignController::class, 'destroy']);
+            Route::post('/revenue-recovery/campaigns/{id}/notify', [RevenueRecoveryCampaignController::class, 'sendNotification']);
         });
 
         Route::get('/staff', [StaffUserController::class, 'index']);

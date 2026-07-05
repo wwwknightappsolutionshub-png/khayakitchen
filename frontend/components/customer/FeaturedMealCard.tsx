@@ -1,12 +1,13 @@
 "use client";
 
-import type { Meal } from "@/lib/types";
+import type { Meal, PromoMealItem } from "@/lib/types";
 import { MealImage } from "@/components/customer/MealImage";
 import { CustomerButton } from "@/components/customer/CustomerButton";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toNumber } from "@/lib/utils";
 
 interface FeaturedMealCardProps {
   meal?: Meal;
+  promoOffer?: PromoMealItem | null;
   isLoading?: boolean;
   isClosed?: boolean;
   showLiveBadge?: boolean;
@@ -15,6 +16,7 @@ interface FeaturedMealCardProps {
 
 export function FeaturedMealCard({
   meal,
+  promoOffer,
   isLoading,
   isClosed,
   showLiveBadge,
@@ -32,6 +34,13 @@ export function FeaturedMealCard({
     );
   }
 
+  const basePrice = toNumber(meal.base_price);
+  const promoPrice = promoOffer ? toNumber(promoOffer.promo_price) : null;
+  const hasDiscount = promoPrice !== null && promoPrice < basePrice;
+  const discountPercent =
+    promoOffer?.discount_percent ??
+    (hasDiscount ? Math.round((1 - promoPrice / basePrice) * 100) : null);
+
   return (
     <article className="overflow-hidden rounded-2xl border border-[var(--primary)]/35 bg-[var(--surface)] shadow-[0_8px_32px_rgba(0,0,0,0.35)]">
       <div className="relative aspect-[16/10] w-full">
@@ -47,13 +56,23 @@ export function FeaturedMealCard({
             Most ordered today
           </span>
         )}
+        {hasDiscount && discountPercent && (
+          <span className="absolute right-3 top-3 rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">
+            −{discountPercent}% off
+          </span>
+        )}
       </div>
       <div className="flex items-end justify-between gap-4 p-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight">{meal.name}</h2>
-          <p className="price mt-1 text-2xl text-[var(--primary)]">
-            {formatCurrency(meal.base_price)}
-          </p>
+          {hasDiscount ? (
+            <div className="mt-1 flex items-baseline gap-2">
+              <p className="price text-2xl text-emerald-400">{formatCurrency(promoPrice)}</p>
+              <p className="price text-sm text-[var(--muted)] line-through">{formatCurrency(basePrice)}</p>
+            </div>
+          ) : (
+            <p className="price mt-1 text-2xl text-[var(--primary)]">{formatCurrency(basePrice)}</p>
+          )}
         </div>
         <CustomerButton
           size="lg"
@@ -61,7 +80,7 @@ export function FeaturedMealCard({
           disabled={isClosed}
           onClick={() => onOrder(meal)}
         >
-          {isClosed ? "Closed" : "Order now"}
+          {isClosed ? "Closed" : hasDiscount ? "Order deal" : "Order now"}
         </CustomerButton>
       </div>
     </article>

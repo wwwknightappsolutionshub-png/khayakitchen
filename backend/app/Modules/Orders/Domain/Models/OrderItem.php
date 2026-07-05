@@ -20,6 +20,8 @@ class OrderItem extends Model
         'quantity',
         'base_price',
         'final_price',
+        'discount_amount',
+        'revenue_recovery_campaign_id',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class OrderItem extends Model
         return [
             'base_price' => 'decimal:2',
             'final_price' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
         ];
     }
 

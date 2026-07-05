@@ -20,6 +20,8 @@ class Order extends Model
         'order_type',
         'scheduled_time',
         'total_amount',
+        'discount_total',
+        'revenue_recovery_campaign_id',
         'created_by',
         'updated_by',
     ];
@@ -29,6 +31,7 @@ class Order extends Model
         return [
             'scheduled_time' => 'datetime',
             'total_amount' => 'decimal:2',
+            'discount_total' => 'decimal:2',
         ];
     }
 

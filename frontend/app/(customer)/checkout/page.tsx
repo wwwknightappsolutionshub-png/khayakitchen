@@ -11,6 +11,7 @@ import { CustomerInput } from "@/components/customer/CustomerInput";
 import { useCartStore, getLinePrice } from "@/stores/cart-store";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { useStorefront } from "@/hooks/useStorefront";
+import { OrderSavingsSummary } from "@/components/customer/OrderSavingsSummary";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ApiClientError } from "@/lib/api-client";
@@ -227,9 +228,8 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 flex justify-between border-t border-[var(--border)] pt-3">
-            <span className="font-semibold">Total</span>
-            <span className="price text-lg text-[var(--primary)]">{formatCurrency(total)}</span>
+          <div className="mt-4">
+            <OrderSavingsSummary items={items} total={total} />
           </div>
         </div>
 

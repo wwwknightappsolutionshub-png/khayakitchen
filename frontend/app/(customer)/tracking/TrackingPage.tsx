@@ -56,6 +56,7 @@ export default function TrackingPage() {
           status={data.status}
           orderType={data.order_type}
           totalAmount={data.total_amount}
+          discountTotal={data.discount_total}
           orderId={data.id}
         />
       )}

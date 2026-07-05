@@ -15,8 +15,16 @@ class Tenant extends Model
         'slug',
         'logo_url',
         'primary_color',
+        'signup_metadata',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'signup_metadata' => 'array',
+        ];
+    }
 
     protected static function booted(): void
     {

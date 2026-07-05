@@ -19,9 +19,16 @@ const STEPS = ["Select Meal", "Configure Options", "Add Extras", "Add to Cart"] 
 interface MealCustomizeFlowProps {
   meal: Meal;
   onClose: () => void;
+  promoUnitPrice?: number;
+  campaignId?: string | null;
 }
 
-export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
+export function MealCustomizeFlow({
+  meal,
+  onClose,
+  promoUnitPrice,
+  campaignId,
+}: MealCustomizeFlowProps) {
   const addItem = useCartStore((s) => s.addItem);
   const triggerCartBounce = useUiStore((s) => s.triggerCartBounce);
   const [step, setStep] = useState(0);
@@ -38,8 +45,11 @@ export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
     return [...fromConfigure, ...fromExtras];
   }, [configureSelections, checkboxSelections]);
 
+  const baseUnit = promoUnitPrice ?? toNumber(meal.base_price);
+  const listBase = toNumber(meal.base_price);
+  const hasPromoPrice = baseUnit < listBase;
   const optionsTotal = allSelectedOptions.reduce((sum, o) => sum + toNumber(o.price_delta), 0);
-  const lineTotal = (toNumber(meal.base_price) + optionsTotal) * quantity;
+  const lineTotal = (baseUnit + optionsTotal) * quantity;
 
   const toggleConfigure = (groupName: string, option: MealOption) => {
     setConfigureSelections((prev) => {
@@ -71,7 +81,9 @@ export function MealCustomizeFlow({ meal, onClose }: MealCustomizeFlowProps) {
     addItem({
       mealId: meal.id,
       mealName: meal.name,
-      basePrice: toNumber(meal.base_price),
+      basePrice: baseUnit,
+      originalBasePrice: hasPromoPrice ? listBase : undefined,
+      campaignId: campaignId ?? null,
       quantity,
       selectedOptions: allSelectedOptions.map((o) => ({
         optionId: o.id,

@@ -22,6 +22,7 @@ class PricingSeeder extends Seeder
             ['key' => 'whatsapp_notifications', 'name' => 'WhatsApp', 'category' => 'marketing', 'module' => 'notifications.whatsapp', 'description' => 'WhatsApp order updates'],
             ['key' => 'pwa_push_notifications', 'name' => 'Push Notifications', 'category' => 'marketing', 'module' => 'notifications', 'description' => 'Web push notifications'],
             ['key' => 'notification_campaigns', 'name' => 'Campaigns', 'category' => 'marketing', 'module' => 'notifications.campaigns', 'description' => 'Marketing campaigns'],
+            ['key' => 'revenue_recovery', 'name' => 'Revenue Recovery', 'category' => 'marketing', 'module' => 'revenue_recovery', 'description' => 'Time-limited recovery campaigns'],
             ['key' => 'analytics_basic', 'name' => 'Analytics', 'category' => 'reporting', 'module' => 'dashboard', 'description' => 'Dashboard KPIs'],
             ['key' => 'reports', 'name' => 'Reports', 'category' => 'reporting', 'module' => 'reporting', 'description' => 'Operational reports'],
             ['key' => 'delivery', 'name' => 'Delivery', 'category' => 'operations', 'module' => 'delivery', 'description' => 'Delivery zones and drivers'],
@@ -158,7 +159,7 @@ class PricingSeeder extends Seeder
         $starterKeys = ['orders', 'menu_management', 'crm_basic', 'analytics_basic', 'pickup'];
         $growthKeys = array_merge($starterKeys, [
             'inventory_tracking', 'loyalty_system', 'whatsapp_notifications', 'pwa_push_notifications',
-            'notification_campaigns', 'delivery', 'coupons',
+            'notification_campaigns', 'revenue_recovery', 'delivery', 'coupons',
         ]);
         $professionalKeys = array_merge($growthKeys, ['reports', 'forecasting']);
         $enterpriseKeys = array_merge($professionalKeys, ['accounting', 'api_access', 'marketplace', 'white_label', 'ai']);
