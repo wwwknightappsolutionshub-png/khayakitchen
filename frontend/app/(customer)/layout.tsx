@@ -3,7 +3,6 @@ import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { CustomerNav } from "@/components/customer/CustomerNav";
 import { CustomerStatusLayer } from "@/components/customer/CustomerStatusLayer";
 import { StickyCartBar } from "@/components/customer/StickyCartBar";
-import { PwaRegister } from "@/components/customer/PwaRegister";
 import { NotificationOptInPrompt } from "@/components/customer/NotificationOptInPrompt";
 import { CustomerLayoutShell } from "@/components/customer/CustomerLayoutShell";
 import { ConnectionBanner } from "@/components/customer/ConnectionBanner";
@@ -36,7 +35,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <StorefrontTheme>
         <RealtimeProvider channels={["customer"]} enabled>
         <WelcomeSplashGate />
-        <PwaRegister />
         <ConnectionBanner />
         <NotificationOptInPrompt />
         <CustomerHeader />

@@ -22,12 +22,18 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(clients.openWindow(targetUrl));
 });
 
-const CACHE_NAME = "khaya-kitchen-v2";
+const CACHE_NAME = "khaya-kitchen-v3";
 const OFFLINE_URL = "/offline";
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, "/", "/manifest.json", "/icon.svg"])),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, "/manifest.json", "/icon.svg"])),
   );
   self.skipWaiting();
 });
@@ -41,6 +47,14 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+function isHtmlNavigation(request) {
+  return (
+    request.mode === "navigate" ||
+    request.destination === "document" ||
+    (request.headers.get("accept") || "").includes("text/html")
+  );
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
@@ -50,17 +64,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok && (url.pathname === "/" || url.pathname.startsWith("/menu"))) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() =>
+  if (url.pathname === "/sw.js") {
+    return;
+  }
+
+  if (isHtmlNavigation(event.request)) {
+    event.respondWith(
+      fetch(event.request).catch(() =>
         caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL)),
       ),
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL))),
   );
 });

@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
       },
       {
+        source: "/api/app-version",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
+      {
         source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\..*).*)",
         headers: [{ key: "Cache-Control", value: "no-cache, must-revalidate" }],
       },

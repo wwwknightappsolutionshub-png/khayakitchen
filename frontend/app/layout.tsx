@@ -3,6 +3,7 @@ import { Anek_Latin, Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/googl
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { AuthHydration } from "@/components/shared/AuthHydration";
+import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
 import "./globals.css";
 
 const anekLatin = Anek_Latin({
@@ -65,6 +66,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <QueryProvider>
           <ToastProvider>
+            <PwaLifecycle />
             <AuthHydration>{children}</AuthHydration>
           </ToastProvider>
         </QueryProvider>

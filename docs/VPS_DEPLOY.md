@@ -44,6 +44,33 @@ After deploy:
 1. Hard-refresh the browser (Ctrl+Shift+R), or open an **Incognito/Private** window.
 2. If styles are still stale: DevTools → Application → **Clear site data** for `khayaos.prohost.cloud`, then reload.
 3. Confirm the deploy commit with `git log -1` on the VPS matches the expected hash below.
+4. **PWA auto-update:** clients poll `/api/app-version` on load and when the tab becomes visible. A new Next.js `BUILD_ID` triggers an automatic SW/cache reset. Users may also tap **Update now** on the in-app banner.
+5. **Nginx / BT Panel:** disable HTML proxy cache for this site, or purge panel cache after deploy. Stale Nginx responses can repopulate client caches even after a phone reset.
+
+---
+
+## Nginx cache guidance (recommended)
+
+Ensure HTML and the service worker are never cached by Nginx. Only long-cache hashed assets under `/_next/static/`:
+
+```nginx
+location /sw.js {
+    proxy_pass http://127.0.0.1:3000;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+
+location /api/app-version {
+    proxy_pass http://127.0.0.1:3000;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+
+location /_next/static/ {
+    proxy_pass http://127.0.0.1:3000;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+```
+
+Disable BT Panel “Website acceleration” / static HTML cache for `khayaos.prohost.cloud` if enabled.
 
 ---
 
