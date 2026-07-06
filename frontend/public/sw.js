@@ -22,8 +22,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(clients.openWindow(targetUrl));
 });
 
-const CACHE_NAME = "khaya-kitchen-v3";
-const OFFLINE_URL = "/offline";
+const CACHE_NAME = "khaya-kitchen-v4";
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
@@ -33,16 +32,27 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL, "/manifest.json", "/icon.svg"])),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(["/offline", "/manifest.json", "/icon.svg"])),
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
-    ),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
+
+      const windowClients = await self.clients.matchAll({ type: "window" });
+      await Promise.all(
+        windowClients.map((client) => {
+          if ("navigate" in client) {
+            return client.navigate(client.url);
+          }
+          return client.focus();
+        }),
+      );
+    })(),
   );
   self.clients.claim();
 });
@@ -59,25 +69,19 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
-
   if (url.pathname.startsWith("/api/") || url.hostname !== self.location.hostname) {
     return;
   }
 
-  if (url.pathname === "/sw.js") {
+  if (url.pathname === "/sw.js" || url.pathname.startsWith("/_next/")) {
     return;
   }
 
   if (isHtmlNavigation(event.request)) {
     event.respondWith(
       fetch(event.request).catch(() =>
-        caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL)),
+        caches.match(event.request).then((cached) => cached || caches.match("/offline")),
       ),
     );
-    return;
   }
-
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL))),
-  );
 });

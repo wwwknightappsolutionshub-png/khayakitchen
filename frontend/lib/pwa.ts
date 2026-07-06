@@ -49,8 +49,13 @@ export async function runVersionGate(): Promise<boolean> {
   const serverBuild = await fetchServerBuildId();
   if (!serverBuild) return false;
 
+  const pageBuild = document.documentElement.dataset.build;
   const storedBuild = localStorage.getItem(APP_BUILD_STORAGE_KEY);
-  if (storedBuild && storedBuild !== serverBuild) {
+
+  const stalePage = Boolean(pageBuild && pageBuild !== serverBuild);
+  const staleStorage = Boolean(storedBuild && storedBuild !== serverBuild);
+
+  if (stalePage || staleStorage) {
     await hardResetPwa(serverBuild);
     return true;
   }

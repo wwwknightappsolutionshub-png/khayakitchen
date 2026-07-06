@@ -3,7 +3,9 @@ import { Anek_Latin, Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/googl
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { AuthHydration } from "@/components/shared/AuthHydration";
+import { PwaBootGate } from "@/components/shared/PwaBootGate";
 import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
+import { getBuildId } from "@/lib/build-id";
 import "./globals.css";
 
 const anekLatin = Anek_Latin({
@@ -58,12 +60,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const buildId = getBuildId();
+
   return (
     <html
       lang="en"
+      data-build={buildId}
       className={`${anekLatin.variable} ${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <PwaBootGate buildId={buildId} />
         <QueryProvider>
           <ToastProvider>
             <PwaLifecycle />
