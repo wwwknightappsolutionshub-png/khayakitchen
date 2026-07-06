@@ -1,7 +1,9 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "2";
+export const PWA_CACHE_EPOCH = "3";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
+export const RESET_COUNT_KEY = "khayaos_reset_count";
+export const MAX_RESET_ATTEMPTS = 2;
 
 export function getPwaBootGateScript(pageBuild: string): string {
   return `
@@ -9,12 +11,21 @@ export function getPwaBootGateScript(pageBuild: string): string {
   var BUILD_KEY=${JSON.stringify(APP_BUILD_STORAGE_KEY)};
   var EPOCH_KEY=${JSON.stringify(PWA_CACHE_EPOCH_KEY)};
   var RELOAD_KEY=${JSON.stringify(BOOT_RELOAD_KEY)};
+  var RESET_COUNT_KEY=${JSON.stringify(RESET_COUNT_KEY)};
   var CACHE_EPOCH=${JSON.stringify(PWA_CACHE_EPOCH)};
+  var MAX_RESETS=${MAX_RESET_ATTEMPTS};
   var root=document.documentElement;
   root.style.visibility="hidden";
 
   function showPage(){
     root.style.visibility="";
+  }
+
+  function pinCurrentBuild(){
+    try{localStorage.setItem(BUILD_KEY,pageBuild);}catch(e){}
+    try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
+    try{sessionStorage.removeItem(RESET_COUNT_KEY);}catch(e){}
+    showPage();
   }
 
   try{
@@ -26,7 +37,14 @@ export function getPwaBootGateScript(pageBuild: string): string {
   }catch(e){}
 
   function hardReset(serverBuild){
-    try{localStorage.setItem(BUILD_KEY,serverBuild);}catch(e){}
+    var count=0;
+    try{count=parseInt(sessionStorage.getItem(RESET_COUNT_KEY)||"0",10)||0;}catch(e){}
+    if(count>=MAX_RESETS){
+      pinCurrentBuild();
+      return;
+    }
+    try{sessionStorage.setItem(RESET_COUNT_KEY,String(count+1));}catch(e){}
+    try{localStorage.setItem(BUILD_KEY,serverBuild||pageBuild);}catch(e){}
     try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
     try{sessionStorage.setItem(RELOAD_KEY,"1");}catch(e){}
     var tasks=[];
@@ -45,9 +63,7 @@ export function getPwaBootGateScript(pageBuild: string): string {
       );
     }
     Promise.all(tasks).finally(function(){
-      var url=new URL(window.location.href);
-      url.searchParams.set("_v",String(Date.now()));
-      window.location.replace(url.toString());
+      window.location.replace("/?_v="+Date.now());
     });
   }
 
@@ -69,6 +85,7 @@ export function getPwaBootGateScript(pageBuild: string): string {
     }
     try{localStorage.setItem(BUILD_KEY,serverBuild);}catch(e){}
     try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
+    try{sessionStorage.removeItem(RESET_COUNT_KEY);}catch(e){}
     showPage();
   }
 
