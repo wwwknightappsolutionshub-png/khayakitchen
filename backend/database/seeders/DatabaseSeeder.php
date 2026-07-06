@@ -135,21 +135,32 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        $proteinGroup = OptionGroup::create([
-            'tenant_id' => $tenant->id,
-            'meal_id' => $meals[0]->id,
-            'name' => 'Protein',
-            'type' => 'single',
-        ]);
+        $mealsByName = collect($meals)->keyBy('name');
 
-        foreach (['Chicken', 'Goat', 'Fish'] as $index => $protein) {
-            MealOption::create([
-                'tenant_id' => $tenant->id,
-                'option_group_id' => $proteinGroup->id,
-                'name' => $protein,
-                'price_delta' => $index * 1.5,
-                'is_active' => true,
-            ]);
+        foreach ((new MenuExtrasSeeder)->mealOptionGroups() as $mealName => $groups) {
+            $meal = $mealsByName->get($mealName);
+            if (! $meal) {
+                continue;
+            }
+
+            foreach ($groups as $groupData) {
+                $group = OptionGroup::create([
+                    'tenant_id' => $tenant->id,
+                    'meal_id' => $meal->id,
+                    'name' => $groupData['name'],
+                    'type' => $groupData['type'],
+                ]);
+
+                foreach ($groupData['options'] as $option) {
+                    MealOption::create([
+                        'tenant_id' => $tenant->id,
+                        'option_group_id' => $group->id,
+                        'name' => $option['name'],
+                        'price_delta' => $option['price_delta'],
+                        'is_active' => true,
+                    ]);
+                }
+            }
         }
 
         $inventoryItems = [];
