@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { Anek_Latin, Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
@@ -64,6 +65,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  noStore();
   const buildId = getBuildId();
 
   return (

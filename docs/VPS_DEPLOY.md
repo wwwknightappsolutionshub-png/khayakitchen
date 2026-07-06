@@ -79,9 +79,16 @@ location = /app-version {
     add_header Cache-Control "no-cache, no-store, must-revalidate";
 }
 
-# PWA start_url — Next.js was sending s-maxage=31536000 for "/"; override at nginx
+# PWA start_url — Next.js was serving a cached shell for "/"; force revalidation at nginx
 location = / {
     proxy_pass http://127.0.0.1:3004;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_no_cache 1;
+    proxy_cache_bypass 1;
     proxy_hide_header Cache-Control;
     add_header Cache-Control "no-cache, no-store, must-revalidate" always;
 }
