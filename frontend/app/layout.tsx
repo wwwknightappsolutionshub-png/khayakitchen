@@ -8,6 +8,10 @@ import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
 import { getBuildId } from "@/lib/build-id";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 const anekLatin = Anek_Latin({
   variable: "--font-anek",
   subsets: ["latin"],
@@ -68,8 +72,10 @@ export default function RootLayout({
       data-build={buildId}
       className={`${anekLatin.variable} ${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">
+      <head>
         <PwaBootGate buildId={buildId} />
+      </head>
+      <body className="min-h-full">
         <QueryProvider>
           <ToastProvider>
             <PwaLifecycle />

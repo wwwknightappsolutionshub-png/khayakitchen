@@ -8,9 +8,12 @@ import { CustomerLayoutShell } from "@/components/customer/CustomerLayoutShell";
 import { ConnectionBanner } from "@/components/customer/ConnectionBanner";
 import { StorefrontTheme } from "@/components/customer/StorefrontTheme";
 import { WelcomeSplashGate } from "@/components/customer/WelcomeSplashGate";
+import { BuildStamp } from "@/components/customer/BuildStamp";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Order",
@@ -44,6 +47,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <CustomerLayoutShell>{children}</CustomerLayoutShell>
         <StickyCartBar />
         <CustomerNav />
+        <BuildStamp />
         </RealtimeProvider>
       </StorefrontTheme>
     </div>

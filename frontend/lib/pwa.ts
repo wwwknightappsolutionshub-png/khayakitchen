@@ -1,7 +1,14 @@
-export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
+import {
+  APP_BUILD_STORAGE_KEY,
+  BOOT_RELOAD_KEY,
+  PWA_CACHE_EPOCH,
+  PWA_CACHE_EPOCH_KEY,
+} from "@/lib/pwa-boot-gate";
 
 /** Static file first — survives nginx /api routing; route handler is dev fallback. */
 const VERSION_URLS = ["/app-version.json", "/app-version"] as const;
+
+export { APP_BUILD_STORAGE_KEY };
 
 export async function clearPwaCaches(): Promise<void> {
   if (!("caches" in window)) return;
@@ -20,10 +27,15 @@ export async function hardResetPwa(nextBuildId?: string): Promise<void> {
   if (nextBuildId) {
     localStorage.setItem(APP_BUILD_STORAGE_KEY, nextBuildId);
   }
+  localStorage.setItem(PWA_CACHE_EPOCH_KEY, PWA_CACHE_EPOCH);
+  sessionStorage.setItem(BOOT_RELOAD_KEY, "1");
 
   await unregisterServiceWorkers();
   await clearPwaCaches();
-  window.location.reload();
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("_v", String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 export async function fetchServerBuildId(): Promise<string | null> {
@@ -51,28 +63,24 @@ export async function runVersionGate(): Promise<boolean> {
 
   const pageBuild = document.documentElement.dataset.build;
   const storedBuild = localStorage.getItem(APP_BUILD_STORAGE_KEY);
+  const storedEpoch = localStorage.getItem(PWA_CACHE_EPOCH_KEY);
 
   const stalePage = Boolean(pageBuild && pageBuild !== serverBuild);
   const staleStorage = Boolean(storedBuild && storedBuild !== serverBuild);
+  const staleEpoch = storedEpoch !== PWA_CACHE_EPOCH;
 
-  if (stalePage || staleStorage) {
+  if (stalePage || staleStorage || staleEpoch) {
     await hardResetPwa(serverBuild);
     return true;
   }
 
   localStorage.setItem(APP_BUILD_STORAGE_KEY, serverBuild);
+  localStorage.setItem(PWA_CACHE_EPOCH_KEY, PWA_CACHE_EPOCH);
   return false;
 }
 
-export async function checkForPwaUpdate(): Promise<ServiceWorkerRegistration | null> {
-  if (!("serviceWorker" in navigator)) return null;
-
-  const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-  await registration.update();
-
-  if (registration.waiting) {
-    registration.waiting.postMessage({ type: "SKIP_WAITING" });
-  }
-
-  return registration;
+/** Pilot: keep service workers unregistered so stale bundles cannot persist. */
+export async function disableServiceWorkers(): Promise<void> {
+  await unregisterServiceWorkers();
+  await clearPwaCaches();
 }
