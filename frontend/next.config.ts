@@ -26,8 +26,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },
       {
+        // Root must be explicit — the catch-all below does not match "/"
+        source: "/",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
+      {
         source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\..*).*)",
-        headers: [{ key: "Cache-Control", value: "no-cache, must-revalidate" }],
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },
     ];
   },

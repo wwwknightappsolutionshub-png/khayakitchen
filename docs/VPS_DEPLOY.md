@@ -78,6 +78,13 @@ location = /app-version {
     proxy_pass http://127.0.0.1:3004;
     add_header Cache-Control "no-cache, no-store, must-revalidate";
 }
+
+# PWA start_url — Next.js was sending s-maxage=31536000 for "/"; override at nginx
+location = / {
+    proxy_pass http://127.0.0.1:3004;
+    proxy_hide_header Cache-Control;
+    add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+}
 ```
 
 Then `nginx -t && nginx -s reload`.

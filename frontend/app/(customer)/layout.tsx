@@ -10,6 +10,8 @@ import { StorefrontTheme } from "@/components/customer/StorefrontTheme";
 import { WelcomeSplashGate } from "@/components/customer/WelcomeSplashGate";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Order",
   description: "Order from Khaya Kitchen",
