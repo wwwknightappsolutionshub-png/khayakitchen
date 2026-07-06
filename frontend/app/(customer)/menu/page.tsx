@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import MenuPage from "./MenuPage";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 function MenuSkeleton() {
   return (
     <div className="space-y-4 px-4 pt-6">

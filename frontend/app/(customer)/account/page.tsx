@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -111,7 +112,7 @@ export default function AccountPage() {
       </header>
 
       {activeOrderId && (
-        <Link
+        <CustomerRouteLink
           href={`/tracking?id=${activeOrderId}`}
           className="mb-4 flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors duration-200 hover:border-[var(--primary)]/30"
         >
@@ -120,7 +121,7 @@ export default function AccountPage() {
             <p className="font-medium">Active order</p>
             <p className="text-xs text-[var(--muted)]">#{activeOrderId.slice(0, 8).toUpperCase()}</p>
           </div>
-        </Link>
+        </CustomerRouteLink>
       )}
 
       <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -204,7 +205,7 @@ export default function AccountPage() {
                 className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <Link
+                  <CustomerRouteLink
                     href={`/tracking?id=${order.id}`}
                     className="min-w-0 flex-1 transition-colors hover:text-[var(--primary)]"
                   >
@@ -214,7 +215,7 @@ export default function AccountPage() {
                     </p>
                     <p className="font-mono text-sm">{formatCurrency(order.total_amount)}</p>
                     <p className="text-xs text-[var(--muted)]">{formatDate(order.created_at)}</p>
-                  </Link>
+                  </CustomerRouteLink>
                   <CustomerButton
                     variant="secondary"
                     className="shrink-0 text-xs"
@@ -259,11 +260,11 @@ export default function AccountPage() {
         </div>
       )}
 
-      <Link href="/tracking">
+      <CustomerRouteLink href="/tracking">
         <CustomerButton variant="secondary" className="w-full">
           Track Orders
         </CustomerButton>
-      </Link>
+      </CustomerRouteLink>
 
       <p className="mt-8 text-center text-xs text-[var(--muted)]">
         Business owner?{" "}

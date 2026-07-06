@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { Minus, Plus, ArrowRight } from "lucide-react";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { useCartStore, getOptionsKey, getLinePrice } from "@/stores/cart-store";
@@ -20,9 +20,9 @@ export default function CartPage() {
         <p className="mb-2 text-4xl">🍽️</p>
         <h1 className="text-xl font-semibold">Your cart is empty</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">Browse the menu to add something delicious</p>
-        <Link href="/menu" className="mt-8">
+        <CustomerRouteLink href="/menu" className="mt-8">
           <CustomerButton>Browse Menu</CustomerButton>
-        </Link>
+        </CustomerRouteLink>
       </div>
     );
   }
@@ -104,12 +104,12 @@ export default function CartPage() {
         <OrderSavingsSummary items={items} total={total} />
       </div>
 
-      <Link href={isClosed ? "/menu" : "/checkout"} className="mt-6 block">
+      <CustomerRouteLink href={isClosed ? "/menu" : "/checkout"} className="mt-6 block">
         <CustomerButton className="w-full" size="lg" disabled={isClosed}>
           {isClosed ? "Currently closed" : "Continue to Checkout"}
           {!isClosed && <ArrowRight className="h-4 w-4" />}
         </CustomerButton>
-      </Link>
+      </CustomerRouteLink>
     </div>
   );
 }

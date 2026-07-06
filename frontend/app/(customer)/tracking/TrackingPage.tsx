@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { OrderStatusTracker } from "@/components/customer/OrderStatusTracker";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { useOrderTracking } from "@/hooks/useOrderTracking";
@@ -29,9 +29,9 @@ export default function TrackingPage() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center customer-animate-in">
         <h1 className="text-xl font-semibold">No active order</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">Place an order to track it here</p>
-        <Link href="/menu" className="mt-6">
+        <CustomerRouteLink href="/menu" className="mt-6">
           <CustomerButton>Order Now</CustomerButton>
-        </Link>
+        </CustomerRouteLink>
       </div>
     );
   }
@@ -61,11 +61,11 @@ export default function TrackingPage() {
         />
       )}
 
-      <Link href="/menu" className="mt-8 block">
+      <CustomerRouteLink href="/menu" className="mt-8 block">
         <CustomerButton variant="secondary" className="w-full">
           Order Again
         </CustomerButton>
-      </Link>
+      </CustomerRouteLink>
     </div>
   );
 }

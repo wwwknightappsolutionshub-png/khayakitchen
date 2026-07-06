@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { usePathname } from "next/navigation";
 import { useCartStore } from "@/stores/cart-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -36,11 +36,11 @@ export function StickyCartBar() {
           </p>
           <p className="price text-lg text-[var(--foreground)]">{formatCurrency(total)}</p>
         </div>
-        <Link href={isClosed ? "/menu" : href}>
+        <CustomerRouteLink href={isClosed ? "/menu" : href}>
           <CustomerButton size="md" disabled={isClosed}>
             {isClosed ? "Closed" : "View Cart"}
           </CustomerButton>
-        </Link>
+        </CustomerRouteLink>
       </div>
     </div>
   );

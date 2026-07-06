@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useCustomerHome } from "@/hooks/useCustomerHome";
 import { FeaturedMealCard } from "@/components/customer/FeaturedMealCard";
 import { PopularMealsRow } from "@/components/customer/PopularMealsRow";
@@ -75,9 +75,9 @@ export default function CustomerHomePage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="featured-section-title text-lg font-bold tracking-tight">Our Featured Meal</h2>
-          <Link href="/menu" className="text-sm text-[var(--primary)]">
+          <CustomerRouteLink href="/menu" className="text-sm text-[var(--primary)]">
             Full menu
-          </Link>
+          </CustomerRouteLink>
         </div>
         <FeaturedMealCard
           meal={featuredMeal}

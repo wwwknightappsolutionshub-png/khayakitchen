@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { CustomerInput } from "@/components/customer/CustomerInput";
 import { useCartStore, getLinePrice } from "@/stores/cart-store";
@@ -69,9 +69,9 @@ export default function CheckoutPage() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
         <h1 className="text-xl font-semibold">Nothing to checkout</h1>
-        <Link href="/menu" className="mt-6">
+        <CustomerRouteLink href="/menu" className="mt-6">
           <CustomerButton>Browse Menu</CustomerButton>
-        </Link>
+        </CustomerRouteLink>
       </div>
     );
   }

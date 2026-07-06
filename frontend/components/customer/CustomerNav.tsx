@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, UtensilsCrossed, ShoppingCart, User } from "lucide-react";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -29,7 +29,7 @@ export function CustomerNav() {
           const showBadge = item.href === "/cart" && itemCount > 0;
 
           return (
-            <Link
+            <CustomerRouteLink
               key={item.href}
               href={item.href}
               className={cn(
@@ -44,7 +44,7 @@ export function CustomerNav() {
                   {itemCount}
                 </span>
               )}
-            </Link>
+            </CustomerRouteLink>
           );
         })}
       </div>

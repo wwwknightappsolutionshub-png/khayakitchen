@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useStorefront } from "@/hooks/useStorefront";
 import { NewsTicker } from "@/components/customer/NewsTicker";
 import { RestaurantStatusPill } from "@/components/customer/RestaurantStatusPill";
@@ -21,7 +21,7 @@ export function CustomerHeader() {
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md">
       <div className="mx-auto max-w-lg px-4 pt-3">
         <div className="flex items-center justify-between gap-3 pb-2.5">
-          <Link href="/" className="flex min-w-0 flex-1 items-center gap-2.5">
+          <CustomerRouteLink href="/" className="flex min-w-0 flex-1 items-center gap-2.5">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
@@ -31,7 +31,7 @@ export function CustomerHeader() {
               </span>
             )}
             <span className="truncate text-base font-semibold leading-tight tracking-tight">{name}</span>
-          </Link>
+          </CustomerRouteLink>
           <RestaurantStatusPill status={status} closingAt={closingAt} promoEndsAt={promoEndsAt} />
         </div>
         {showTicker && (
