@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const SPLASH_DURATION_MS = 10_000;
+const SPLASH_DURATION_MS = 3_000;
 
 interface KitchenSignupSplashProps {
   onComplete: () => void;
@@ -15,6 +15,14 @@ export function KitchenSignupSplash({ onComplete }: KitchenSignupSplashProps) {
   const [progress, setProgress] = useState(0);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const dismissedRef = useRef(false);
+
+  const dismiss = () => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    setVisible(false);
+    window.setTimeout(() => onCompleteRef.current(), 400);
+  };
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -23,22 +31,25 @@ export function KitchenSignupSplash({ onComplete }: KitchenSignupSplashProps) {
       setProgress(Math.min(100, (elapsed / SPLASH_DURATION_MS) * 100));
       if (elapsed >= SPLASH_DURATION_MS) {
         window.clearInterval(tick);
-        setVisible(false);
-        window.setTimeout(() => onCompleteRef.current(), 500);
+        dismiss();
       }
     }, 50);
 
     return () => window.clearInterval(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div
+      onClick={dismiss}
+      role="button"
+      tabIndex={0}
       className={cn(
-        "fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[#0a0806] transition-opacity duration-500",
+        "fixed inset-0 z-[1000] flex cursor-pointer items-center justify-center overflow-hidden bg-[#0a0806] transition-opacity duration-500",
         visible ? "opacity-100" : "pointer-events-none opacity-0",
       )}
       aria-live="polite"
-      aria-label="KhayaOS kitchen welcome"
+      aria-label="KhayaOS kitchen welcome — tap to continue"
     >
       <div className="signup-splash-glow absolute inset-0" />
       <div className="signup-splash-ember absolute left-[12%] top-[18%] h-40 w-40 rounded-full bg-amber-500/20 blur-3xl" />
@@ -76,6 +87,8 @@ export function KitchenSignupSplash({ onComplete }: KitchenSignupSplashProps) {
             />
           </div>
         </div>
+
+        <p className="signup-splash-fade-up-delay mt-6 text-xs text-amber-100/50">Tap anywhere to continue</p>
       </div>
     </div>
   );

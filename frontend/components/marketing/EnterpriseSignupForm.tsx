@@ -431,7 +431,18 @@ export function EnterpriseSignupForm({
       <UnifiedProgress currentStep={step} label={currentLabel} />
 
       {isFeatureStep ? (
-        <FeatureExplainerSlide slide={KHAYA_FEATURE_SLIDES[step]} />
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setStep(FEATURE_COUNT)}
+              className={cn("text-sm font-medium underline-offset-4 hover:underline", marketingTheme.link)}
+            >
+              Skip intro → go to signup form
+            </button>
+          </div>
+          <FeatureExplainerSlide slide={KHAYA_FEATURE_SLIDES[step]} />
+        </div>
       ) : (
         <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
           <SectionTitle title={SIGNUP_PHASES[phase].title} description={SIGNUP_PHASES[phase].description} />
