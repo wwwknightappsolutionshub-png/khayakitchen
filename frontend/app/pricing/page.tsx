@@ -46,21 +46,27 @@ export default function PublicPricingPage() {
           <Link href="/menu" className="text-lg font-semibold tracking-tight">
             Khaya Kitchen
           </Link>
-          <div className="flex gap-4 text-sm">
-            <Link href="/get-started" className="text-violet-400 hover:text-violet-300">
-              Get started
-            </Link>
+          <div className="flex items-center gap-4 text-sm">
             <Link href="/menu" className="text-zinc-400 hover:text-white">
               Order
             </Link>
             <Link href="/pricing" className="text-zinc-400 hover:text-white">
               Pricing
             </Link>
+            <Link href="/login" className="text-violet-400 hover:text-violet-300">
+              Sign in
+            </Link>
             {isSuperAdmin && (
               <Link href="/platform/pricing" className="text-violet-400 hover:text-violet-300">
                 Manage Plans
               </Link>
             )}
+            <Link
+              href="/get-started?signup=1"
+              className="rounded-full bg-violet-600 px-4 py-1.5 font-semibold text-white hover:bg-violet-500"
+            >
+              Sign up
+            </Link>
           </div>
         </div>
       </header>
