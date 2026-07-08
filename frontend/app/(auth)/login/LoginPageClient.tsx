@@ -100,9 +100,6 @@ export default function LoginPageClient() {
           <Link href="/get-started" className="text-primary hover:underline">
             Get started
           </Link>
-          {" · "}
-          Platform admin?{" "}
-          <span className="text-violet-400">admin@khayaos.com</span>
         </p>
       </CardContent>
     </Card>
