@@ -1,20 +1,25 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  tooltip?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => {
+  ({ className, label, error, tooltip, id, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-foreground">
-            {label}
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor={inputId} className="text-sm font-medium text-foreground">
+              {label}
+            </label>
+            {tooltip ? <InfoTooltip label={label} text={tooltip} /> : null}
+          </div>
         )}
         <input
           ref={ref}

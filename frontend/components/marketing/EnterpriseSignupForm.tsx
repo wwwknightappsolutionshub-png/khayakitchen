@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/Input";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Button } from "@/components/ui/Button";
 import type { PublicPricingPlan } from "@/lib/types";
 import { marketingTheme } from "@/lib/marketing-theme";
@@ -84,6 +85,29 @@ function SectionTitle({ title, description }: { title: string; description: stri
   );
 }
 
+function LabeledSelect({
+  label,
+  tooltip,
+  error,
+  children,
+}: {
+  label: string;
+  tooltip?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <label className="text-sm font-medium">{label}</label>
+        {tooltip ? <InfoTooltip label={label} text={tooltip} /> : null}
+      </div>
+      {children}
+      {error ? <p className="mt-1 text-sm text-red-400">{error}</p> : null}
+    </div>
+  );
+}
+
 export function EnterpriseSignupForm({
   plans,
   defaultPlanId,
@@ -148,14 +172,22 @@ export function EnterpriseSignupForm({
           description="Legal and public-facing details for your restaurant workspace."
         />
         <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Restaurant name" error={errors.restaurant_name?.message} {...register("restaurant_name")} />
+          <Input
+            label="Restaurant name"
+            tooltip="The public-facing name customers will see on your menu, ordering app, and receipts."
+            error={errors.restaurant_name?.message}
+            {...register("restaurant_name")}
+          />
           <Input
             label="Legal business name"
+            tooltip="The registered legal name of your business, as it appears on official documents and invoices."
             error={errors.legal_business_name?.message}
             {...register("legal_business_name")}
           />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Business type</label>
+          <LabeledSelect
+            label="Business type"
+            tooltip="Helps KhayaOS tailor default settings and module recommendations for your operation."
+          >
             <select
               className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
               {...register("business_type")}
@@ -167,8 +199,13 @@ export function EnterpriseSignupForm({
               <option value="franchise">Franchise</option>
               <option value="other">Other</option>
             </select>
-          </div>
-          <Input label="Workspace slug" error={errors.slug?.message} {...register("slug")} />
+          </LabeledSelect>
+          <Input
+            label="Workspace slug"
+            tooltip="A unique URL-friendly identifier for your workspace (e.g. khaya-kitchen). Used in your login URL and cannot be changed later."
+            error={errors.slug?.message}
+            {...register("slug")}
+          />
           <Input
             label="Company registration number"
             error={errors.company_registration_number?.message}
@@ -181,41 +218,86 @@ export function EnterpriseSignupForm({
       <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Location & locale" description="Where you operate and how you price orders." />
         <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Country" error={errors.country?.message} {...register("country")} />
-          <Input label="City" error={errors.city?.message} {...register("city")} />
+          <Input
+            label="Country"
+            tooltip="The country where your primary kitchen or restaurant is located."
+            error={errors.country?.message}
+            {...register("country")}
+          />
+          <Input
+            label="City"
+            tooltip="The city or town of your main operating location."
+            error={errors.city?.message}
+            {...register("city")}
+          />
           <Input
             label="Street address"
             className="md:col-span-2"
+            tooltip="Full street address of your primary location, used for delivery zone setup and business records."
             error={errors.street_address?.message}
             {...register("street_address")}
           />
-          <Input label="Postal code" error={errors.postal_code?.message} {...register("postal_code")} />
-          <Input label="Timezone" error={errors.timezone?.message} {...register("timezone")} />
-          <Input label="Currency" error={errors.currency?.message} placeholder="GBP" {...register("currency")} />
+          <Input
+            label="Postal code"
+            tooltip="Postcode or ZIP code for your primary location."
+            error={errors.postal_code?.message}
+            {...register("postal_code")}
+          />
+          <Input
+            label="Timezone"
+            tooltip="Used to schedule order cut-offs, kitchen hours, and reporting. Example: Europe/London."
+            error={errors.timezone?.message}
+            {...register("timezone")}
+          />
+          <Input
+            label="Currency"
+            tooltip="The currency shown to customers and used in all pricing and reports. Example: GBP, USD, NGN."
+            error={errors.currency?.message}
+            placeholder="GBP"
+            {...register("currency")}
+          />
         </div>
       </section>
 
       <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
         <SectionTitle title="Owner account" description="Primary administrator credentials for your tenant." />
         <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Owner full name" error={errors.owner_name?.message} {...register("owner_name")} />
-          <Input label="Role / title" error={errors.owner_role_title?.message} {...register("owner_role_title")} />
+          <Input
+            label="Owner full name"
+            tooltip="Full name of the primary account holder who will manage this workspace."
+            error={errors.owner_name?.message}
+            {...register("owner_name")}
+          />
+          <Input
+            label="Role / title"
+            tooltip="Your job title or role, e.g. Owner, General Manager, Head Chef."
+            error={errors.owner_role_title?.message}
+            {...register("owner_role_title")}
+          />
           <Input
             label="Owner email"
             type="email"
+            tooltip="Your login email address. A welcome email with your credentials will be sent here after signup."
             error={errors.owner_email?.message}
             {...register("owner_email")}
           />
-          <Input label="Owner phone" error={errors.owner_phone?.message} {...register("owner_phone")} />
+          <Input
+            label="Owner phone"
+            tooltip="Contact number for account recovery and important platform notifications."
+            error={errors.owner_phone?.message}
+            {...register("owner_phone")}
+          />
           <Input
             label="Password"
             type="password"
+            tooltip="Minimum 8 characters. You will use this to log in to your KhayaOS admin dashboard."
             error={errors.owner_password?.message}
             {...register("owner_password")}
           />
           <Input
             label="Confirm password"
             type="password"
+            tooltip="Re-enter your password to confirm it is correct."
             error={errors.owner_password_confirmation?.message}
             {...register("owner_password_confirmation")}
           />
@@ -226,7 +308,13 @@ export function EnterpriseSignupForm({
         <SectionTitle title="Operations profile" description="How your kitchen runs day to day." />
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <p className="mb-2 text-sm font-medium">Order types offered</p>
+            <div className="mb-2 flex items-center gap-1.5">
+              <p className="text-sm font-medium">Order types offered</p>
+              <InfoTooltip
+                label="Order types offered"
+                text="Select at least one. Pickup = customers collect orders. Delivery = orders sent to customer addresses."
+              />
+            </div>
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm text-zinc-300">
                 <input type="checkbox" className={marketingTheme.checkbox} {...register("order_types_pickup")} />
@@ -244,18 +332,21 @@ export function EnterpriseSignupForm({
           <Input
             label="Estimated daily orders"
             type="number"
+            tooltip="Approximate number of orders you expect per day. Helps KhayaOS size your plan and set sensible defaults."
             error={errors.estimated_daily_orders?.message}
             {...register("estimated_daily_orders", { valueAsNumber: true })}
           />
           <Input
             label="Staff count"
             type="number"
+            tooltip="Total number of staff who will use KhayaOS (kitchen, front-of-house, management)."
             error={errors.staff_count?.message}
             {...register("staff_count", { valueAsNumber: true })}
           />
           <Input
             label="Branch count"
             type="number"
+            tooltip="Number of locations or branches you operate. Start with 1 if you have a single site."
             error={errors.branch_count?.message}
             {...register("branch_count", { valueAsNumber: true })}
           />
@@ -277,18 +368,22 @@ export function EnterpriseSignupForm({
           <Input label="Primary color" error={errors.primary_color?.message} {...register("primary_color")} />
           <Input label="Secondary color" error={errors.secondary_color?.message} {...register("secondary_color")} />
           <div className="md:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium">Subscription plan</label>
-            <select
-              className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
-              {...register("plan_id")}
+            <LabeledSelect
+              label="Subscription plan"
+              tooltip="Choose the plan that matches your operation size. You can upgrade or change your plan later from the admin dashboard."
+              error={errors.plan_id?.message}
             >
-              {plans.map((plan) => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.name}
-                </option>
-              ))}
-            </select>
-            {errors.plan_id?.message ? <p className="mt-1 text-sm text-red-400">{errors.plan_id.message}</p> : null}
+              <select
+                className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
+                {...register("plan_id")}
+              >
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+            </LabeledSelect>
           </div>
         </div>
       </section>
