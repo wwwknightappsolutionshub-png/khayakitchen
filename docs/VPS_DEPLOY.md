@@ -34,10 +34,14 @@ Copy-paste block for production (use as-is when asked for VPS deployment command
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
-cd backend && /www/server/php/83/bin/php artisan migrate --force
-cd ../frontend && rm -rf .next && npm run build
+cd backend && composer install --no-dev --optimize-autoloader
+/www/server/php/83/bin/php artisan migrate --force
+/www/server/php/83/bin/php artisan config:clear
+cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```
+
+> **Dependencies (required):** `node_modules/` and `vendor/` are git-ignored, so **every deploy must run `npm install`** (frontend) **and `composer install`** (backend) after `git pull`. Skipping `npm install` causes `Module not found` build failures whenever a new package was added (e.g. `country-state-city`). `config:clear` is required so `.env` changes like `FRONTEND_URL` take effect.
 
 After deploy:
 

@@ -41,10 +41,14 @@ The most recent production work landed in commit **`ffa9d2f`** on `main`. It com
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
-cd backend && /www/server/php/83/bin/php artisan migrate --force
-cd ../frontend && npm run build
+cd backend && composer install --no-dev --optimize-autoloader
+/www/server/php/83/bin/php artisan migrate --force
+/www/server/php/83/bin/php artisan config:clear
+cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```
+
+> `node_modules/`/`vendor/` are git-ignored — always run `npm install` + `composer install` after pull, or builds fail with `Module not found` when a dependency was added.
 
 Verify: `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline` → latest commit on `main`. Hard-refresh browser after deploy.
 
