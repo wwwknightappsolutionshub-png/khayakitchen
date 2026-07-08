@@ -12,7 +12,11 @@ import { signupService } from "@/services/signup.service";
 import { useToast } from "@/providers/ToastProvider";
 import { ApiClientError } from "@/lib/api-client";
 
-export function SignupWizard() {
+interface SignupWizardProps {
+  startAtForm?: boolean;
+}
+
+export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -102,6 +106,7 @@ export function SignupWizard() {
         defaultPlanId={defaultPlanId}
         isSubmitting={signupMutation.isPending}
         onSubmit={handleSignup}
+        startAtForm={startAtForm}
       />
       {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
     </div>

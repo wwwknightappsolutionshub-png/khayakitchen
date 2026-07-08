@@ -1,13 +1,16 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { SignupWizard } from "@/components/marketing/SignupWizard";
 import { KitchenSignupSplash } from "@/components/marketing/KitchenSignupSplash";
 import { marketingTheme } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
 function GetStartedContent() {
-  const [showSplash, setShowSplash] = useState(true);
+  const searchParams = useSearchParams();
+  const startAtForm = searchParams.get("signup") === "1";
+  const [showSplash, setShowSplash] = useState(!startAtForm);
 
   return (
     <>
@@ -25,7 +28,7 @@ function GetStartedContent() {
             enterprise onboarding to provision your tenant instantly.
           </p>
         </div>
-        <SignupWizard />
+        <SignupWizard startAtForm={startAtForm} />
       </div>
     </>
   );

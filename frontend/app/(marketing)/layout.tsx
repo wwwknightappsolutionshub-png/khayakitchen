@@ -20,6 +20,15 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/login" className={marketingTheme.link}>
               Sign in
             </Link>
+            <Link
+              href="/get-started?signup=1"
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-semibold text-white",
+                marketingTheme.primaryButton,
+              )}
+            >
+              Sign up
+            </Link>
           </nav>
         </div>
       </header>

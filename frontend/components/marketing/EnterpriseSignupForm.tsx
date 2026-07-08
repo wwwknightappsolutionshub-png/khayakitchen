@@ -91,6 +91,7 @@ interface EnterpriseSignupFormProps {
   defaultPlanId?: string;
   isSubmitting?: boolean;
   onSubmit: (values: EnterpriseSignupFormValues) => void;
+  startAtForm?: boolean;
 }
 
 type CountryRow = {
@@ -237,8 +238,9 @@ export function EnterpriseSignupForm({
   defaultPlanId,
   isSubmitting,
   onSubmit,
+  startAtForm = false,
 }: EnterpriseSignupFormProps) {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(startAtForm ? FEATURE_COUNT : 0);
   const [countries, setCountries] = useState<CountryRow[]>([]);
   const [states, setStates] = useState<StateRow[]>([]);
   const [cities, setCities] = useState<CityRow[]>([]);
