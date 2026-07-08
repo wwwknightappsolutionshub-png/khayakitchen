@@ -40,7 +40,7 @@ export default function PublicPricingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] font-[family-name:var(--font-anek)] text-white">
+    <div className="min-h-screen bg-[#0a0806] font-[family-name:var(--font-anek)] text-white">
       <header className="border-b border-white/10 px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link href="/menu" className="text-lg font-semibold tracking-tight">
@@ -53,17 +53,17 @@ export default function PublicPricingPage() {
             <Link href="/pricing" className="text-zinc-400 hover:text-white">
               Pricing
             </Link>
-            <Link href="/login" className="text-violet-400 hover:text-violet-300">
+            <Link href="/login" className="text-amber-400 hover:text-amber-300">
               Sign in
             </Link>
             {isSuperAdmin && (
-              <Link href="/platform/pricing" className="text-violet-400 hover:text-violet-300">
+              <Link href="/platform/pricing" className="text-amber-400 hover:text-amber-300">
                 Manage Plans
               </Link>
             )}
             <Link
               href="/get-started?signup=1"
-              className="rounded-full bg-violet-600 px-4 py-1.5 font-semibold text-white hover:bg-violet-500"
+              className="rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-4 py-1.5 font-semibold text-white hover:from-amber-400 hover:via-orange-400 hover:to-rose-400"
             >
               Sign up
             </Link>
@@ -78,12 +78,12 @@ export default function PublicPricingPage() {
           </h1>
           <p className="mt-2 text-zinc-400">Choose the plan that fits your kitchen</p>
 
-          <div className="mt-6 inline-flex rounded-full border border-white/10 bg-[#141418] p-1">
+          <div className="mt-6 inline-flex rounded-full border border-white/10 bg-[#14100c] p-1">
             <button
               type="button"
               onClick={() => setCycle("monthly")}
               className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
-                cycle === "monthly" ? "bg-violet-600 text-white" : "text-zinc-400 hover:text-white"
+                cycle === "monthly" ? "bg-orange-600 text-white" : "text-zinc-400 hover:text-white"
               }`}
             >
               Monthly
@@ -92,7 +92,7 @@ export default function PublicPricingPage() {
               type="button"
               onClick={() => setCycle("yearly")}
               className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
-                cycle === "yearly" ? "bg-violet-600 text-white" : "text-zinc-400 hover:text-white"
+                cycle === "yearly" ? "bg-orange-600 text-white" : "text-zinc-400 hover:text-white"
               }`}
             >
               Yearly
@@ -110,22 +110,22 @@ export default function PublicPricingPage() {
           {plans.map((plan) => {
             const price = cycle === "monthly" ? plan.price_monthly : plan.price_yearly;
             const period = cycle === "monthly" ? "month" : "year";
-            const accent = plan.plan_color ?? "#8B5CF6";
+            const accent = plan.plan_color ?? "#E07A5F";
 
             return (
               <article
                 key={plan.id}
                 className={`relative flex flex-col rounded-2xl border p-6 transition-transform hover:-translate-y-0.5 ${
                   plan.is_recommended
-                    ? "border-violet-500/50 bg-gradient-to-b from-violet-950/40 to-[#141418] shadow-lg shadow-violet-950/30"
-                    : "border-white/10 bg-[#141418]"
+                    ? "border-orange-500/50 bg-gradient-to-b from-orange-950/40 to-[#14100c] shadow-lg shadow-orange-950/30"
+                    : "border-white/10 bg-[#14100c]"
                 }`}
                 style={{ borderTopColor: accent, borderTopWidth: 3 }}
               >
                 {plan.is_recommended && (
                   <Badge
                     variant="primary"
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 border border-violet-400/30 bg-violet-600/90 text-white"
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 border border-orange-400/30 bg-orange-600/90 text-white"
                   >
                     <Sparkles className="mr-1 h-3 w-3" />
                     Recommended
@@ -183,7 +183,7 @@ export default function PublicPricingPage() {
             <div className="overflow-x-auto rounded-2xl border border-white/10">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 bg-[#141418]">
+                  <tr className="border-b border-white/10 bg-[#14100c]">
                     <th className="px-4 py-3 text-left font-medium text-zinc-400">Feature</th>
                     {plans.map((p) => (
                       <th key={p.id} className="px-4 py-3 text-center font-medium">
