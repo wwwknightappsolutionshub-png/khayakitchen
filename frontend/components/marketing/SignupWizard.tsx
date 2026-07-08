@@ -3,28 +3,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { FeatureExplainerSlide } from "@/components/marketing/FeatureExplainerSlide";
 import {
   EnterpriseSignupForm,
   type EnterpriseSignupFormValues,
 } from "@/components/marketing/EnterpriseSignupForm";
-import { WizardProgress } from "@/components/marketing/WizardProgress";
-import { KHAYA_FEATURE_SLIDES, WIZARD_STEP_LABELS } from "@/lib/khayaos-features";
 import { pricingService } from "@/services/pricing.service";
 import { signupService } from "@/services/signup.service";
 import { useToast } from "@/providers/ToastProvider";
 import { ApiClientError } from "@/lib/api-client";
-import { marketingTheme } from "@/lib/marketing-theme";
-
-const WIZARD_STEPS = [...WIZARD_STEP_LABELS];
 
 export function SignupWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
-  const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const plansQuery = useQuery({
@@ -96,53 +87,23 @@ export function SignupWizard() {
     });
   };
 
-  const isFeatureStep = step < KHAYA_FEATURE_SLIDES.length;
+  if (plansQuery.isLoading) {
+    return <p className="text-zinc-400">Loading plans…</p>;
+  }
+
+  if (plans.length === 0) {
+    return <p className="text-red-400">Public pricing is unavailable. Contact sales@khayaos.com to onboard.</p>;
+  }
 
   return (
-    <div>
-      <WizardProgress steps={WIZARD_STEPS} currentStep={step} />
-
-      {isFeatureStep ? (
-        <FeatureExplainerSlide slide={KHAYA_FEATURE_SLIDES[step]} />
-      ) : (
-        <div className="space-y-4">
-          {plansQuery.isLoading ? (
-            <p className="text-zinc-400">Loading plans…</p>
-          ) : plans.length === 0 ? (
-            <p className="text-red-400">Public pricing is unavailable. Contact sales@khayaos.com to onboard.</p>
-          ) : (
-            <EnterpriseSignupForm
-              plans={plans}
-              defaultPlanId={defaultPlanId}
-              isSubmitting={signupMutation.isPending}
-              onSubmit={handleSignup}
-              onBackToFeatures={() => setStep((current) => current - 1)}
-            />
-          )}
-          {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
-        </div>
-      )}
-
-      {isFeatureStep ? (
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-          <Button
-            variant="secondary"
-            className={marketingTheme.secondaryButton}
-            onClick={() => setStep((current) => Math.max(0, current - 1))}
-            disabled={step === 0}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <Button
-            className={marketingTheme.primaryButton}
-            onClick={() => setStep((current) => Math.min(WIZARD_STEPS.length - 1, current + 1))}
-          >
-            Continue
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : null}
+    <div className="space-y-4">
+      <EnterpriseSignupForm
+        plans={plans}
+        defaultPlanId={defaultPlanId}
+        isSubmitting={signupMutation.isPending}
+        onSubmit={handleSignup}
+      />
+      {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
     </div>
   );
 }
