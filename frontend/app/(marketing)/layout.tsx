@@ -23,7 +23,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
       </header>
-      <main className="relative mx-auto max-w-6xl px-6 py-10">{children}</main>
+      <main className="relative mx-auto max-w-6xl px-6 pt-10 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2rem))]">
+        {children}
+      </main>
     </div>
   );
 }
