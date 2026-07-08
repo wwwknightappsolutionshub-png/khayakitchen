@@ -119,4 +119,75 @@ class PublicSignupTest extends TestCase
         $response->assertStatus(422);
         Mail::assertNothingSent();
     }
+
+    public function test_signup_allows_optional_postal_code_outside_uk_europe_canada(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $response = $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Lagos Kitchen',
+            'legal_business_name' => 'Lagos Kitchen Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'lagos-kitchen',
+            'country' => 'Nigeria',
+            'state' => 'Lagos',
+            'city' => 'Lagos',
+            'street_address' => '12 Admiralty Way',
+            'timezone' => 'Africa/Lagos',
+            'currency' => 'NGN',
+            'owner_name' => 'Ngozi Owner',
+            'owner_email' => 'ngozi@lagoskitchen.test',
+            'owner_phone' => '+2348012345678',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 40,
+            'staff_count' => 4,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ]);
+
+        $response->assertCreated();
+        Mail::assertSent(WelcomeOwnerMail::class);
+    }
+
+    public function test_signup_requires_postal_code_for_united_kingdom(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $response = $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'No Postcode Kitchen',
+            'legal_business_name' => 'No Postcode Kitchen Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'no-postcode-kitchen',
+            'country' => 'United Kingdom',
+            'city' => 'London',
+            'street_address' => '1 Test Street',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Test Owner',
+            'owner_email' => 'nopostcode@testkitchen.test',
+            'owner_phone' => '+447700900111',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 20,
+            'staff_count' => 2,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('code', 'VALIDATION_ERROR');
+        $this->assertArrayHasKey('postal_code', $response->json('details'));
+        Mail::assertNothingSent();
+    }
 }

@@ -149,6 +149,7 @@ class PublicSignupService
             'company_registration_number' => $data['company_registration_number'] ?? null,
             'tax_vat_number' => $data['tax_vat_number'] ?? null,
             'country' => $data['country'] ?? null,
+            'state' => $data['state'] ?? null,
             'city' => $data['city'] ?? null,
             'street_address' => $data['street_address'] ?? null,
             'postal_code' => $data['postal_code'] ?? null,

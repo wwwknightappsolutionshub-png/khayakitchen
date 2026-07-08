@@ -69,9 +69,10 @@ export function SignupWizard() {
       tax_vat_number: values.tax_vat_number || undefined,
       slug: values.slug,
       country: values.country,
+      state: values.state || undefined,
       city: values.city,
       street_address: values.street_address,
-      postal_code: values.postal_code,
+      postal_code: values.postal_code?.trim() || undefined,
       timezone: values.timezone,
       currency: values.currency.toUpperCase(),
       owner_name: values.owner_name,
@@ -95,13 +96,13 @@ export function SignupWizard() {
     });
   };
 
-  const isLastStep = step === WIZARD_STEPS.length - 1;
+  const isFeatureStep = step < KHAYA_FEATURE_SLIDES.length;
 
   return (
     <div>
       <WizardProgress steps={WIZARD_STEPS} currentStep={step} />
 
-      {step < KHAYA_FEATURE_SLIDES.length ? (
+      {isFeatureStep ? (
         <FeatureExplainerSlide slide={KHAYA_FEATURE_SLIDES[step]} />
       ) : (
         <div className="space-y-4">
@@ -115,13 +116,14 @@ export function SignupWizard() {
               defaultPlanId={defaultPlanId}
               isSubmitting={signupMutation.isPending}
               onSubmit={handleSignup}
+              onBackToFeatures={() => setStep((current) => current - 1)}
             />
           )}
           {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
         </div>
       )}
 
-      {!isLastStep && (
+      {isFeatureStep ? (
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="secondary"
@@ -140,16 +142,7 @@ export function SignupWizard() {
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
-      )}
-
-      {isLastStep && step > 0 && (
-        <div className="mt-6">
-          <Button variant="secondary" className={marketingTheme.secondaryButton} onClick={() => setStep((current) => current - 1)}>
-            <ArrowLeft className="h-4 w-4" />
-            Back to features
-          </Button>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
