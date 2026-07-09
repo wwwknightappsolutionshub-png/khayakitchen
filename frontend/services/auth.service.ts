@@ -55,4 +55,49 @@ export const authService = {
       password_confirmation: passwordConfirmation,
     });
   },
+
+  async verifyEmail(token: string, email: string) {
+    return api.post<{
+      message: string;
+      already_verified: boolean;
+      tenant_slug?: string | null;
+      email: string;
+    }>("/auth/verify-email", { token, email }, { skipAuth: true });
+  },
+
+  async resendVerification(email: string, tenantSlug?: string) {
+    return api.post<{ message: string }>(
+      "/auth/resend-verification",
+      { email, tenant_slug: tenantSlug?.trim() || undefined },
+      { skipAuth: true },
+    );
+  },
+
+  async forgotPassword(email: string, tenantSlug?: string) {
+    return api.post<{ message: string }>(
+      "/auth/forgot-password",
+      { email, tenant_slug: tenantSlug?.trim() || undefined },
+      { skipAuth: true },
+    );
+  },
+
+  async resetPassword(
+    email: string,
+    token: string,
+    password: string,
+    passwordConfirmation: string,
+    tenantSlug?: string,
+  ) {
+    return api.post<{ message: string; tenant_slug?: string | null; email: string }>(
+      "/auth/reset-password",
+      {
+        email,
+        token,
+        password,
+        password_confirmation: passwordConfirmation,
+        tenant_slug: tenantSlug?.trim() || undefined,
+      },
+      { skipAuth: true },
+    );
+  },
 };

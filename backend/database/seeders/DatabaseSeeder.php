@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             'password' => 'password',
             'role' => 'super_admin',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $owner = User::create([
@@ -48,6 +49,7 @@ class DatabaseSeeder extends Seeder
             'password' => 'password',
             'role' => 'owner',
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $modules = ['menu', 'orders', 'inventory', 'crm', 'loyalty', 'dashboard', 'kitchen', 'delivery', 'notifications'];

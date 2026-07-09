@@ -29,8 +29,8 @@ class StaffUserService
 
         $tenantId = $this->tenantContext->id();
 
-        if (User::where('tenant_id', $tenantId)->where('email', $data['email'])->exists()) {
-            throw ValidationException::withMessages(['email' => ['Email already in use.']]);
+        if (User::withoutGlobalScopes()->where('email', $data['email'])->exists()) {
+            throw ValidationException::withMessages(['email' => ['This email is already registered.']]);
         }
 
         return User::create([
@@ -40,6 +40,7 @@ class StaffUserService
             'password' => $data['password'],
             'role' => $data['role'],
             'status' => 'active',
+            'email_verified_at' => now(),
         ]);
     }
 

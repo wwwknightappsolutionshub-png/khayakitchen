@@ -2,18 +2,15 @@
 
 namespace App\Modules\Platform\Application\Services;
 
+use App\Modules\Auth\Application\Services\EmailVerificationService;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Platform\Mail\WelcomeOwnerMail;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Domain\Models\Plan;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class PublicSignupService
 {
@@ -21,6 +18,7 @@ class PublicSignupService
         private PlatformTenantService $tenantService,
         private SubscriptionService $subscriptionService,
         private AuditLogService $auditLogService,
+        private EmailVerificationService $emailVerificationService,
     ) {}
 
     /**
@@ -44,13 +42,8 @@ class PublicSignupService
 
         $plainPassword = $data['owner_password'];
         $signupMetadata = $this->buildSignupMetadata($data);
-        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/login?'.http_build_query([
-            'email' => $data['owner_email'],
-            'tenant' => $data['slug'],
-            'welcome' => '1',
-        ]);
 
-        $result = DB::transaction(function () use ($data, $plan, $plainPassword, $signupMetadata, $loginUrl) {
+        $result = DB::transaction(function () use ($data, $plan, $plainPassword, $signupMetadata) {
             $tenant = $this->tenantService->createTenant([
                 'name' => $data['restaurant_name'],
                 'slug' => $data['slug'],
@@ -59,6 +52,7 @@ class PublicSignupService
                 'owner_name' => $data['owner_name'],
                 'owner_email' => $data['owner_email'],
                 'owner_password' => $plainPassword,
+                'owner_email_verified_at' => null,
             ]);
 
             Tenant::withoutGlobalScopes()
@@ -93,8 +87,14 @@ class PublicSignupService
                     'plan_name' => $plan->name,
                     'owner_email' => $data['owner_email'],
                     'business_type' => $data['business_type'] ?? null,
+                    'email_verified' => false,
                 ],
             );
+
+            $owner = User::withoutGlobalScopes()
+                ->where('tenant_id', $tenant['id'])
+                ->where('email', $data['owner_email'])
+                ->firstOrFail();
 
             return [
                 'tenant' => $tenant,
@@ -104,41 +104,17 @@ class PublicSignupService
                     'slug' => $plan->slug,
                 ],
                 'owner_email' => $data['owner_email'],
-                'login_url' => $loginUrl,
-                'message' => 'Congratulations and welcome to KhayaOS',
+                'owner_id' => $owner->id,
+                'message' => 'Check your email to confirm your account before signing in.',
             ];
         });
 
-        // Send the welcome email AFTER the tenant is fully committed. A mail
-        // transport failure (misconfigured SMTP on the server) must never roll
-        // back a successful signup — the owner already set their own password.
-        $this->sendWelcomeEmail($data, $plan, $plainPassword, $loginUrl);
+        $owner = User::withoutGlobalScopes()->findOrFail($result['owner_id']);
+        $this->emailVerificationService->createAndSendVerification($owner, $data['slug']);
+
+        unset($result['owner_id']);
 
         return $result;
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function sendWelcomeEmail(array $data, Plan $plan, string $plainPassword, string $loginUrl): void
-    {
-        try {
-            Mail::to($data['owner_email'])->send(new WelcomeOwnerMail(
-                ownerName: $data['owner_name'],
-                restaurantName: $data['restaurant_name'],
-                tenantSlug: $data['slug'],
-                ownerEmail: $data['owner_email'],
-                plainPassword: $plainPassword,
-                loginUrl: $loginUrl,
-                planName: $plan->name,
-            ));
-        } catch (Throwable $e) {
-            Log::error('Signup welcome email failed to send', [
-                'owner_email' => $data['owner_email'],
-                'tenant_slug' => $data['slug'],
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     /**

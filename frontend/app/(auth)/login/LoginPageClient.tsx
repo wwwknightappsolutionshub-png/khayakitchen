@@ -76,6 +76,14 @@ export default function LoginPageClient() {
             error={errors.password?.message}
             {...register("password")}
           />
+          <div className="flex justify-end">
+            <Link href={`/forgot-password?${new URLSearchParams({
+              email: prefilledEmail,
+              tenant: prefilledTenant,
+            }).toString()}`} className="text-xs text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <Input
             label="Workspace slug"
             type="text"

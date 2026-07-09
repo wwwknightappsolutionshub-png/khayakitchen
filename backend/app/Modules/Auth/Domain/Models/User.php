@@ -19,6 +19,7 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'email_verified_at',
         'last_login_at',
     ];
 
@@ -30,7 +31,13 @@ class User extends Authenticatable
     {
         return [
             'last_login_at' => 'datetime',
+            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->email_verified_at !== null;
     }
 }

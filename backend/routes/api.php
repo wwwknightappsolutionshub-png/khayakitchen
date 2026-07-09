@@ -42,6 +42,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1');
+    Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1');
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
     Route::post('/signup', [PublicSignupController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);

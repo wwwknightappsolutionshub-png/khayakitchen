@@ -89,6 +89,9 @@ class PlatformTenantService
                     'password' => $data['owner_password'] ?? 'password',
                     'role' => 'owner',
                     'status' => 'active',
+                    'email_verified_at' => array_key_exists('owner_email_verified_at', $data)
+                        ? $data['owner_email_verified_at']
+                        : now(),
                 ]);
             }
 

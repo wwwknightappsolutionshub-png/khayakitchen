@@ -53,6 +53,12 @@ class AuthService
             ]);
         }
 
+        if ($user->tenant_id && ! $user->isEmailVerified()) {
+            throw ValidationException::withMessages([
+                'email' => ['Please verify your email before signing in. Check your inbox for the confirmation link.'],
+            ]);
+        }
+
         $user->update(['last_login_at' => now()]);
         $this->tenantContext->setUser($user);
         if ($user->tenant_id) {
@@ -133,12 +139,6 @@ class AuthService
         $duplicateQuery = User::withoutGlobalScopes()
             ->where('email', $email)
             ->where('id', '!=', $user->id);
-
-        if ($user->tenant_id) {
-            $duplicateQuery->where('tenant_id', $user->tenant_id);
-        } else {
-            $duplicateQuery->whereNull('tenant_id');
-        }
 
         if ($duplicateQuery->exists()) {
             throw ValidationException::withMessages([

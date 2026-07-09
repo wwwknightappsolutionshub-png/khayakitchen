@@ -32,6 +32,15 @@ class CheckTenantAccess
             return ApiResponse::error('User account is disabled', 'USER_DISABLED', null, 403);
         }
 
+        if ($user->tenant_id && ! $user->isEmailVerified()) {
+            return ApiResponse::error(
+                'Please verify your email before accessing this workspace.',
+                'EMAIL_NOT_VERIFIED',
+                null,
+                403,
+            );
+        }
+
         $tenantId = $this->tenantContext->id();
         if (! $tenantId || $user->tenant_id !== $tenantId) {
             return ApiResponse::error('Tenant access denied', 'TENANT_ACCESS_DENIED', null, 403);

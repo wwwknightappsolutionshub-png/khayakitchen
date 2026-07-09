@@ -38,16 +38,15 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
     mutationFn: signupService.register,
     onSuccess: (response) => {
       showToast(
-        "Congratulations and welcome to KhayaOS",
-        "Your branded welcome email and login credentials have been sent to your inbox.",
+        "Almost there!",
+        "Check your inbox and confirm your email to activate your account.",
       );
       window.setTimeout(() => {
-        const loginParams = new URLSearchParams({
+        const params = new URLSearchParams({
           email: response.owner_email,
           tenant: response.tenant.slug,
-          welcome: "1",
         });
-        router.push(`/login?${loginParams.toString()}`);
+        router.push(`/verify-email-pending?${params.toString()}`);
       }, 1200);
     },
     onError: (error) => {

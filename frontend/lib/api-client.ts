@@ -86,10 +86,15 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
 
   const isPlatformRoute = endpoint.startsWith("/platform");
   const isAuthLoginRoute = endpoint === "/auth/login";
+  const isPublicAuthRoute =
+    endpoint === "/auth/verify-email" ||
+    endpoint === "/auth/resend-verification" ||
+    endpoint === "/auth/forgot-password" ||
+    endpoint === "/auth/reset-password";
   const isPublicSignupRoute = endpoint === "/signup";
   const isPublicPricingRoute = endpoint === "/pricing/plans";
 
-  if (!isPlatformRoute && !isAuthLoginRoute && !isPublicSignupRoute && !isPublicPricingRoute) {
+  if (!isPlatformRoute && !isAuthLoginRoute && !isPublicAuthRoute && !isPublicSignupRoute && !isPublicPricingRoute) {
     const tenantId = getStoredTenantId();
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
 

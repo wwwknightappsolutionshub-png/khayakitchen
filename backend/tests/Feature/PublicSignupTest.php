@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Auth\Mail\EmailVerificationMail;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Platform\Mail\WelcomeOwnerMail;
@@ -20,7 +21,7 @@ class PublicSignupTest extends TestCase
         $this->seed();
     }
 
-    public function test_public_signup_provisions_tenant_plan_and_welcome_email(): void
+    public function test_public_signup_provisions_tenant_plan_and_verification_email(): void
     {
         Mail::fake();
 
@@ -59,12 +60,15 @@ class PublicSignupTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('message', 'Congratulations and welcome to KhayaOS');
+        $response->assertJsonPath('message', 'Check your email to confirm your account before signing in.');
         $response->assertJsonPath('tenant.slug', 'sunrise-kitchen');
 
         $tenant = Tenant::where('slug', 'sunrise-kitchen')->firstOrFail();
         $this->assertNotNull($tenant->signup_metadata);
         $this->assertSame('London', $tenant->signup_metadata['city']);
+
+        $owner = User::where('email', 'ada@sunrisekitchen.test')->firstOrFail();
+        $this->assertNull($owner->email_verified_at);
 
         $this->assertDatabaseHas('users', [
             'tenant_id' => $tenant->id,
@@ -77,16 +81,70 @@ class PublicSignupTest extends TestCase
             'plan_id' => $plan->id,
         ]);
 
-        Mail::assertSent(WelcomeOwnerMail::class, function (WelcomeOwnerMail $mail) {
-            return $mail->ownerEmail === 'ada@sunrisekitchen.test'
-                && $mail->plainPassword === 'SecurePass1!'
-                && $mail->tenantSlug === 'sunrise-kitchen'
-                && str_contains($mail->loginUrl, 'tenant=sunrise-kitchen')
-                && str_contains($mail->loginUrl, 'email=ada%40sunrisekitchen.test');
+        Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) {
+            return $mail->tenantSlug === 'sunrise-kitchen'
+                && str_contains($mail->verifyUrl, 'token=')
+                && str_contains($mail->verifyUrl, 'email=ada%40sunrisekitchen.test');
         });
+        Mail::assertNotSent(WelcomeOwnerMail::class);
     }
 
-    public function test_signup_owner_can_login_with_tenant_slug(): void
+    public function test_signup_owner_can_login_after_email_verification(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Harbor Bistro',
+            'legal_business_name' => 'Harbor Bistro Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'harbor-bistro',
+            'country' => 'United Kingdom',
+            'city' => 'Bristol',
+            'street_address' => '3 Harbor Road',
+            'postal_code' => 'BS1 4ST',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Harbor Owner',
+            'owner_email' => 'owner@harborbistro.test',
+            'owner_phone' => '+447700900222',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 30,
+            'staff_count' => 3,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ])->assertCreated();
+
+        $token = null;
+        Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) use (&$token) {
+            parse_str((string) parse_url($mail->verifyUrl, PHP_URL_QUERY), $query);
+            $token = $query['token'] ?? null;
+
+            return is_string($token) && $token !== '';
+        });
+
+        $this->postJson('/api/v1/auth/verify-email', [
+            'token' => $token,
+            'email' => 'owner@harborbistro.test',
+        ])->assertOk();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@harborbistro.test',
+            'password' => 'SecurePass1!',
+            'tenant_slug' => 'harbor-bistro',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'owner');
+        $response->assertJsonPath('user.tenant_slug', 'harbor-bistro');
+    }
+
+    public function test_signup_owner_cannot_login_before_email_verification(): void
     {
         Mail::fake();
 
@@ -123,12 +181,10 @@ class PublicSignupTest extends TestCase
             'tenant_slug' => 'harbor-bistro',
         ]);
 
-        $response->assertOk();
-        $response->assertJsonPath('user.role', 'owner');
-        $response->assertJsonPath('user.tenant_slug', 'harbor-bistro');
+        $response->assertStatus(422);
     }
 
-    public function test_signup_owner_can_login_without_tenant_slug_when_email_is_unique(): void
+    public function test_signup_owner_can_login_without_tenant_slug_after_verification(): void
     {
         Mail::fake();
 
@@ -158,6 +214,19 @@ class PublicSignupTest extends TestCase
             'branch_count' => 1,
             'terms_accepted' => true,
         ])->assertCreated();
+
+        $token = null;
+        Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) use (&$token) {
+            parse_str((string) parse_url($mail->verifyUrl, PHP_URL_QUERY), $query);
+            $token = $query['token'] ?? null;
+
+            return is_string($token) && $token !== '';
+        });
+
+        $this->postJson('/api/v1/auth/verify-email', [
+            'token' => $token,
+            'email' => 'owner@cedarcafe.test',
+        ])->assertOk();
 
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'owner@cedarcafe.test',
@@ -237,7 +306,7 @@ class PublicSignupTest extends TestCase
         ]);
 
         $response->assertCreated();
-        Mail::assertSent(WelcomeOwnerMail::class);
+        Mail::assertSent(EmailVerificationMail::class);
     }
 
     public function test_signup_requires_postal_code_for_united_kingdom(): void
