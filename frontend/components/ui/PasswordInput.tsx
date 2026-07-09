@@ -30,7 +30,7 @@ export interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputEl
 }
 
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ className, label, error, tooltip, id, value = "", showStrength = true, ...props }, ref) => {
+  ({ className, label, error, tooltip, id, value, showStrength = true, ...props }, ref) => {
     const [visible, setVisible] = useState(false);
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
     const currentValue = typeof value === "string" ? value : "";
@@ -56,7 +56,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             id={inputId}
             type={visible ? "text" : "password"}
             autoComplete={props.autoComplete ?? "new-password"}
-            value={value}
+            {...(value !== undefined ? { value } : {})}
             className={cn(
               "h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 pr-10 text-sm text-foreground",
               "placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",

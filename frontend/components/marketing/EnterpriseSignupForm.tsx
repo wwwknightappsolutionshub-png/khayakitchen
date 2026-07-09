@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -245,6 +245,7 @@ export function EnterpriseSignupForm({
   const [states, setStates] = useState<StateRow[]>([]);
   const [cities, setCities] = useState<CityRow[]>([]);
   const [geoReady, setGeoReady] = useState(false);
+  const slugManuallyEditedRef = useRef(false);
 
   const {
     register,
@@ -277,10 +278,10 @@ export function EnterpriseSignupForm({
   });
 
   const restaurantName = watch("restaurant_name");
-  const slug = watch("slug");
   const countryIso = watch("country_iso");
   const stateCode = watch("state_code");
   const ownerPassword = watch("owner_password");
+  const ownerPasswordConfirmation = watch("owner_password_confirmation");
   const postalRequired = isPostalCodeRequired(countryIso);
 
   const isFeatureStep = step < FEATURE_COUNT;
@@ -295,9 +296,18 @@ export function EnterpriseSignupForm({
   }, [defaultPlanId, setValue]);
 
   useEffect(() => {
-    if (!restaurantName || slug) return;
-    setValue("slug", slugify(restaurantName));
-  }, [restaurantName, slug, setValue]);
+    if (!restaurantName || slugManuallyEditedRef.current) return;
+    setValue("slug", slugify(restaurantName), { shouldValidate: true });
+  }, [restaurantName, setValue]);
+
+  const slugField = register("slug");
+  const handleSlugChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      slugManuallyEditedRef.current = true;
+      void slugField.onChange(event);
+    },
+    [slugField],
+  );
 
   useEffect(() => {
     let active = true;
@@ -478,9 +488,12 @@ export function EnterpriseSignupForm({
               </LabeledSelect>
               <Input
                 label="Workspace slug"
-                tooltip="Unique URL-friendly identifier for your workspace (e.g. khaya-kitchen)."
+                tooltip="Auto-generated from your restaurant name. Edit only if you need a custom URL."
                 error={errors.slug?.message}
-                {...register("slug")}
+                name={slugField.name}
+                ref={slugField.ref}
+                onBlur={slugField.onBlur}
+                onChange={handleSlugChange}
               />
               <Input label="Company registration number" {...register("company_registration_number")} />
               <Input label="Tax / VAT number" {...register("tax_vat_number")} />
@@ -584,6 +597,7 @@ export function EnterpriseSignupForm({
                 label="Confirm password"
                 showStrength={false}
                 error={errors.owner_password_confirmation?.message}
+                value={ownerPasswordConfirmation}
                 {...register("owner_password_confirmation")}
               />
             </div>
