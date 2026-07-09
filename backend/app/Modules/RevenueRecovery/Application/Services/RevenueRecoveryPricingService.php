@@ -110,6 +110,7 @@ class RevenueRecoveryPricingService
         return RevenueRecoveryCampaign::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('status', RevenueRecoveryCampaign::STATUS_ACTIVE)
+            ->where('campaign_type', '!=', RevenueRecoveryCampaign::TYPE_PROXIMITY)
             ->where('starts_at', '<=', now())
             ->where('ends_at', '>=', now())
             ->where(function ($query) {

@@ -439,7 +439,7 @@ export interface PromoMealItem {
   ends_at?: string | null;
 }
 
-export type RevenueRecoveryCampaignType = "closing_soon" | "happy_hour" | "slow_period" | "custom";
+export type RevenueRecoveryCampaignType = "closing_soon" | "happy_hour" | "slow_period" | "custom" | "proximity";
 
 export type RevenueRecoveryCampaignStatus =
   | "draft"
@@ -466,12 +466,15 @@ export interface RevenueRecoveryCampaign {
   notification_title?: string | null;
   notification_message?: string | null;
   target_audience: "all" | "repeat_customers" | "active_customers";
+  proximity_bait_tiers?: ProximityBaitTier[] | null;
   redemption_limit?: number | null;
   redemption_count: number;
   orders_count: number;
   recovered_revenue: number | string;
   notifications_sent: number;
   notifications_delivered: number;
+  proximity_impressions?: number;
+  proximity_push_sent?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -490,6 +493,56 @@ export interface RevenueRecoveryDashboard {
   redemptions: number;
   recent_campaigns: RevenueRecoveryCampaign[];
   active_offers: PromoMealItem[];
+}
+
+export interface ProximityBaitTier {
+  min_km: number;
+  max_km: number;
+  urgency_label: string;
+}
+
+export interface TenantRevenueRecoverySettings {
+  tenant_id: string;
+  tenant_name?: string;
+  tenant_slug?: string;
+  time_based_enabled: boolean;
+  proximity_enabled: boolean;
+  geofence_radius_km: number;
+  tenant_can_edit_radius: boolean;
+  kitchen_lat: number | null;
+  kitchen_lng: number | null;
+  kitchen_address_text: string | null;
+  proximity_bait_tiers: ProximityBaitTier[];
+  max_daily_proximity_pushes_per_customer: number;
+  location_accuracy_max_meters: number;
+  updated_at?: string;
+}
+
+export interface ProximityBaitPayload {
+  campaign_id: string;
+  distance_km: number;
+  urgency_label: string;
+  message: string;
+  has_active_time_based_offer: boolean;
+  time_based_campaign_name?: string | null;
+  time_based_discount_percent?: number | null;
+}
+
+export interface StorefrontProximityConfig {
+  enabled: boolean;
+  requires_email_verification: boolean;
+  location_accuracy_max_meters: number;
+}
+
+export interface CustomerProximitySession {
+  session_token: string;
+  expires_at: string;
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+  };
 }
 
 export interface PromoMealSelection {
@@ -546,6 +599,7 @@ export interface Storefront {
       RevenueRecoveryCampaign,
       "id" | "name" | "campaign_type" | "ends_at" | "discount_type" | "discount_value"
     >[];
+    proximity?: StorefrontProximityConfig;
   };
 }
 

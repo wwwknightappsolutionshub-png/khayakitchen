@@ -87,6 +87,19 @@ export function getCampaignTypePreset(
         notificationMessage: "Beat the rush with a limited offer on selected meals.",
         targetAudience: "repeat_customers",
       };
+    case "proximity": {
+      const end = new Date();
+      end.setFullYear(end.getFullYear() + 1);
+      return {
+        discountType: "percent",
+        discountValue: "0",
+        startsAt: start,
+        endsAt: toLocalInput(end),
+        notificationTitle: "You are nearby",
+        notificationMessage: "Stop by — we are close and ready for pickup orders.",
+        targetAudience: "all",
+      };
+    }
     default:
       return {
         discountType: "percent",

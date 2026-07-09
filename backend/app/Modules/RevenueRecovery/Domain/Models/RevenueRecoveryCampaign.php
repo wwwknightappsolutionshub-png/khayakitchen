@@ -20,6 +20,8 @@ class RevenueRecoveryCampaign extends Model
 
     public const TYPE_CUSTOM = 'custom';
 
+    public const TYPE_PROXIMITY = 'proximity';
+
     public const DISCOUNT_PERCENT = 'percent';
 
     public const DISCOUNT_FIXED = 'fixed';
@@ -51,6 +53,7 @@ class RevenueRecoveryCampaign extends Model
         'notification_title',
         'notification_message',
         'target_audience',
+        'proximity_bait_tiers',
         'redemption_limit',
         'redemption_count',
         'orders_count',
@@ -59,6 +62,8 @@ class RevenueRecoveryCampaign extends Model
         'notifications_sent',
         'notifications_delivered',
         'notifications_opened',
+        'proximity_impressions',
+        'proximity_push_sent',
         'created_by',
         'duplicated_from_id',
         'activated_at',
@@ -70,6 +75,7 @@ class RevenueRecoveryCampaign extends Model
         return [
             'meal_ids' => 'array',
             'category_ids' => 'array',
+            'proximity_bait_tiers' => 'array',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'activated_at' => 'datetime',
@@ -77,6 +83,8 @@ class RevenueRecoveryCampaign extends Model
             'notifications_enabled' => 'boolean',
             'discount_value' => 'decimal:2',
             'recovered_revenue' => 'decimal:2',
+            'proximity_impressions' => 'integer',
+            'proximity_push_sent' => 'integer',
         ];
     }
 

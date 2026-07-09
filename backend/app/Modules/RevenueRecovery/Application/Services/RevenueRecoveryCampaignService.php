@@ -25,6 +25,7 @@ class RevenueRecoveryCampaignService
         private AuditLogService $auditLogService,
         private BrandingService $brandingService,
         private RevenueRecoveryPricingService $pricingService,
+        private TenantRevenueRecoverySettingsService $settingsService,
     ) {}
 
     public function list(array $permissions, ?string $status = null)
@@ -111,6 +112,7 @@ class RevenueRecoveryCampaignService
             'notification_title' => $source->notification_title,
             'notification_message' => $source->notification_message,
             'target_audience' => $source->target_audience,
+            'proximity_bait_tiers' => $source->proximity_bait_tiers,
             'redemption_limit' => $source->redemption_limit,
             'created_by' => $this->tenantContext->user()?->id,
             'duplicated_from_id' => $source->id,
@@ -142,6 +144,12 @@ class RevenueRecoveryCampaignService
             throw ValidationException::withMessages(['ends_at' => ['Campaign end time must be in the future.']]);
         }
 
+        if ($this->isProximityCampaign($campaign)) {
+            $this->assertProximityCampaignAllowed($campaign->tenant_id, $campaign->id);
+        }
+
+        $this->deactivateOtherActiveCampaigns($campaign);
+
         $status = $campaign->starts_at > now()
             ? RevenueRecoveryCampaign::STATUS_SCHEDULED
             : RevenueRecoveryCampaign::STATUS_ACTIVE;
@@ -171,6 +179,11 @@ class RevenueRecoveryCampaignService
     public function resume(string $id, array $permissions): RevenueRecoveryCampaign
     {
         $this->planLimitService->assertPromotionLimit();
+        $campaign = RevenueRecoveryCampaign::findOrFail($id);
+        if ($this->isProximityCampaign($campaign)) {
+            $this->assertProximityCampaignAllowed($campaign->tenant_id, $campaign->id);
+        }
+        $this->deactivateOtherActiveCampaigns($campaign);
         $campaign = $this->transition($id, $permissions, [RevenueRecoveryCampaign::STATUS_PAUSED], RevenueRecoveryCampaign::STATUS_ACTIVE);
         $this->audit('revenue_recovery.resumed', $campaign);
 
@@ -309,6 +322,7 @@ class RevenueRecoveryCampaignService
         $activeCampaigns = RevenueRecoveryCampaign::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('status', RevenueRecoveryCampaign::STATUS_ACTIVE)
+            ->where('campaign_type', '!=', RevenueRecoveryCampaign::TYPE_PROXIMITY)
             ->where('starts_at', '<=', now())
             ->where('ends_at', '>=', now())
             ->get(['id', 'name', 'campaign_type', 'ends_at', 'discount_type', 'discount_value']);
@@ -316,6 +330,7 @@ class RevenueRecoveryCampaignService
         return [
             'offers' => $offers,
             'campaigns' => $activeCampaigns,
+            'proximity' => $this->settingsService->getStorefrontProximityConfig($tenantId),
         ];
     }
 
@@ -370,6 +385,7 @@ class RevenueRecoveryCampaignService
             ->get();
 
         foreach ($toActivate as $campaign) {
+            $this->deactivateOtherActiveCampaigns($campaign);
             $campaign->update([
                 'status' => RevenueRecoveryCampaign::STATUS_ACTIVE,
                 'activated_at' => now(),
@@ -436,11 +452,11 @@ class RevenueRecoveryCampaignService
      */
     private function mapPayload(array $data): array
     {
-        return [
+        $payload = [
             'name' => $data['name'],
             'campaign_type' => $data['campaign_type'],
-            'discount_type' => $data['discount_type'],
-            'discount_value' => $data['discount_value'],
+            'discount_type' => $data['discount_type'] ?? RevenueRecoveryCampaign::DISCOUNT_PERCENT,
+            'discount_value' => $data['discount_value'] ?? 0,
             'meal_ids' => $data['meal_ids'] ?? [],
             'starts_at' => $data['starts_at'],
             'ends_at' => $data['ends_at'],
@@ -450,6 +466,14 @@ class RevenueRecoveryCampaignService
             'target_audience' => $data['target_audience'] ?? 'all',
             'redemption_limit' => $data['redemption_limit'] ?? null,
         ];
+
+        if (($data['campaign_type'] ?? null) === RevenueRecoveryCampaign::TYPE_PROXIMITY) {
+            $payload['proximity_bait_tiers'] = $data['proximity_bait_tiers'] ?? null;
+            $payload['meal_ids'] = [];
+            $payload['discount_value'] = 0;
+        }
+
+        return $payload;
     }
 
     /**
@@ -457,11 +481,41 @@ class RevenueRecoveryCampaignService
      */
     private function validatePayload(array $data, ?RevenueRecoveryCampaign $existing = null): void
     {
+        $campaignType = $data['campaign_type'] ?? $existing?->campaign_type;
         $startsAt = $data['starts_at'] ?? $existing?->starts_at;
         $endsAt = $data['ends_at'] ?? $existing?->ends_at;
 
         if ($startsAt && $endsAt && $endsAt <= $startsAt) {
             throw ValidationException::withMessages(['ends_at' => ['End time must be after start time.']]);
+        }
+
+        if ($campaignType === RevenueRecoveryCampaign::TYPE_PROXIMITY) {
+            if (! $this->settingsService->isProximityEnabled()) {
+                throw ValidationException::withMessages([
+                    'campaign_type' => ['Proximity campaigns require proximity to be enabled and a kitchen location configured.'],
+                ]);
+            }
+
+            $tenantId = $this->tenantContext->id();
+            $existingId = $existing?->id;
+            $duplicate = RevenueRecoveryCampaign::where('campaign_type', RevenueRecoveryCampaign::TYPE_PROXIMITY)
+                ->whereNotIn('status', [RevenueRecoveryCampaign::STATUS_ARCHIVED])
+                ->when($existingId, fn ($q) => $q->where('id', '!=', $existingId))
+                ->exists();
+
+            if ($duplicate) {
+                throw ValidationException::withMessages([
+                    'campaign_type' => ['Only one proximity campaign is allowed per tenant.'],
+                ]);
+            }
+
+            return;
+        }
+
+        if (! $this->settingsService->isTimeBasedEnabled()) {
+            throw ValidationException::withMessages([
+                'campaign_type' => ['Time-based revenue recovery is disabled for this tenant.'],
+            ]);
         }
 
         $mealIds = $data['meal_ids'] ?? $existing?->meal_ids ?? [];
@@ -479,9 +533,55 @@ class RevenueRecoveryCampaignService
 
     private function ensureEnabled(): void
     {
-        if (! $this->featureAccessService->canAccess(self::FEATURE_KEY)) {
+        if (! $this->featureAccessService->canAccess(self::FEATURE_KEY)
+            && ! $this->featureAccessService->canAccess(TenantRevenueRecoverySettingsService::FEATURE_TIME_BASED)
+            && ! $this->featureAccessService->canAccess(TenantRevenueRecoverySettingsService::FEATURE_PROXIMITY)) {
             abort(403, 'Revenue Recovery is not available on your plan');
         }
+    }
+
+    private function isProximityCampaign(RevenueRecoveryCampaign $campaign): bool
+    {
+        return $campaign->campaign_type === RevenueRecoveryCampaign::TYPE_PROXIMITY;
+    }
+
+    private function assertProximityCampaignAllowed(string $tenantId, ?string $excludeCampaignId = null): void
+    {
+        if (! $this->settingsService->isProximityEnabled($tenantId)) {
+            throw ValidationException::withMessages([
+                'status' => ['Configure kitchen location and enable proximity before activating this campaign.'],
+            ]);
+        }
+
+        $exists = RevenueRecoveryCampaign::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('campaign_type', RevenueRecoveryCampaign::TYPE_PROXIMITY)
+            ->whereIn('status', [
+                RevenueRecoveryCampaign::STATUS_ACTIVE,
+                RevenueRecoveryCampaign::STATUS_SCHEDULED,
+                RevenueRecoveryCampaign::STATUS_PAUSED,
+            ])
+            ->when($excludeCampaignId, fn ($q) => $q->where('id', '!=', $excludeCampaignId))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'status' => ['Only one proximity campaign can be active at a time.'],
+            ]);
+        }
+    }
+
+    private function deactivateOtherActiveCampaigns(RevenueRecoveryCampaign $campaign): void
+    {
+        RevenueRecoveryCampaign::withoutGlobalScopes()
+            ->where('tenant_id', $campaign->tenant_id)
+            ->where('id', '!=', $campaign->id)
+            ->whereIn('status', [
+                RevenueRecoveryCampaign::STATUS_ACTIVE,
+                RevenueRecoveryCampaign::STATUS_SCHEDULED,
+                RevenueRecoveryCampaign::STATUS_PAUSED,
+            ])
+            ->update(['status' => RevenueRecoveryCampaign::STATUS_DEACTIVATED]);
     }
 
     private function authorizeView(array $permissions): void

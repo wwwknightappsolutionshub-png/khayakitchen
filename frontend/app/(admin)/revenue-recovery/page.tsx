@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { RevenueRecoveryCampaignForm } from "@/components/admin/RevenueRecoveryCampaignForm";
+import { RevenueRecoverySettingsCard } from "@/components/admin/RevenueRecoverySettingsCard";
 import { UpgradeLimitModal } from "@/components/shared/UpgradeLimitModal";
 import { revenueRecoveryService } from "@/services/revenue-recovery.service";
 import { useAuthStore } from "@/stores/auth-store";
@@ -24,6 +25,7 @@ const TYPE_LABELS: Record<string, string> = {
   happy_hour: "Happy Hour",
   slow_period: "Slow Period",
   custom: "Custom",
+  proximity: "Proximity Bait",
 };
 
 export default function RevenueRecoveryPage() {
@@ -156,6 +158,12 @@ export default function RevenueRecoveryPage() {
           {errorMessage}
         </p>
       ) : null}
+
+      {canManage && (
+        <section className="mb-6">
+          <RevenueRecoverySettingsCard />
+        </section>
+      )}
 
       <Card>
         <CardHeader>

@@ -17,6 +17,7 @@ import {
   Grid3X3,
   Receipt,
   X,
+  Radar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/platform/tenants", label: "Tenants", icon: Building2, available: true },
   { href: "/platform/modules", label: "Modules", icon: Boxes, available: true },
   { href: "/platform/feature-flags", label: "Feature Flags", icon: Flag, available: true },
+  { href: "/platform/revenue-recovery", label: "Revenue Recovery", icon: Radar, available: true },
   { href: "/platform/pricing", label: "Plans & Pricing", icon: CreditCard, available: true },
   { href: "/platform/features", label: "Feature Library", icon: Layers, available: true },
   { href: "/platform/feature-assignments", label: "Feature Assignments", icon: Grid3X3, available: true },

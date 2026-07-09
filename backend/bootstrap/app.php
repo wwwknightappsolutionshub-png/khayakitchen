@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permissions.load' => \App\Shared\Middleware\LoadPermissions::class,
             'feature' => \App\Shared\Middleware\ApplyFeatureFlags::class,
             'platform.super_admin' => \App\Shared\Middleware\EnsureSuperAdmin::class,
+            'customer.session' => \App\Shared\Middleware\ResolveCustomerSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

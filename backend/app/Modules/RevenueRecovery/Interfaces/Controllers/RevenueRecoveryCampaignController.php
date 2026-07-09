@@ -34,18 +34,22 @@ class RevenueRecoveryCampaignController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'campaign_type' => ['required', 'in:closing_soon,happy_hour,slow_period,custom'],
-            'discount_type' => ['required', 'in:percent,fixed'],
-            'discount_value' => ['required', 'numeric', 'min:0.01'],
-            'meal_ids' => ['required', 'array', 'min:1'],
+            'campaign_type' => ['required', 'in:closing_soon,happy_hour,slow_period,custom,proximity'],
+            'discount_type' => ['required_unless:campaign_type,proximity', 'in:percent,fixed'],
+            'discount_value' => ['required_unless:campaign_type,proximity', 'numeric', 'min:0.01'],
+            'meal_ids' => ['required_unless:campaign_type,proximity', 'array'],
             'meal_ids.*' => ['uuid'],
-            'starts_at' => ['required', 'date', 'after:now'],
+            'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'notifications_enabled' => ['nullable', 'boolean'],
             'notification_title' => ['nullable', 'string', 'max:120'],
             'notification_message' => ['nullable', 'string', 'max:500'],
             'target_audience' => ['nullable', 'in:all,repeat_customers,active_customers'],
             'redemption_limit' => ['nullable', 'integer', 'min:1'],
+            'proximity_bait_tiers' => ['nullable', 'array'],
+            'proximity_bait_tiers.*.min_km' => ['required_with:proximity_bait_tiers', 'numeric', 'min:0'],
+            'proximity_bait_tiers.*.max_km' => ['required_with:proximity_bait_tiers', 'numeric', 'min:0'],
+            'proximity_bait_tiers.*.urgency_label' => ['required_with:proximity_bait_tiers', 'string', 'max:120'],
         ]);
 
         return ApiResponse::success([
@@ -57,10 +61,10 @@ class RevenueRecoveryCampaignController extends Controller
     {
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:120'],
-            'campaign_type' => ['sometimes', 'in:closing_soon,happy_hour,slow_period,custom'],
+            'campaign_type' => ['sometimes', 'in:closing_soon,happy_hour,slow_period,custom,proximity'],
             'discount_type' => ['sometimes', 'in:percent,fixed'],
-            'discount_value' => ['sometimes', 'numeric', 'min:0.01'],
-            'meal_ids' => ['sometimes', 'array', 'min:1'],
+            'discount_value' => ['sometimes', 'numeric', 'min:0'],
+            'meal_ids' => ['sometimes', 'array'],
             'meal_ids.*' => ['uuid'],
             'starts_at' => ['sometimes', 'date'],
             'ends_at' => ['sometimes', 'date', 'after:starts_at'],
@@ -69,6 +73,10 @@ class RevenueRecoveryCampaignController extends Controller
             'notification_message' => ['nullable', 'string', 'max:500'],
             'target_audience' => ['nullable', 'in:all,repeat_customers,active_customers'],
             'redemption_limit' => ['nullable', 'integer', 'min:1'],
+            'proximity_bait_tiers' => ['nullable', 'array'],
+            'proximity_bait_tiers.*.min_km' => ['required_with:proximity_bait_tiers', 'numeric', 'min:0'],
+            'proximity_bait_tiers.*.max_km' => ['required_with:proximity_bait_tiers', 'numeric', 'min:0'],
+            'proximity_bait_tiers.*.urgency_label' => ['required_with:proximity_bait_tiers', 'string', 'max:120'],
         ]);
 
         return ApiResponse::success([

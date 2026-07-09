@@ -1,5 +1,10 @@
 import { api } from "@/lib/api-client";
-import type { RevenueRecoveryCampaign, RevenueRecoveryDashboard } from "@/lib/types";
+import type {
+  RevenueRecoveryCampaign,
+  RevenueRecoveryDashboard,
+  TenantRevenueRecoverySettings,
+  ProximityBaitTier,
+} from "@/lib/types";
 
 export type CreateRevenueRecoveryCampaignPayload = {
   name: string;
@@ -13,6 +18,7 @@ export type CreateRevenueRecoveryCampaignPayload = {
   notification_title?: string;
   notification_message?: string;
   target_audience?: RevenueRecoveryCampaign["target_audience"];
+  proximity_bait_tiers?: ProximityBaitTier[];
   redemption_limit?: number | null;
 };
 
@@ -87,6 +93,21 @@ export const revenueRecoveryService = {
   async trackCampaignOpen(id: string) {
     return api.post<{ recorded: boolean }>(
       `/storefront/revenue-recovery/campaigns/${id}/track-open`,
+    );
+  },
+
+  async getSettings(): Promise<{ settings: TenantRevenueRecoverySettings }> {
+    return api.get<{ settings: TenantRevenueRecoverySettings }>("/revenue-recovery/settings");
+  },
+
+  async updateSettings(payload: {
+    geofence_radius_km?: number;
+    kitchen_address_text?: string;
+    proximity_bait_tiers?: ProximityBaitTier[];
+  }) {
+    return api.patch<{ settings: TenantRevenueRecoverySettings }>(
+      "/revenue-recovery/settings",
+      payload,
     );
   },
 };

@@ -32,7 +32,11 @@ use App\Modules\Pricing\Interfaces\Controllers\PlatformSubscriptionController;
 use App\Modules\Pricing\Interfaces\Controllers\PublicPricingController;
 use App\Modules\Realtime\Interfaces\Controllers\RealtimeController;
 use App\Modules\Reporting\Interfaces\Controllers\DashboardController;
+use App\Modules\RevenueRecovery\Interfaces\Controllers\CustomerProximityAuthController;
+use App\Modules\RevenueRecovery\Interfaces\Controllers\CustomerProximityController;
+use App\Modules\RevenueRecovery\Interfaces\Controllers\PlatformRevenueRecoveryController;
 use App\Modules\RevenueRecovery\Interfaces\Controllers\RevenueRecoveryCampaignController;
+use App\Modules\RevenueRecovery\Interfaces\Controllers\TenantRevenueRecoverySettingsController;
 use App\Modules\TenantBranding\Interfaces\Controllers\BrandingController;
 use App\Modules\TenantBranding\Interfaces\Controllers\PlatformBrandingController;
 use App\Modules\TenantBranding\Interfaces\Controllers\PlatformRestaurantStatusController;
@@ -65,6 +69,20 @@ Route::prefix('v1')->group(function () {
     // Public customer endpoints (tenant resolved via header/subdomain)
     Route::middleware(['tenant.resolve'])->group(function () {
         Route::get('/realtime/public-config', [RealtimeController::class, 'publicConfig']);
+
+        Route::middleware('feature:revenue_recovery')->group(function () {
+            Route::post('/customer/proximity/auth/request-otp', [CustomerProximityAuthController::class, 'requestOtp'])
+                ->middleware('throttle:6,1');
+            Route::post('/customer/proximity/auth/verify-otp', [CustomerProximityAuthController::class, 'verifyOtp'])
+                ->middleware('throttle:10,1');
+
+            Route::middleware('customer.session')->group(function () {
+                Route::post('/customer/proximity/auth/location-opt-in', [CustomerProximityAuthController::class, 'updateLocationOptIn']);
+                Route::post('/customer/proximity/location', [CustomerProximityController::class, 'heartbeat']);
+                Route::get('/customer/proximity/bait', [CustomerProximityController::class, 'bait']);
+                Route::post('/customer/proximity/dismiss', [CustomerProximityController::class, 'dismiss']);
+            });
+        });
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:menu'])->group(function () {
@@ -178,6 +196,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/revenue-recovery/campaigns/{id}/archive', [RevenueRecoveryCampaignController::class, 'archive']);
             Route::delete('/revenue-recovery/campaigns/{id}', [RevenueRecoveryCampaignController::class, 'destroy']);
             Route::post('/revenue-recovery/campaigns/{id}/notify', [RevenueRecoveryCampaignController::class, 'sendNotification']);
+            Route::get('/revenue-recovery/settings', [TenantRevenueRecoverySettingsController::class, 'show']);
+            Route::patch('/revenue-recovery/settings', [TenantRevenueRecoverySettingsController::class, 'update']);
         });
 
         Route::get('/staff', [StaffUserController::class, 'index']);
@@ -256,5 +276,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('/tenants/{tenantId}/entitlements/limits', [PlatformEntitlementController::class, 'setLimitOverride']);
                 Route::post('/tenants/{tenantId}/entitlements/reset', [PlatformEntitlementController::class, 'reset']);
             });
+
+            Route::get('/revenue-recovery/tenants', [PlatformRevenueRecoveryController::class, 'index']);
+            Route::get('/revenue-recovery/tenants/{tenantId}', [PlatformRevenueRecoveryController::class, 'show']);
+            Route::patch('/revenue-recovery/tenants/{tenantId}', [PlatformRevenueRecoveryController::class, 'update']);
         });
 });

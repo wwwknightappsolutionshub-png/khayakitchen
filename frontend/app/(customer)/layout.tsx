@@ -4,6 +4,7 @@ import { CustomerNav } from "@/components/customer/CustomerNav";
 import { CustomerStatusLayer } from "@/components/customer/CustomerStatusLayer";
 import { StickyCartBar } from "@/components/customer/StickyCartBar";
 import { NotificationOptInPrompt } from "@/components/customer/NotificationOptInPrompt";
+import { ProximityLayer } from "@/components/customer/ProximityLayer";
 import { CustomerLayoutShell } from "@/components/customer/CustomerLayoutShell";
 import { ConnectionBanner } from "@/components/customer/ConnectionBanner";
 import { StorefrontTheme } from "@/components/customer/StorefrontTheme";
@@ -42,6 +43,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <WelcomeSplashGate />
         <ConnectionBanner />
         <NotificationOptInPrompt />
+        <ProximityLayer />
         <CustomerHeader />
         <CustomerStatusLayer />
         <CustomerLayoutShell>{children}</CustomerLayoutShell>

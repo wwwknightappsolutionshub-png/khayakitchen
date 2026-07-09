@@ -111,13 +111,18 @@ export function RevenueRecoveryCampaignForm({
   const discount = Number(discountValue);
   const parsedStart = new Date(startsAt);
   const parsedEnd = new Date(endsAt);
-  const isValid =
-    name.trim().length > 0 &&
-    mealIds.length > 0 &&
-    !Number.isNaN(parsedStart.getTime()) &&
-    !Number.isNaN(parsedEnd.getTime()) &&
-    parsedEnd > parsedStart &&
-    discount > 0;
+  const isProximity = campaignType === "proximity";
+  const isValid = isProximity
+    ? name.trim().length > 0 &&
+      !Number.isNaN(parsedStart.getTime()) &&
+      !Number.isNaN(parsedEnd.getTime()) &&
+      parsedEnd > parsedStart
+    : name.trim().length > 0 &&
+      mealIds.length > 0 &&
+      !Number.isNaN(parsedStart.getTime()) &&
+      !Number.isNaN(parsedEnd.getTime()) &&
+      parsedEnd > parsedStart &&
+      discount > 0;
 
   const toggleMeal = (id: string) => {
     setMealIds((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
@@ -147,8 +152,8 @@ export function RevenueRecoveryCampaignForm({
       name: name.trim(),
       campaign_type: campaignType,
       discount_type: discountType,
-      discount_value: discount,
-      meal_ids: mealIds,
+      discount_value: isProximity ? 0 : discount,
+      meal_ids: isProximity ? [] : mealIds,
       starts_at: parsedStart.toISOString(),
       ends_at: parsedEnd.toISOString(),
       notifications_enabled: notificationsEnabled,
@@ -165,8 +170,9 @@ export function RevenueRecoveryCampaignForm({
         <CardHeader>
           <CardTitle>{initial ? "Edit campaign" : "Create recovery campaign"}</CardTitle>
           <p className="text-sm text-muted">
-            Discounted meals apply automatically at checkout. Optional push alerts use your existing
-            PWA notification opt-ins.
+            {isProximity
+              ? "Proximity campaigns show location-based bait in the customer app. Discounts still come from active time-based campaigns at checkout."
+              : "Discounted meals apply automatically at checkout. Optional push alerts use your existing PWA notification opt-ins."}
           </p>
         </CardHeader>
         <CardContent className="max-h-[70dvh] space-y-4 overflow-y-auto">
@@ -187,6 +193,7 @@ export function RevenueRecoveryCampaignForm({
                 <option value="happy_hour">Happy Hour</option>
                 <option value="slow_period">Slow Period</option>
                 <option value="custom">Custom Promotion</option>
+                <option value="proximity">Proximity Bait</option>
               </select>
             </div>
             <div>
@@ -206,6 +213,7 @@ export function RevenueRecoveryCampaignForm({
               </select>
             </div>
           </div>
+          {!isProximity && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium">Discount type</label>
@@ -228,6 +236,7 @@ export function RevenueRecoveryCampaignForm({
               onChange={(e) => setDiscountValue(e.target.value)}
             />
           </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Starts at"
@@ -252,6 +261,7 @@ export function RevenueRecoveryCampaignForm({
             onChange={(e) => setRedemptionLimit(e.target.value)}
             placeholder="Unlimited"
           />
+          {!isProximity && (
           <div>
             <p className="mb-2 text-sm font-medium">Meals on discount</p>
             <div className="max-h-40 space-y-2 overflow-y-auto rounded-[var(--radius)] border border-border p-2">
@@ -290,6 +300,7 @@ export function RevenueRecoveryCampaignForm({
               })}
             </div>
           </div>
+          )}
           <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius)] border border-border p-3">
             <input
               type="checkbox"
