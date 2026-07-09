@@ -63,7 +63,9 @@ export function getPwaBootGateScript(pageBuild: string): string {
       );
     }
     Promise.all(tasks).finally(function(){
-      window.location.replace("/?_v="+Date.now());
+      var target=window.location.pathname+window.location.search;
+      var sep=target.indexOf("?")>=0?"&":"?";
+      window.location.replace(target+sep+"_v="+Date.now());
     });
   }
 

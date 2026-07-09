@@ -12,12 +12,23 @@ export function AuthHydration({ children }: { children: React.ReactNode }) {
       setReady(true);
     };
 
+    const safetyTimeout = window.setTimeout(markReady, 2000);
+
     if (useAuthStore.persist.hasHydrated()) {
       markReady();
+      window.clearTimeout(safetyTimeout);
       return;
     }
 
-    return useAuthStore.persist.onFinishHydration(markReady);
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+      markReady();
+      window.clearTimeout(safetyTimeout);
+    });
+
+    return () => {
+      window.clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
   }, []);
 
   if (!ready) {
