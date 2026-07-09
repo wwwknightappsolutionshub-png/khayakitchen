@@ -25,6 +25,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   const plansQuery = useQuery({
     queryKey: ["public-pricing", "signup"],
     queryFn: () => pricingService.getPublicPlans(),
+    retry: 2,
   });
 
   const plans = plansQuery.data?.plans ?? [];
@@ -33,6 +34,16 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
     if (!selectedPlanSlug) return plans.find((plan) => plan.is_recommended)?.id ?? plans[0]?.id;
     return plans.find((plan) => plan.slug === selectedPlanSlug)?.id ?? plans[0]?.id;
   }, [plans, selectedPlanSlug]);
+
+  const plansUnavailable =
+    !plansQuery.isLoading && !plansQuery.isFetching && (plansQuery.isError || plans.length === 0);
+
+  const plansErrorMessage =
+    plansQuery.error instanceof ApiClientError
+      ? plansQuery.error.message
+      : plansUnavailable
+        ? "Public pricing is unavailable right now."
+        : null;
 
   const signupMutation = useMutation({
     mutationFn: signupService.register,
@@ -55,6 +66,11 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   });
 
   const handleSignup = (values: EnterpriseSignupFormValues) => {
+    if (plans.length === 0) {
+      setSubmitError("Select a subscription plan to continue. If plans do not load, contact sales@khayaos.com.");
+      return;
+    }
+
     setSubmitError(null);
     const orderTypes: Array<"pickup" | "delivery"> = [];
     if (values.order_types_pickup) orderTypes.push("pickup");
@@ -95,14 +111,6 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
     });
   };
 
-  if (plansQuery.isLoading) {
-    return <p className="text-zinc-400">Loading plans…</p>;
-  }
-
-  if (plans.length === 0) {
-    return <p className="text-red-400">Public pricing is unavailable. Contact sales@khayaos.com to onboard.</p>;
-  }
-
   return (
     <div className="space-y-4">
       <EnterpriseSignupForm
@@ -111,6 +119,12 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
         isSubmitting={signupMutation.isPending}
         onSubmit={handleSignup}
         startAtForm={startAtForm}
+        plansLoading={plansQuery.isLoading || plansQuery.isFetching}
+        plansUnavailable={plansUnavailable}
+        plansErrorMessage={plansErrorMessage}
+        onRetryPlans={() => {
+          void plansQuery.refetch();
+        }}
       />
       {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
     </div>

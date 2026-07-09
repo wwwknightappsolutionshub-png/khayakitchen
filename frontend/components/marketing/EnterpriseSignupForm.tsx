@@ -92,6 +92,10 @@ interface EnterpriseSignupFormProps {
   isSubmitting?: boolean;
   onSubmit: (values: EnterpriseSignupFormValues) => void;
   startAtForm?: boolean;
+  plansLoading?: boolean;
+  plansUnavailable?: boolean;
+  plansErrorMessage?: string | null;
+  onRetryPlans?: () => void;
 }
 
 type CountryRow = {
@@ -239,6 +243,10 @@ export function EnterpriseSignupForm({
   isSubmitting,
   onSubmit,
   startAtForm = false,
+  plansLoading = false,
+  plansUnavailable = false,
+  plansErrorMessage = null,
+  onRetryPlans,
 }: EnterpriseSignupFormProps) {
   const [step, setStep] = useState(startAtForm ? FEATURE_COUNT : 0);
   const [countries, setCountries] = useState<CountryRow[]>([]);
@@ -293,7 +301,8 @@ export function EnterpriseSignupForm({
 
   useEffect(() => {
     if (defaultPlanId) setValue("plan_id", defaultPlanId);
-  }, [defaultPlanId, setValue]);
+    else if (plans[0]?.id) setValue("plan_id", plans[0].id);
+  }, [defaultPlanId, plans, setValue]);
 
   useEffect(() => {
     if (!restaurantName || slugManuallyEditedRef.current) return;
@@ -654,14 +663,45 @@ export function EnterpriseSignupForm({
                     <select
                       className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
                       {...register("plan_id")}
+                      disabled={plansLoading || plans.length === 0}
                     >
-                      {plans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name}
+                      {plans.length === 0 ? (
+                        <option value="">
+                          {plansLoading ? "Loading plans…" : "No plans available"}
                         </option>
-                      ))}
+                      ) : (
+                        plans.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </LabeledSelect>
+                  {plansUnavailable ? (
+                    <div className="mt-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                      <p>
+                        {plansErrorMessage ??
+                          "We could not load subscription plans. You can continue exploring KhayaOS, but plan selection is required before launch."}
+                      </p>
+                      <p className="mt-1 text-xs text-amber-100/80">
+                        Contact{" "}
+                        <a href="mailto:sales@khayaos.com" className="underline">
+                          sales@khayaos.com
+                        </a>{" "}
+                        if this persists.
+                      </p>
+                      {onRetryPlans ? (
+                        <button
+                          type="button"
+                          onClick={onRetryPlans}
+                          className={cn("mt-2 text-xs font-semibold underline", marketingTheme.link)}
+                        >
+                          Retry loading plans
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <label className="flex items-start gap-3">
@@ -696,7 +736,13 @@ export function EnterpriseSignupForm({
           Back
         </Button>
         {isLastStep ? (
-          <Button type="submit" className={marketingTheme.primaryButton} size="lg" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            className={marketingTheme.primaryButton}
+            size="lg"
+            isLoading={isSubmitting}
+            disabled={plansUnavailable}
+          >
             Create my KhayaOS workspace
           </Button>
         ) : (

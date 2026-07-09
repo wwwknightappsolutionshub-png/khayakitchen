@@ -1,35 +1,28 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { SignupWizard } from "@/components/marketing/SignupWizard";
-import { KitchenSignupSplash } from "@/components/marketing/KitchenSignupSplash";
 import { marketingTheme } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
 function GetStartedContent() {
   const searchParams = useSearchParams();
   const startAtForm = searchParams.get("signup") === "1";
-  const [showSplash, setShowSplash] = useState(!startAtForm);
-
-  if (showSplash) {
-    return <KitchenSignupSplash onComplete={() => setShowSplash(false)} />;
-  }
 
   return (
     <div>
-      <div className="mb-8 max-w-3xl">
-        <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
-          Get started
-        </p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
-          Discover KhayaOS, then launch your kitchen
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-zinc-400">
-          Explore kitchen operations, customer experience, growth tools, and the platform — then complete
-          enterprise onboarding to provision your tenant instantly.
-        </p>
-      </div>
+      {startAtForm ? (
+        <div className="mb-8 max-w-3xl">
+          <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+            Get started
+          </p>
+          <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">Create your KhayaOS workspace</h1>
+          <p className="mt-4 text-base leading-relaxed text-zinc-400">
+            Complete enterprise onboarding to provision your tenant instantly.
+          </p>
+        </div>
+      ) : null}
       <SignupWizard startAtForm={startAtForm} />
     </div>
   );
