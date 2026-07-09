@@ -54,6 +54,15 @@ export function setTenantId(tenantId: string | null) {
   }
 }
 
+export function setTenantSlug(tenantSlug: string | null) {
+  if (typeof window === "undefined") return;
+  if (tenantSlug) {
+    localStorage.setItem("khayaos_tenant_slug", tenantSlug);
+  } else {
+    localStorage.removeItem("khayaos_tenant_slug");
+  }
+}
+
 async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, skipAuth, headers: customHeaders, ...fetchOptions } = options;
 

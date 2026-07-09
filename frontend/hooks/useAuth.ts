@@ -19,8 +19,15 @@ export function useAuth() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      authService.login(email, password),
+    mutationFn: ({
+      email,
+      password,
+      tenantSlug,
+    }: {
+      email: string;
+      password: string;
+      tenantSlug?: string;
+    }) => authService.login(email, password, tenantSlug),
     onSuccess: (data) => {
       setAuth(data.user, data.token);
       queryClient.invalidateQueries({ queryKey: ["auth"] });
@@ -44,7 +51,8 @@ export function useAuth() {
   });
 
   const login = useCallback(
-    (email: string, password: string) => loginMutation.mutateAsync({ email, password }),
+    (email: string, password: string, tenantSlug?: string) =>
+      loginMutation.mutateAsync({ email, password, tenantSlug }),
     [loginMutation],
   );
 

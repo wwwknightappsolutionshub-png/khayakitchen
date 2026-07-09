@@ -80,8 +80,93 @@ class PublicSignupTest extends TestCase
         Mail::assertSent(WelcomeOwnerMail::class, function (WelcomeOwnerMail $mail) {
             return $mail->ownerEmail === 'ada@sunrisekitchen.test'
                 && $mail->plainPassword === 'SecurePass1!'
-                && $mail->tenantSlug === 'sunrise-kitchen';
+                && $mail->tenantSlug === 'sunrise-kitchen'
+                && str_contains($mail->loginUrl, 'tenant=sunrise-kitchen')
+                && str_contains($mail->loginUrl, 'email=ada%40sunrisekitchen.test');
         });
+    }
+
+    public function test_signup_owner_can_login_with_tenant_slug(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Harbor Bistro',
+            'legal_business_name' => 'Harbor Bistro Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'harbor-bistro',
+            'country' => 'United Kingdom',
+            'city' => 'Bristol',
+            'street_address' => '3 Harbor Road',
+            'postal_code' => 'BS1 4ST',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Harbor Owner',
+            'owner_email' => 'owner@harborbistro.test',
+            'owner_phone' => '+447700900222',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 30,
+            'staff_count' => 3,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ])->assertCreated();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@harborbistro.test',
+            'password' => 'SecurePass1!',
+            'tenant_slug' => 'harbor-bistro',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'owner');
+        $response->assertJsonPath('user.tenant_slug', 'harbor-bistro');
+    }
+
+    public function test_signup_owner_can_login_without_tenant_slug_when_email_is_unique(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Cedar Cafe',
+            'legal_business_name' => 'Cedar Cafe Ltd',
+            'business_type' => 'cafe',
+            'slug' => 'cedar-cafe',
+            'country' => 'United Kingdom',
+            'city' => 'Leeds',
+            'street_address' => '8 Cedar Street',
+            'postal_code' => 'LS1 1AA',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Cedar Owner',
+            'owner_email' => 'owner@cedarcafe.test',
+            'owner_phone' => '+447700900333',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 25,
+            'staff_count' => 2,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ])->assertCreated();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@cedarcafe.test',
+            'password' => 'SecurePass1!',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'owner');
+        $response->assertJsonPath('user.tenant_slug', 'cedar-cafe');
     }
 
     public function test_signup_rejects_duplicate_owner_email(): void

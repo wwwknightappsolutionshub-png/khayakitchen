@@ -16,8 +16,6 @@ class AuthService
 
     public function login(string $email, string $password, ?string $tenantSlug = null): array
     {
-        $query = User::withoutGlobalScopes()->where('email', $email);
-
         if ($tenantSlug) {
             $tenant = Tenant::withoutGlobalScopes()->where('slug', $tenantSlug)->first();
 
@@ -27,12 +25,21 @@ class AuthService
                 ]);
             }
 
-            $query->where('tenant_id', $tenant->id);
+            $user = User::withoutGlobalScopes()
+                ->where('email', $email)
+                ->where('tenant_id', $tenant->id)
+                ->first();
         } else {
-            $query->whereNull('tenant_id');
-        }
+            $candidates = User::withoutGlobalScopes()->where('email', $email)->get();
 
-        $user = $query->first();
+            if ($candidates->count() > 1) {
+                throw ValidationException::withMessages([
+                    'tenant_slug' => ['Multiple workspaces use this email. Enter your workspace slug to sign in.'],
+                ]);
+            }
+
+            $user = $candidates->first();
+        }
 
         if (! $user || ! Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
@@ -68,6 +75,13 @@ class AuthService
             'created_at' => now(),
         ]);
 
+        $resolvedTenantSlug = null;
+        if ($user->tenant_id) {
+            $resolvedTenantSlug = Tenant::withoutGlobalScopes()
+                ->where('id', $user->tenant_id)
+                ->value('slug');
+        }
+
         return [
             'token' => $token,
             'user' => [
@@ -75,6 +89,7 @@ class AuthService
                 'name' => $user->name,
                 'role' => $user->role,
                 'tenant_id' => $user->tenant_id,
+                'tenant_slug' => $resolvedTenantSlug,
             ],
         ];
     }

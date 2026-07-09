@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,56 @@ class AuthProfileTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('user.role', 'super_admin');
         $response->assertJsonPath('user.tenant_id', null);
+        $response->assertJsonPath('user.tenant_slug', null);
+    }
+
+    public function test_tenant_owner_can_login_with_tenant_slug(): void
+    {
+        $this->seed();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@khayaos.com',
+            'password' => 'password',
+            'tenant_slug' => 'pilot',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'owner');
+        $response->assertJsonPath('user.tenant_slug', 'pilot');
+    }
+
+    public function test_tenant_owner_can_login_without_tenant_slug_when_email_is_unique(): void
+    {
+        $this->seed();
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@khayaos.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.role', 'owner');
+        $response->assertJsonPath('user.tenant_slug', 'pilot');
+    }
+
+    public function test_tenant_owner_login_fails_with_wrong_tenant_slug(): void
+    {
+        $this->seed();
+
+        Tenant::create([
+            'name' => 'Other Kitchen',
+            'slug' => 'other-kitchen',
+            'status' => 'active',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'owner@khayaos.com',
+            'password' => 'password',
+            'tenant_slug' => 'other-kitchen',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('details.email.0', 'The provided credentials are incorrect.');
     }
 
     public function test_tenant_owner_can_update_email_with_current_password(): void

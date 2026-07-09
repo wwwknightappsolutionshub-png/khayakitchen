@@ -1,25 +1,26 @@
-import { api, setAuthToken, setTenantId } from "@/lib/api-client";
+import { api, setAuthToken, setTenantId, setTenantSlug } from "@/lib/api-client";
 import type { LoginResponse, User } from "@/lib/types";
 
 const PLATFORM_ADMIN_EMAIL = "admin@khayaos.com";
 
 export const authService = {
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string, tenantSlug?: string): Promise<LoginResponse> {
     const isPlatformAdmin = email.trim().toLowerCase() === PLATFORM_ADMIN_EMAIL;
-    const tenantSlug = process.env.NEXT_PUBLIC_TENANT_SLUG ?? "pilot";
 
     const body: { email: string; password: string; tenant_slug?: string } = {
       email,
       password,
     };
 
-    if (!isPlatformAdmin) {
-      body.tenant_slug = tenantSlug;
+    const normalizedTenantSlug = tenantSlug?.trim();
+    if (!isPlatformAdmin && normalizedTenantSlug) {
+      body.tenant_slug = normalizedTenantSlug;
     }
 
     const response = await api.post<LoginResponse>("/auth/login", body, { skipAuth: true });
     setAuthToken(response.token);
     setTenantId(response.user.tenant_id ?? null);
+    setTenantSlug(response.user.tenant_slug ?? null);
     return response;
   },
 

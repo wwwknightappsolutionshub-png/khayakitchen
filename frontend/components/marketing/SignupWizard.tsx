@@ -42,7 +42,12 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
         "Your branded welcome email and login credentials have been sent to your inbox.",
       );
       window.setTimeout(() => {
-        router.push(`/login?email=${encodeURIComponent(response.owner_email)}&welcome=1`);
+        const loginParams = new URLSearchParams({
+          email: response.owner_email,
+          tenant: response.tenant.slug,
+          welcome: "1",
+        });
+        router.push(`/login?${loginParams.toString()}`);
       }, 1200);
     },
     onError: (error) => {

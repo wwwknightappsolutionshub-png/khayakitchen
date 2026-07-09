@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/lib/types";
-import { setAuthToken, setTenantId } from "@/lib/api-client";
+import { setAuthToken, setTenantId, setTenantSlug } from "@/lib/api-client";
 
 interface AuthState {
   user: User | null;
@@ -25,11 +25,13 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token) => {
         setAuthToken(token);
         setTenantId(user.tenant_id ?? null);
+        setTenantSlug(user.tenant_slug ?? null);
         set({ user, token, isAuthenticated: true, hasHydrated: true });
       },
       clearAuth: () => {
         setAuthToken(null);
         setTenantId(null);
+        setTenantSlug(null);
         set({ user: null, token: null, isAuthenticated: false });
       },
       setUser: (user) => set({ user }),
@@ -44,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.token) setAuthToken(state.token);
         setTenantId(state?.user?.tenant_id ?? null);
+        setTenantSlug(state?.user?.tenant_slug ?? null);
         state?.setHasHydrated(true);
       },
     },

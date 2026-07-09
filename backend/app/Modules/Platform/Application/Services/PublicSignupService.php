@@ -44,7 +44,11 @@ class PublicSignupService
 
         $plainPassword = $data['owner_password'];
         $signupMetadata = $this->buildSignupMetadata($data);
-        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/login';
+        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/login?'.http_build_query([
+            'email' => $data['owner_email'],
+            'tenant' => $data['slug'],
+            'welcome' => '1',
+        ]);
 
         $result = DB::transaction(function () use ($data, $plan, $plainPassword, $signupMetadata, $loginUrl) {
             $tenant = $this->tenantService->createTenant([

@@ -15,6 +15,7 @@ import { ApiClientError } from "@/lib/api-client";
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
+  tenant_slug: z.string().optional(),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -22,6 +23,8 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPageClient() {
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams.get("email") ?? "";
+  const prefilledTenant =
+    searchParams.get("tenant") ?? searchParams.get("tenant_slug") ?? "";
   const { login, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
@@ -31,13 +34,13 @@ export default function LoginPageClient() {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: prefilledEmail, password: "" },
+    defaultValues: { email: prefilledEmail, password: "", tenant_slug: prefilledTenant },
   });
 
   const onSubmit = async (data: LoginForm) => {
     setError(null);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, data.tenant_slug?.trim() || undefined);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -72,6 +75,15 @@ export default function LoginPageClient() {
             autoComplete="current-password"
             error={errors.password?.message}
             {...register("password")}
+          />
+          <Input
+            label="Workspace slug"
+            type="text"
+            autoComplete="organization"
+            placeholder="your-restaurant"
+            tooltip="From your welcome email if you have multiple workspaces."
+            error={errors.tenant_slug?.message}
+            {...register("tenant_slug")}
           />
           {error && (
             <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
