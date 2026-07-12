@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
       },
       {
+        source: "/pwa-manifest/:slug",
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+      },
+      {
         source: "/app-version.json",
         headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },

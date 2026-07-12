@@ -55,6 +55,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
 
+    Route::get('/storefront/pwa-manifest/{slug}', [StorefrontController::class, 'pwaManifest']);
+
     Route::middleware(['tenant.resolve'])->group(function () {
         Route::get('/storefront', [StorefrontController::class, 'show']);
         Route::post('/storefront/revenue-recovery/campaigns/{id}/track-open', [StorefrontController::class, 'trackCampaignOpen']);

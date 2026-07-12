@@ -622,6 +622,11 @@ export interface Storefront {
   branding: TenantBranding;
   status: RestaurantStatus;
   workspace?: StorefrontWorkspace;
+  pwa?: {
+    manifest_path: string;
+    start_url: string;
+    installable: boolean;
+  };
   revenue_recovery?: {
     offers: PromoMealItem[];
     campaigns: Pick<

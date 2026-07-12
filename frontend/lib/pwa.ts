@@ -60,7 +60,17 @@ export async function fetchServerBuildId(): Promise<string | null> {
   return null;
 }
 
-/** Pilot: keep service workers unregistered so stale bundles cannot persist. */
+/** Register network-only SW required for installability and push. */
+export async function registerNetworkOnlyServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!("serviceWorker" in navigator)) return null;
+  try {
+    return await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch {
+    return null;
+  }
+}
+
+/** Kept for hard-reset flows that must clear registrations. */
 export async function disableServiceWorkers(): Promise<void> {
   await unregisterServiceWorkers();
 }

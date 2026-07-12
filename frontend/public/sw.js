@@ -1,5 +1,5 @@
-// Pilot: service worker disabled — network-only to prevent stale PWA bundles.
-// Push handlers remain for future re-enablement behind a versioned SW file.
+// Network-only service worker for installability and push.
+// Does not cache app shells — avoids stale Next.js bundles.
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -11,16 +11,53 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const keys = await caches.keys();
       await Promise.all(keys.map((key) => caches.delete(key)));
-      await self.registration.unregister();
-      const windowClients = await self.clients.matchAll({ type: "window" });
-      await Promise.all(
-        windowClients.map((client) => {
-          if ("navigate" in client) {
-            return client.navigate(client.url);
-          }
-          return client.focus();
-        }),
-      );
+      await self.clients.claim();
     })(),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
+
+self.addEventListener("push", (event) => {
+  let payload = { title: "KhayaOS", body: "You have a new update" };
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch {
+    // keep defaults
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "KhayaOS", {
+      body: payload.body || "",
+      data: payload.data || {},
+      icon: payload.icon || "/icon.svg",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl =
+    (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsArr) => {
+      for (const client of clientsArr) {
+        if ("focus" in client) {
+          client.focus();
+          if ("navigate" in client) {
+            return client.navigate(targetUrl);
+          }
+          return undefined;
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+      return undefined;
+    }),
   );
 });

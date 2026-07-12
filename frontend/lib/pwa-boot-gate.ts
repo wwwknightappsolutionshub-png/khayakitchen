@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "3";
+export const PWA_CACHE_EPOCH = "4";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";

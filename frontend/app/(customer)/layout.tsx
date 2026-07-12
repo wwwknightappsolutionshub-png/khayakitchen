@@ -10,6 +10,8 @@ import { ConnectionBanner } from "@/components/customer/ConnectionBanner";
 import { StorefrontTheme } from "@/components/customer/StorefrontTheme";
 import { WelcomeSplashGate } from "@/components/customer/WelcomeSplashGate";
 import { BuildStamp } from "@/components/customer/BuildStamp";
+import { TenantPwaManifestLink } from "@/components/customer/TenantPwaManifestLink";
+import { PwaInstallPrompt } from "@/components/customer/PwaInstallPrompt";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
 
 export const dynamic = "force-dynamic";
@@ -40,8 +42,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     <div className="customer-app min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <StorefrontTheme>
         <RealtimeProvider channels={["customer"]} enabled>
+        <TenantPwaManifestLink />
         <WelcomeSplashGate />
         <ConnectionBanner />
+        <PwaInstallPrompt />
         <NotificationOptInPrompt />
         <ProximityLayer />
         <CustomerHeader />
