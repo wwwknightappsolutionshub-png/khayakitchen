@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
+import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
 import { campaignService } from "@/services/campaign.service";
 import { useAuthStore } from "@/stores/auth-store";
 import type { CreateCampaignPayload } from "@/services/campaign.service";
@@ -136,56 +137,95 @@ export default function MarketingPage() {
         <CardHeader>
           <CardTitle className="text-lg">Campaigns</CardTitle>
         </CardHeader>
-        <TableScroll bordered={false}>
-          <table className={BACKEND_TABLE_CLASS}>
-            <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="px-4 py-3 font-medium">Title</th>
-                <th className="px-4 py-3 font-medium">Channel</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Sent</th>
-                <th className="px-4 py-3 font-medium">Delivered</th>
-                <th className="px-4 py-3 font-medium">Failed</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading &&
-                Array.from({ length: 3 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+        <ResponsiveDataView
+          mobile={
+            <>
+              {isLoading && (
+                <p className="px-4 py-6 text-center text-sm text-muted">Loading campaigns…</p>
+              )}
               {!isLoading && campaigns.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
-                    No campaigns yet
-                  </td>
-                </tr>
+                <p className="px-4 py-6 text-center text-sm text-muted">No campaigns yet</p>
               )}
               {campaigns.map((campaign) => (
-                <tr key={campaign.id} className="border-b border-border">
-                  <td className="px-4 py-3 font-medium">{campaign.title}</td>
-                  <td className="px-4 py-3 capitalize text-muted">{campaign.channel}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline">{campaign.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 font-mono">{campaign.sent_count}</td>
-                  <td className="px-4 py-3 font-mono text-status-ready">{campaign.delivered_count}</td>
-                  <td className="px-4 py-3 font-mono text-danger">{campaign.failed_count}</td>
-                  <td className="px-4 py-3">
-                    {canManage && campaign.status === "draft" && (
-                      <Button
-                        size="sm"
-                        onClick={() => sendMutation.mutate(campaign.id)}
-                        isLoading={sendMutation.isPending}
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        Send
-                      </Button>
-                    )}
-                  </td>
-                </tr>
+                <div key={campaign.id} className="px-4 pb-3">
+                  <MobileDataCard
+                    title={campaign.title}
+                    subtitle={campaign.channel}
+                    meta={<Badge variant="outline">{campaign.status}</Badge>}
+                    rows={[
+                      { label: "Sent", value: campaign.sent_count },
+                      { label: "Delivered", value: campaign.delivered_count },
+                      { label: "Failed", value: campaign.failed_count },
+                    ]}
+                    actions={
+                      canManage && campaign.status === "draft" ? (
+                        <Button
+                          size="sm"
+                          onClick={() => sendMutation.mutate(campaign.id)}
+                          isLoading={sendMutation.isPending}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Send
+                        </Button>
+                      ) : null
+                    }
+                  />
+                </div>
               ))}
-            </tbody>
-          </table>
-        </TableScroll>
+            </>
+          }
+        >
+          <TableScroll bordered={false}>
+            <table className={BACKEND_TABLE_CLASS}>
+              <thead>
+                <tr className="border-b border-border text-left text-muted">
+                  <th className="px-4 py-3 font-medium">Title</th>
+                  <th className="px-4 py-3 font-medium">Channel</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Sent</th>
+                  <th className="px-4 py-3 font-medium">Delivered</th>
+                  <th className="px-4 py-3 font-medium">Failed</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading &&
+                  Array.from({ length: 3 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+                {!isLoading && campaigns.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                      No campaigns yet
+                    </td>
+                  </tr>
+                )}
+                {campaigns.map((campaign) => (
+                  <tr key={campaign.id} className="border-b border-border">
+                    <td className="px-4 py-3 font-medium">{campaign.title}</td>
+                    <td className="px-4 py-3 capitalize text-muted">{campaign.channel}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline">{campaign.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3 font-mono">{campaign.sent_count}</td>
+                    <td className="px-4 py-3 font-mono text-status-ready">{campaign.delivered_count}</td>
+                    <td className="px-4 py-3 font-mono text-danger">{campaign.failed_count}</td>
+                    <td className="px-4 py-3">
+                      {canManage && campaign.status === "draft" && (
+                        <Button
+                          size="sm"
+                          onClick={() => sendMutation.mutate(campaign.id)}
+                          isLoading={sendMutation.isPending}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Send
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
+        </ResponsiveDataView>
       </Card>
     </BackendPage>
   );

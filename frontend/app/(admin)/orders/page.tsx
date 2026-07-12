@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
+import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
 import { ordersService } from "@/services/orders.service";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 
@@ -30,6 +31,28 @@ export default function OrdersPage() {
   });
 
   const orders = data?.orders ?? [];
+
+  const orderActions = (order: (typeof orders)[number]) => (
+    <>
+      {order.status === "pending" && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => updateMutation.mutate({ id: order.id, status: "preparing" })}
+        >
+          Start
+        </Button>
+      )}
+      {order.status === "preparing" && (
+        <Button
+          size="sm"
+          onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
+        >
+          Ready
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <BackendPage>
@@ -58,70 +81,87 @@ export default function OrdersPage() {
       </div>
 
       <Card>
-        <TableScroll bordered={false}>
-          <table className={BACKEND_TABLE_CLASS}>
-            <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Order</th>
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Type</th>
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Status</th>
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Total</th>
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Created</th>
-                <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading &&
-                Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={6} />)}
+        <ResponsiveDataView
+          mobile={
+            <>
+              {isLoading && (
+                <p className="py-6 text-center text-sm text-muted">Loading orders…</p>
+              )}
               {!isLoading && orders.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                    No orders found
-                  </td>
-                </tr>
+                <p className="py-6 text-center text-sm text-muted">No orders found</p>
               )}
               {orders.map((order) => (
-                <tr
+                <MobileDataCard
                   key={order.id}
-                  className="border-b border-border transition-colors hover:bg-surface-elevated/50"
-                >
-                  <td className="px-4 py-3 font-mono text-xs">
-                    #{order.id.slice(0, 8).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-3 capitalize">{order.order_type}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-3 font-mono">
-                    {formatCurrency(order.total_amount)}
-                  </td>
-                  <td className="px-4 py-3 text-muted">{formatDate(order.created_at)}</td>
-                  <td className="px-4 py-3">
-                    {order.status === "pending" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          updateMutation.mutate({ id: order.id, status: "preparing" })
-                        }
-                      >
-                        Start
-                      </Button>
-                    )}
-                    {order.status === "preparing" && (
-                      <Button
-                        size="sm"
-                        onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
-                      >
-                        Ready
-                      </Button>
-                    )}
-                  </td>
-                </tr>
+                  title={`#${order.id.slice(0, 8).toUpperCase()}`}
+                  subtitle={order.customer_name || "Guest"}
+                  meta={<StatusBadge status={order.status} />}
+                  rows={[
+                    { label: "Phone", value: order.customer_phone || "—" },
+                    { label: "Payment", value: order.payment_channel || "—" },
+                    { label: "Type", value: order.order_type },
+                    { label: "Total", value: formatCurrency(order.total_amount) },
+                    { label: "Created", value: formatDate(order.created_at) },
+                  ]}
+                  actions={orderActions(order)}
+                />
               ))}
-            </tbody>
-          </table>
-        </TableScroll>
+            </>
+          }
+        >
+          <TableScroll bordered={false}>
+            <table className={BACKEND_TABLE_CLASS}>
+              <thead>
+                <tr className="border-b border-border text-left text-muted">
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Order</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Customer</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Phone</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Payment</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Type</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Status</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Total</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Created</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading &&
+                  Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={9} />)}
+                {!isLoading && orders.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-muted">
+                      No orders found
+                    </td>
+                  </tr>
+                )}
+                {orders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className="border-b border-border transition-colors hover:bg-surface-elevated/50"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs">
+                      #{order.id.slice(0, 8).toUpperCase()}
+                    </td>
+                    <td className="px-4 py-3">{order.customer_name || "Guest"}</td>
+                    <td className="px-4 py-3 text-muted">{order.customer_phone || "—"}</td>
+                    <td className="px-4 py-3 capitalize text-muted">
+                      {order.payment_channel || "—"}
+                    </td>
+                    <td className="px-4 py-3 capitalize">{order.order_type}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-4 py-3 font-mono">
+                      {formatCurrency(order.total_amount)}
+                    </td>
+                    <td className="px-4 py-3 text-muted">{formatDate(order.created_at)}</td>
+                    <td className="px-4 py-3">{orderActions(order)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
+        </ResponsiveDataView>
       </Card>
     </BackendPage>
   );

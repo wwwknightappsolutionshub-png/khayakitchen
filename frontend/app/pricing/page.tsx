@@ -136,12 +136,12 @@ export default function PublicPricingPage() {
                   <p className="mt-1 text-sm text-zinc-400">{plan.description}</p>
                 )}
                 <p className="mt-4">
-                  <span className="text-4xl font-bold">{formatCurrency(price)}</span>
+                  <span className="text-4xl font-bold">{formatCurrency(price, "GBP")}</span>
                   <span className="text-sm text-zinc-500"> / {period}</span>
                 </p>
                 {cycle === "yearly" && (
                   <p className="text-xs text-zinc-500">
-                    {formatCurrency(plan.price_monthly)}/mo billed annually
+                    {formatCurrency(plan.price_monthly, "GBP")}/mo billed annually
                   </p>
                 )}
 

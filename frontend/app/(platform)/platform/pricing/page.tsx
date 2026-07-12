@@ -298,7 +298,7 @@ export default function PlatformPricingPage() {
                     {archived && <Badge variant="outline">Archived</Badge>}
                   </div>
                   <p className="mt-1 font-mono text-sm text-violet-200">
-                    {formatCurrency(plan.price_monthly)}/mo · {formatCurrency(plan.price_yearly)}/yr
+                    {formatCurrency(plan.price_monthly, "GBP")}/mo · {formatCurrency(plan.price_yearly, "GBP")}/yr
                   </p>
                   {plan.slug && (
                     <p className="text-xs text-violet-300/50">{plan.slug}</p>

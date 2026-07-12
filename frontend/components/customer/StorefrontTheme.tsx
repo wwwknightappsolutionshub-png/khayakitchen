@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useStorefront } from "@/hooks/useStorefront";
+import { applyWorkspaceRuntime } from "@/lib/workspace-runtime";
 
 function darken(hex: string, amount = 0.12): string {
   const normalized = hex.replace("#", "");
@@ -14,6 +15,12 @@ function darken(hex: string, amount = 0.12): string {
 
 export function StorefrontTheme({ children }: { children: React.ReactNode }) {
   const { data } = useStorefront();
+
+  useEffect(() => {
+    if (data?.workspace) {
+      applyWorkspaceRuntime(data.workspace);
+    }
+  }, [data?.workspace]);
 
   useEffect(() => {
     const root = document.querySelector(".customer-app") as HTMLElement | null;

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { Customer } from "@/lib/types";
+import type { CrmStrategicAnalytics, Customer } from "@/lib/types";
 
 export const crmService = {
   async getCustomers(): Promise<{ customers: Customer[] }> {
@@ -16,5 +16,11 @@ export const crmService = {
 
   async getInsights() {
     return api.get<import("@/lib/types").CrmInsights>("/customers/insights");
+  },
+
+  async getStrategicAnalytics(from: string, to: string): Promise<CrmStrategicAnalytics> {
+    return api.get<CrmStrategicAnalytics>("/customers/analytics", {
+      params: { from, to },
+    });
   },
 };

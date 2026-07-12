@@ -57,7 +57,14 @@ class PublicSignupService
 
             Tenant::withoutGlobalScopes()
                 ->where('id', $tenant['id'])
-                ->update(['signup_metadata' => $signupMetadata]);
+                ->update([
+                    'signup_metadata' => $signupMetadata,
+                    'currency' => strtoupper((string) ($data['currency'] ?? 'GBP')),
+                    'country' => $data['country'] ?? null,
+                    'country_iso' => isset($data['country_iso']) ? strtoupper((string) $data['country_iso']) : null,
+                    'timezone' => $data['timezone'] ?? null,
+                    'ui_theme' => 'light',
+                ]);
 
             TenantBranding::withoutGlobalScopes()
                 ->where('tenant_id', $tenant['id'])

@@ -96,6 +96,9 @@ export interface CreateOrderResponse {
 export interface Order {
   id: string;
   customer_id?: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  payment_channel?: string | null;
   status: string;
   order_type: string;
   scheduled_time?: string;
@@ -590,9 +593,35 @@ export interface RestaurantStatus {
   updated_at?: string;
 }
 
+export interface TenantWorkspace {
+  tenant_id: string;
+  name: string;
+  slug: string;
+  currency: string;
+  country?: string | null;
+  country_iso?: string | null;
+  timezone?: string | null;
+  ui_theme: "light" | "dark";
+  ordering_path: string;
+  ordering_url_hint?: string;
+}
+
+export interface StorefrontWorkspace {
+  tenant_id: string;
+  slug: string;
+  name: string;
+  currency: string;
+  country?: string | null;
+  country_iso?: string | null;
+  timezone?: string | null;
+  ui_theme: "light" | "dark";
+  ordering_path: string;
+}
+
 export interface Storefront {
   branding: TenantBranding;
   status: RestaurantStatus;
+  workspace?: StorefrontWorkspace;
   revenue_recovery?: {
     offers: PromoMealItem[];
     campaigns: Pick<
@@ -640,6 +669,33 @@ export interface CrmInsights {
     order_count: number;
     segment: string;
   }[];
+}
+
+export interface CrmStrategicAnalytics {
+  from: string;
+  to: string;
+  food_bought: {
+    meal_name: string;
+    quantity: number;
+    order_count: number;
+  }[];
+  total_amount_spent: number;
+  preferred_food: {
+    meal_name: string;
+    quantity: number;
+    order_count: number;
+  } | null;
+  referral_count: number;
+  reward_qualification_by_spend: {
+    min_total_spent: number;
+    qualified_customer_count: number;
+    customers: {
+      customer_id: string;
+      name?: string | null;
+      total_spent: number;
+    }[];
+  }[];
+  orders_in_period: number;
 }
 
 export interface CustomerProfile {

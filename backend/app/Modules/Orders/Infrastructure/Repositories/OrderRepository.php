@@ -15,12 +15,20 @@ class OrderRepository extends BaseRepository
 
     public function list(?string $status = null)
     {
-        $query = $this->query()->with(['items.options'])->orderByDesc('created_at');
+        $query = $this->query()
+            ->with(['items.options', 'customer', 'latestPayment'])
+            ->orderByDesc('created_at');
 
         if ($status) {
             $query->where('status', $status);
         }
 
-        return $query->get();
+        return $query->get()->map(function (Order $order) {
+            $order->setAttribute('customer_name', $order->customer?->name);
+            $order->setAttribute('customer_phone', $order->customer?->phone);
+            $order->setAttribute('payment_channel', $order->latestPayment?->provider);
+
+            return $order;
+        });
     }
 }

@@ -6,6 +6,7 @@ import { Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ColorField } from "@/components/ui/ColorField";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiClientError } from "@/lib/api-client";
@@ -305,33 +306,25 @@ export default function PlatformSettingsPage() {
                   }
                 />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <Input
+                  <ColorField
                     label="Primary color"
-                    value={displayedSettings.primary_color ?? ""}
-                    onChange={(e) =>
-                      setSplashForm((f) => ({ ...f, primary_color: e.target.value }))
-                    }
+                    value={displayedSettings.primary_color ?? "#004D40"}
+                    onChange={(hex) => setSplashForm((f) => ({ ...f, primary_color: hex }))}
                   />
-                  <Input
+                  <ColorField
                     label="Secondary color"
-                    value={displayedSettings.secondary_color ?? ""}
-                    onChange={(e) =>
-                      setSplashForm((f) => ({ ...f, secondary_color: e.target.value }))
-                    }
+                    value={displayedSettings.secondary_color ?? "#81B29A"}
+                    onChange={(hex) => setSplashForm((f) => ({ ...f, secondary_color: hex }))}
                   />
-                  <Input
+                  <ColorField
                     label="Accent color"
-                    value={displayedSettings.accent_color ?? ""}
-                    onChange={(e) =>
-                      setSplashForm((f) => ({ ...f, accent_color: e.target.value }))
-                    }
+                    value={displayedSettings.accent_color ?? "#F2CC8F"}
+                    onChange={(hex) => setSplashForm((f) => ({ ...f, accent_color: hex }))}
                   />
-                  <Input
+                  <ColorField
                     label="Background color"
-                    value={displayedSettings.background_color ?? ""}
-                    onChange={(e) =>
-                      setSplashForm((f) => ({ ...f, background_color: e.target.value }))
-                    }
+                    value={displayedSettings.background_color ?? "#F4F1DE"}
+                    onChange={(hex) => setSplashForm((f) => ({ ...f, background_color: hex }))}
                   />
                 </div>
                 <div className="grid gap-6 lg:grid-cols-2">

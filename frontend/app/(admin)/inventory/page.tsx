@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
+import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
 import { ScrollTabs } from "@/components/ui/ScrollTabs";
 import { inventoryService } from "@/services/inventory.service";
 import { cn, formatDate, toNumber } from "@/lib/utils";
@@ -325,98 +326,176 @@ export default function InventoryPage() {
       {(tab === "levels" || tab === "history") && (
         <Card>
           {tab === "history" ? (
-            <TableScroll bordered={false}>
-              <table className={BACKEND_TABLE_CLASS}>
-                <thead>
-                  <tr className="border-b border-border text-left text-muted">
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Date</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Type</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Item</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {txLoading &&
-                    Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={4} />)}
+            <ResponsiveDataView
+              mobile={
+                <>
+                  {txLoading && (
+                    <p className="py-6 text-center text-sm text-muted">Loading history…</p>
+                  )}
                   {!txLoading && transactions.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-muted">
-                        No transactions yet
-                      </td>
-                    </tr>
+                    <p className="py-6 text-center text-sm text-muted">No transactions yet</p>
                   )}
                   {transactions.map((tx) => {
                     const item = items.find((i) => i.id === tx.inventory_item_id);
                     return (
-                      <tr
+                      <MobileDataCard
                         key={tx.id}
-                        className="border-b border-border transition-colors hover:bg-surface-elevated/50"
-                      >
-                        <td className="px-4 py-3 text-muted">{formatDate(tx.created_at)}</td>
-                        <td className="px-4 py-3">
+                        title={item?.name ?? tx.inventory_item_id.slice(0, 8)}
+                        subtitle={formatDate(tx.created_at)}
+                        meta={
                           <Badge variant="outline" className="capitalize">
                             {tx.type}
                           </Badge>
-                        </td>
-                        <td className="px-4 py-3 font-medium">{item?.name ?? tx.inventory_item_id.slice(0, 8)}</td>
-                        <td className="px-4 py-3 font-mono">{toNumber(tx.quantity)}</td>
-                      </tr>
+                        }
+                        rows={[{ label: "Quantity", value: toNumber(tx.quantity) }]}
+                      />
                     );
                   })}
-                </tbody>
-              </table>
-            </TableScroll>
-          ) : (
-            <TableScroll bordered={false}>
-              <table className={BACKEND_TABLE_CLASS}>
-                <thead>
-                  <tr className="border-b border-border text-left text-muted">
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Item</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Unit</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Current Stock</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Reorder Level</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Cost/Unit</th>
-                    <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading &&
-                    Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={6} />)}
-                  {!isLoading && items.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                        No inventory items
-                      </td>
+                </>
+              }
+            >
+              <TableScroll bordered={false}>
+                <table className={BACKEND_TABLE_CLASS}>
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted">
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Date</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Type</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Item</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Quantity</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {txLoading &&
+                      Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={4} />)}
+                    {!txLoading && transactions.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                          No transactions yet
+                        </td>
+                      </tr>
+                    )}
+                    {transactions.map((tx) => {
+                      const item = items.find((i) => i.id === tx.inventory_item_id);
+                      return (
+                        <tr
+                          key={tx.id}
+                          className="border-b border-border transition-colors hover:bg-surface-elevated/50"
+                        >
+                          <td className="px-4 py-3 text-muted">{formatDate(tx.created_at)}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="capitalize">
+                              {tx.type}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {item?.name ?? tx.inventory_item_id.slice(0, 8)}
+                          </td>
+                          <td className="px-4 py-3 font-mono">{toNumber(tx.quantity)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableScroll>
+            </ResponsiveDataView>
+          ) : (
+            <ResponsiveDataView
+              mobile={
+                <>
+                  {isLoading && (
+                    <p className="py-6 text-center text-sm text-muted">Loading inventory…</p>
+                  )}
+                  {!isLoading && items.length === 0 && (
+                    <p className="py-6 text-center text-sm text-muted">No inventory items</p>
                   )}
                   {items.map((item) => {
                     const stock = toNumber(item.current_stock);
                     const reorder = toNumber(item.reorder_level);
                     const isLow = stock <= reorder;
                     return (
-                      <tr
+                      <MobileDataCard
                         key={item.id}
-                        className="border-b border-border transition-colors hover:bg-surface-elevated/50"
-                      >
-                        <td className="px-4 py-3 font-medium">{item.name}</td>
-                        <td className="px-4 py-3 text-muted">{item.unit}</td>
-                        <td className="px-4 py-3 font-mono">{stock}</td>
-                        <td className="px-4 py-3 font-mono text-muted">{reorder}</td>
-                        <td className="px-4 py-3 font-mono">{toNumber(item.cost_per_unit).toFixed(2)}</td>
-                        <td className="px-4 py-3">
+                        title={item.name}
+                        subtitle={item.unit}
+                        meta={
                           <Badge
                             variant={isLow ? "warning" : "secondary"}
                             className={cn(isLow && "bg-warning/20 text-warning")}
                           >
                             {isLow ? "Low Stock" : "OK"}
                           </Badge>
-                        </td>
-                      </tr>
+                        }
+                        rows={[
+                          { label: "Current stock", value: stock },
+                          { label: "Reorder level", value: reorder },
+                          {
+                            label: "Cost/unit",
+                            value: toNumber(item.cost_per_unit).toFixed(2),
+                          },
+                        ]}
+                      />
                     );
                   })}
-                </tbody>
-              </table>
-            </TableScroll>
+                </>
+              }
+            >
+              <TableScroll bordered={false}>
+                <table className={BACKEND_TABLE_CLASS}>
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted">
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Item</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Unit</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">
+                        Current Stock
+                      </th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">
+                        Reorder Level
+                      </th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Cost/Unit</th>
+                      <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading &&
+                      Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={6} />)}
+                    {!isLoading && items.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                          No inventory items
+                        </td>
+                      </tr>
+                    )}
+                    {items.map((item) => {
+                      const stock = toNumber(item.current_stock);
+                      const reorder = toNumber(item.reorder_level);
+                      const isLow = stock <= reorder;
+                      return (
+                        <tr
+                          key={item.id}
+                          className="border-b border-border transition-colors hover:bg-surface-elevated/50"
+                        >
+                          <td className="px-4 py-3 font-medium">{item.name}</td>
+                          <td className="px-4 py-3 text-muted">{item.unit}</td>
+                          <td className="px-4 py-3 font-mono">{stock}</td>
+                          <td className="px-4 py-3 font-mono text-muted">{reorder}</td>
+                          <td className="px-4 py-3 font-mono">
+                            {toNumber(item.cost_per_unit).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              variant={isLow ? "warning" : "secondary"}
+                              className={cn(isLow && "bg-warning/20 text-warning")}
+                            >
+                              {isLow ? "Low Stock" : "OK"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableScroll>
+            </ResponsiveDataView>
           )}
         </Card>
       )}

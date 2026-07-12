@@ -72,6 +72,101 @@ class CrmService
         ];
     }
 
+    /**
+     * Strategic CRM analytics for a date range.
+     *
+     * @return array<string, mixed>
+     */
+    public function getStrategicAnalytics(array $permissions, string $from, string $to): array
+    {
+        $this->permissionService->authorize($permissions, 'crm.view');
+        $this->featureAccessService->assertAccess('crm_basic');
+
+        $tenantId = $this->tenantContext->id();
+        $fromDate = \Carbon\Carbon::parse($from)->startOfDay();
+        $toDate = \Carbon\Carbon::parse($to)->endOfDay();
+
+        if ($toDate->lt($fromDate)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'to' => ['End date must be on or after the start date.'],
+            ]);
+        }
+
+        $orders = Order::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$fromDate, $toDate])
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['cancelled'])
+            ->with(['items.meal'])
+            ->get();
+
+        $foodBought = [];
+        foreach ($orders as $order) {
+            foreach ($order->items as $item) {
+                $name = (string) ($item->meal?->name ?? 'Unknown item');
+                $qty = (int) ($item->quantity ?? 1);
+                if (! isset($foodBought[$name])) {
+                    $foodBought[$name] = [
+                        'meal_name' => $name,
+                        'quantity' => 0,
+                        'order_count' => 0,
+                    ];
+                }
+                $foodBought[$name]['quantity'] += max(1, $qty);
+                $foodBought[$name]['order_count'] += 1;
+            }
+        }
+
+        usort($foodBought, fn ($a, $b) => $b['quantity'] <=> $a['quantity']);
+
+        $totalSpentInPeriod = round((float) $orders->sum(fn ($o) => (float) $o->total_amount), 2);
+
+        $preferredFood = $foodBought[0] ?? null;
+
+        $referralCount = Customer::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('referred_by_customer_id')
+            ->whereBetween('created_at', [$fromDate, $toDate])
+            ->count();
+
+        $rewardThresholds = [50.0, 100.0, 200.0];
+        $profiles = CrmProfile::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->get();
+
+        $rewardQualification = [];
+        foreach ($rewardThresholds as $threshold) {
+            $qualified = $profiles->filter(fn ($p) => (float) $p->total_spent >= $threshold)->values();
+            $rewardQualification[] = [
+                'min_total_spent' => $threshold,
+                'qualified_customer_count' => $qualified->count(),
+                'customers' => $qualified->take(20)->map(function ($profile) {
+                    $customer = Customer::withoutGlobalScopes()
+                        ->where('tenant_id', $profile->tenant_id)
+                        ->where('id', $profile->customer_id)
+                        ->first();
+
+                    return [
+                        'customer_id' => $profile->customer_id,
+                        'name' => $customer?->name,
+                        'total_spent' => (float) $profile->total_spent,
+                    ];
+                })->values()->all(),
+            ];
+        }
+
+        return [
+            'from' => $fromDate->toDateString(),
+            'to' => $toDate->toDateString(),
+            'food_bought' => array_values($foodBought),
+            'total_amount_spent' => $totalSpentInPeriod,
+            'preferred_food' => $preferredFood,
+            'referral_count' => $referralCount,
+            'reward_qualification_by_spend' => $rewardQualification,
+            'orders_in_period' => $orders->count(),
+        ];
+    }
+
     public function getCustomer(string $id, array $permissions): Customer
     {
         $this->permissionService->authorize($permissions, 'crm.view');

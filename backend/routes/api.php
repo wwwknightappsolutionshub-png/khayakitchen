@@ -3,6 +3,7 @@
 use App\Modules\Auth\Interfaces\Controllers\AuthController;
 use App\Modules\Auth\Interfaces\Controllers\FeatureFlagController;
 use App\Modules\Auth\Interfaces\Controllers\StaffUserController;
+use App\Modules\Auth\Interfaces\Controllers\TenantWorkspaceController;
 use App\Modules\CRM\Interfaces\Controllers\CustomerController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryZoneController;
@@ -144,6 +145,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('feature:crm')->group(function () {
             Route::get('/customers', [CustomerController::class, 'index']);
             Route::get('/customers/insights', [CustomerController::class, 'insights']);
+            Route::get('/customers/analytics', [CustomerController::class, 'strategicAnalytics']);
             Route::get('/customers/{id}', [CustomerController::class, 'show']);
             Route::post('/customers/{id}/tags', [CustomerController::class, 'updateTags']);
         });
@@ -207,6 +209,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/feature-flags', [FeatureFlagController::class, 'index']);
         Route::get('/entitlements', [EntitlementController::class, 'index']);
         Route::post('/entitlements/upgrade-request', [EntitlementController::class, 'requestUpgrade']);
+        Route::get('/workspace', [TenantWorkspaceController::class, 'show']);
+        Route::patch('/workspace', [TenantWorkspaceController::class, 'update']);
         Route::get('/branding', [BrandingController::class, 'show']);
         Route::patch('/branding', [BrandingController::class, 'update']);
         Route::post('/branding/logo', [BrandingController::class, 'uploadLogo']);

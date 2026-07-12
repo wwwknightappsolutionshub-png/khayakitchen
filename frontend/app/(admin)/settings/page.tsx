@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Settings, Users } from "lucide-react";
+import { Copy, Link2, Settings, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,9 +13,11 @@ import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ApiClientError } from "@/lib/api-client";
+import { applyWorkspaceRuntime } from "@/lib/workspace-runtime";
 import { authService } from "@/services/auth.service";
 import { featureFlagsService } from "@/services/feature-flags.service";
 import { staffService } from "@/services/staff.service";
+import { workspaceService } from "@/services/workspace.service";
 
 const ROLES = ["owner", "manager", "kitchen", "staff"] as const;
 
@@ -34,6 +36,16 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [workspaceSuccess, setWorkspaceSuccess] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [workspaceForm, setWorkspaceForm] = useState({
+    currency: "GBP",
+    country: "",
+    country_iso: "",
+    timezone: "",
+    ui_theme: "light" as "light" | "dark",
+  });
   const [staffForm, setStaffForm] = useState({
     name: "",
     email: "",
@@ -42,10 +54,16 @@ export default function SettingsPage() {
   });
 
   const displayedEmail = emailForm.email || user?.email || "";
+  const canEditWorkspace = user?.role === "owner" || user?.role === "super_admin";
 
   const { data: flagsData } = useQuery({
     queryKey: ["feature-flags"],
     queryFn: () => featureFlagsService.getFlags(),
+  });
+
+  const { data: workspaceData, isLoading: workspaceLoading } = useQuery({
+    queryKey: ["workspace"],
+    queryFn: () => workspaceService.getWorkspace(),
   });
 
   const { data: staffData, isLoading: staffLoading } = useQuery({
@@ -54,12 +72,55 @@ export default function SettingsPage() {
     enabled: user?.role === "owner" || user?.role === "manager",
   });
 
+  useEffect(() => {
+    const workspace = workspaceData?.workspace;
+    if (!workspace) return;
+    setWorkspaceForm({
+      currency: workspace.currency || "GBP",
+      country: workspace.country ?? "",
+      country_iso: workspace.country_iso ?? "",
+      timezone: workspace.timezone ?? "",
+      ui_theme: workspace.ui_theme === "dark" ? "dark" : "light",
+    });
+    applyWorkspaceRuntime(workspace);
+  }, [workspaceData?.workspace]);
+
+  const orderingUrl = useMemo(() => {
+    const path = workspaceData?.workspace?.ordering_path ?? "";
+    if (!path) return "";
+    if (typeof window === "undefined") return path;
+    return `${window.location.origin}${path}`;
+  }, [workspaceData?.workspace?.ordering_path]);
+
   const createStaffMutation = useMutation({
     mutationFn: () => staffService.createStaff(staffForm),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       setShowStaffForm(false);
       setStaffForm({ name: "", email: "", password: "", role: "staff" });
+    },
+  });
+
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: () =>
+      workspaceService.updateWorkspace({
+        currency: workspaceForm.currency.trim().toUpperCase(),
+        country: workspaceForm.country.trim() || null,
+        country_iso: workspaceForm.country_iso.trim().toUpperCase() || null,
+        timezone: workspaceForm.timezone.trim() || null,
+        ui_theme: workspaceForm.ui_theme,
+      }),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace"], response);
+      applyWorkspaceRuntime(response.workspace);
+      setWorkspaceError(null);
+      setWorkspaceSuccess("Workspace settings saved.");
+    },
+    onError: (err) => {
+      setWorkspaceSuccess(null);
+      setWorkspaceError(
+        err instanceof ApiClientError ? err.message : "Failed to update workspace settings.",
+      );
     },
   });
 
@@ -104,6 +165,17 @@ export default function SettingsPage() {
   const staff = staffData?.users ?? [];
   const canManageStaff = user?.role === "owner" || user?.role === "manager";
 
+  const copyOrderingUrl = async () => {
+    if (!orderingUrl) return;
+    try {
+      await navigator.clipboard.writeText(orderingUrl);
+      setCopyMessage("Ordering link copied.");
+    } catch {
+      setCopyMessage("Could not copy — select the URL manually.");
+    }
+    window.setTimeout(() => setCopyMessage(null), 2500);
+  };
+
   return (
     <BackendPage>
       <header className="backend-header">
@@ -140,6 +212,136 @@ export default function SettingsPage() {
               <span className="text-muted">Tenant ID</span>
               <span className="font-mono text-xs">{user?.tenant_id ?? "—"}</span>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Workspace</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {workspaceLoading ? (
+              <p className="text-sm text-muted">Loading workspace…</p>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Currency code"
+                    value={workspaceForm.currency}
+                    disabled={!canEditWorkspace}
+                    onChange={(e) =>
+                      setWorkspaceForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))
+                    }
+                  />
+                  <Input
+                    label="Country"
+                    value={workspaceForm.country}
+                    disabled={!canEditWorkspace}
+                    onChange={(e) => setWorkspaceForm((f) => ({ ...f, country: e.target.value }))}
+                  />
+                  <Input
+                    label="Country ISO"
+                    value={workspaceForm.country_iso}
+                    disabled={!canEditWorkspace}
+                    onChange={(e) =>
+                      setWorkspaceForm((f) => ({
+                        ...f,
+                        country_iso: e.target.value.toUpperCase().slice(0, 2),
+                      }))
+                    }
+                  />
+                  <Input
+                    label="Timezone"
+                    value={workspaceForm.timezone}
+                    disabled={!canEditWorkspace}
+                    placeholder="e.g. Africa/Lagos"
+                    onChange={(e) => setWorkspaceForm((f) => ({ ...f, timezone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Theme</label>
+                  <select
+                    className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm"
+                    value={workspaceForm.ui_theme}
+                    disabled={!canEditWorkspace}
+                    onChange={(e) =>
+                      setWorkspaceForm((f) => ({
+                        ...f,
+                        ui_theme: e.target.value === "dark" ? "dark" : "light",
+                      }))
+                    }
+                  >
+                    <option value="light">Light (default)</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted">
+                    Default for mobile and tablet is light. Switch to dark when needed.
+                  </p>
+                </div>
+                {workspaceError && (
+                  <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
+                    {workspaceError}
+                  </p>
+                )}
+                {workspaceSuccess && (
+                  <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                    {workspaceSuccess}
+                  </p>
+                )}
+                {canEditWorkspace && (
+                  <Button
+                    onClick={() => updateWorkspaceMutation.mutate()}
+                    isLoading={updateWorkspaceMutation.isPending}
+                    disabled={!workspaceForm.currency.trim()}
+                  >
+                    Save workspace
+                  </Button>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-primary" />
+              <CardTitle>Ordering page</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted">
+              Share this unique link so customers open your menu for this restaurant.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Input label="Ordering URL" value={orderingUrl} readOnly />
+              <Button
+                type="button"
+                variant="secondary"
+                className="sm:mt-6"
+                onClick={() => void copyOrderingUrl()}
+                disabled={!orderingUrl}
+              >
+                <Copy className="h-4 w-4" />
+                Copy link
+              </Button>
+            </div>
+            {copyMessage && <p className="text-sm text-secondary">{copyMessage}</p>}
+            {orderingUrl ? (
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(orderingUrl)}`}
+                  alt="Ordering page QR code"
+                  width={160}
+                  height={160}
+                  className="rounded-[var(--radius)] border border-border bg-white p-2"
+                />
+                <p className="text-sm text-muted">
+                  Customers can scan this QR code to open your ordering page on their phone.
+                </p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

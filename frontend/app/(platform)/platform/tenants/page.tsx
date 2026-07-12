@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { ColorField } from "@/components/ui/ColorField";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
@@ -335,23 +336,20 @@ export default function PlatformTenantsPage() {
               {logoUploadProgress && <p className="mt-1 text-xs text-muted">{logoUploadProgress}</p>}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Input
+              <ColorField
                 label="Primary color"
-                value={brandingForm.primary_color}
-                onChange={(e) => setBrandingForm((f) => ({ ...f, primary_color: e.target.value }))}
-                placeholder="#E07A5F"
+                value={brandingForm.primary_color || "#E07A5F"}
+                onChange={(hex) => setBrandingForm((f) => ({ ...f, primary_color: hex }))}
               />
-              <Input
+              <ColorField
                 label="Secondary color"
-                value={brandingForm.secondary_color}
-                onChange={(e) => setBrandingForm((f) => ({ ...f, secondary_color: e.target.value }))}
-                placeholder="#81B29A"
+                value={brandingForm.secondary_color || "#81B29A"}
+                onChange={(hex) => setBrandingForm((f) => ({ ...f, secondary_color: hex }))}
               />
-              <Input
+              <ColorField
                 label="Accent color"
-                value={brandingForm.accent_color}
-                onChange={(e) => setBrandingForm((f) => ({ ...f, accent_color: e.target.value }))}
-                placeholder="#F2CC8F"
+                value={brandingForm.accent_color || "#F2CC8F"}
+                onChange={(hex) => setBrandingForm((f) => ({ ...f, accent_color: hex }))}
               />
             </div>
             <div>
@@ -680,11 +678,10 @@ export default function PlatformTenantsPage() {
                 value={createForm.owner_password}
                 onChange={(e) => setCreateForm((f) => ({ ...f, owner_password: e.target.value }))}
               />
-              <Input
+              <ColorField
                 label="Primary color (optional)"
-                value={createForm.primary_color}
-                onChange={(e) => setCreateForm((f) => ({ ...f, primary_color: e.target.value }))}
-                placeholder="#FF6B35"
+                value={createForm.primary_color || "#FF6B35"}
+                onChange={(hex) => setCreateForm((f) => ({ ...f, primary_color: hex }))}
               />
               <div className="flex gap-2 pt-2">
                 <Button

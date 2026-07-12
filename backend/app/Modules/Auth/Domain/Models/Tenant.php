@@ -15,6 +15,11 @@ class Tenant extends Model
         'slug',
         'logo_url',
         'primary_color',
+        'currency',
+        'country',
+        'country_iso',
+        'timezone',
+        'ui_theme',
         'signup_metadata',
         'status',
     ];

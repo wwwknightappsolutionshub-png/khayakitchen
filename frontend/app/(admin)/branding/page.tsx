@@ -7,6 +7,7 @@ import { Palette, Store } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ColorField } from "@/components/ui/ColorField";
 import { Badge } from "@/components/ui/Badge";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { LiveDashboardStatusControl } from "@/components/admin/LiveDashboardStatusControl";
@@ -231,13 +232,13 @@ export default function BrandingPage() {
                   )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
+                  <ColorField
                     name="primary_color"
                     label="Primary color"
                     defaultValue={branding.primary_color ?? "#E07A5F"}
                     disabled={!canManage}
                   />
-                  <Input
+                  <ColorField
                     name="secondary_color"
                     label="Secondary color"
                     defaultValue={branding.secondary_color ?? "#81B29A"}

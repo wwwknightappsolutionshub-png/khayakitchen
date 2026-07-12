@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { ColorField } from "@/components/ui/ColorField";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput, isStrongPassword } from "@/components/ui/PasswordInput";
@@ -656,8 +657,18 @@ export function EnterpriseSignupForm({
               <div className="grid gap-4 md:grid-cols-2">
                 <Input label="Tagline (optional)" error={errors.tagline?.message} {...register("tagline")} />
                 <Input label="Logo URL (optional)" error={errors.logo_url?.message} {...register("logo_url")} />
-                <Input label="Primary color" error={errors.primary_color?.message} {...register("primary_color")} />
-                <Input label="Secondary color" error={errors.secondary_color?.message} {...register("secondary_color")} />
+                <ColorField
+                  label="Primary color"
+                  value={watch("primary_color") || "#1A1A2E"}
+                  onChange={(hex) => setValue("primary_color", hex, { shouldValidate: true })}
+                  error={errors.primary_color?.message}
+                />
+                <ColorField
+                  label="Secondary color"
+                  value={watch("secondary_color") || "#E94560"}
+                  onChange={(hex) => setValue("secondary_color", hex, { shouldValidate: true })}
+                  error={errors.secondary_color?.message}
+                />
                 <div className="md:col-span-2">
                   <LabeledSelect label="Subscription plan" error={errors.plan_id?.message}>
                     <select

@@ -19,6 +19,7 @@ class Customer extends Model
         'name',
         'email',
         'phone',
+        'referred_by_customer_id',
         'created_by',
         'updated_by',
     ];
@@ -26,6 +27,16 @@ class Customer extends Model
     public function profile(): HasOne
     {
         return $this->hasOne(CrmProfile::class, 'customer_id');
+    }
+
+    public function referredBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'referred_by_customer_id');
+    }
+
+    public function referrals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(self::class, 'referred_by_customer_id');
     }
 
     public function notificationPreference(): HasOne

@@ -50,4 +50,20 @@ class CustomerController extends Controller
             $this->crmService->getInsights($request->get('permissions', [])),
         );
     }
+
+    public function strategicAnalytics(Request $request)
+    {
+        $data = $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+        ]);
+
+        return ApiResponse::success(
+            $this->crmService->getStrategicAnalytics(
+                $request->get('permissions', []),
+                $data['from'],
+                $data['to'],
+            ),
+        );
+    }
 }

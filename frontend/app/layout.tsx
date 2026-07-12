@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { Anek_Latin, Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
+import { ThemeBoot } from "@/components/shared/ThemeBoot";
 import { AuthHydration } from "@/components/shared/AuthHydration";
 import { PwaBootGate } from "@/components/shared/PwaBootGate";
 import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
@@ -54,7 +55,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#121418",
+  themeColor: "#f4f5f7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -72,6 +73,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="light"
       data-build={buildId}
       className={`${anekLatin.variable} ${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
@@ -81,6 +83,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <QueryProvider>
           <ToastProvider>
+            <ThemeBoot />
             <PwaLifecycle />
             <AuthHydration>{children}</AuthHydration>
           </ToastProvider>

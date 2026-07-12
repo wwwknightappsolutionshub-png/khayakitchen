@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
+import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
 import { RevenueRecoveryCampaignForm } from "@/components/admin/RevenueRecoveryCampaignForm";
 import { RevenueRecoverySettingsCard } from "@/components/admin/RevenueRecoverySettingsCard";
 import { UpgradeLimitModal } from "@/components/shared/UpgradeLimitModal";
@@ -98,6 +99,92 @@ export default function RevenueRecoveryPage() {
   const dashboard = dashboardQuery.data;
   const campaigns = campaignsQuery.data?.campaigns ?? [];
 
+  const renderCampaignActions = (campaign: RevenueRecoveryCampaign) => (
+    <div className="flex flex-wrap gap-1">
+      {["draft", "paused", "deactivated"].includes(campaign.status) && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setEditing(campaign);
+            setFormOpen(true);
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {["draft", "paused", "deactivated", "scheduled"].includes(campaign.status) && (
+        <Button
+          size="sm"
+          onClick={() => actionMutation.mutate({ action: "activate", id: campaign.id })}
+          isLoading={actionMutation.isPending}
+        >
+          <Play className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {campaign.status === "active" && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => actionMutation.mutate({ action: "pause", id: campaign.id })}
+        >
+          <Pause className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {campaign.status === "paused" && (
+        <Button
+          size="sm"
+          onClick={() => actionMutation.mutate({ action: "resume", id: campaign.id })}
+        >
+          <Play className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {["active", "paused", "scheduled"].includes(campaign.status) && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => actionMutation.mutate({ action: "deactivate", id: campaign.id })}
+        >
+          Stop
+        </Button>
+      )}
+      {["active", "scheduled"].includes(campaign.status) && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => actionMutation.mutate({ action: "notify", id: campaign.id })}
+        >
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => actionMutation.mutate({ action: "duplicate", id: campaign.id })}
+      >
+        <Copy className="h-3.5 w-3.5" />
+      </Button>
+      {campaign.status === "deactivated" && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => actionMutation.mutate({ action: "archive", id: campaign.id })}
+        >
+          <Archive className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {["draft", "archived"].includes(campaign.status) && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => actionMutation.mutate({ action: "delete", id: campaign.id })}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <BackendPage>
       <header className="backend-header items-start">
@@ -169,153 +256,89 @@ export default function RevenueRecoveryPage() {
         <CardHeader>
           <CardTitle className="text-lg">Campaigns</CardTitle>
         </CardHeader>
-        <TableScroll bordered={false}>
-          <table className={BACKEND_TABLE_CLASS}>
-            <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Window</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Orders</th>
-                <th className="px-4 py-3 font-medium">Recovered</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {campaignsQuery.isLoading &&
-                Array.from({ length: 4 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+        <ResponsiveDataView
+          mobile={
+            <>
+              {campaignsQuery.isLoading && (
+                <p className="px-4 py-6 text-center text-sm text-muted">Loading campaigns…</p>
+              )}
               {!campaignsQuery.isLoading && campaigns.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted">
-                    No recovery campaigns yet
-                  </td>
-                </tr>
+                <p className="px-4 py-6 text-center text-sm text-muted">
+                  No recovery campaigns yet
+                </p>
               )}
               {campaigns.map((campaign) => (
-                <tr key={campaign.id} className="border-b border-border">
-                  <td className="px-4 py-3 font-medium">{campaign.name}</td>
-                  <td className="px-4 py-3 text-muted">
-                    {TYPE_LABELS[campaign.campaign_type] ?? campaign.campaign_type}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
-                    {formatDate(campaign.starts_at)} → {formatDate(campaign.ends_at)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline">{campaign.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 font-mono">{campaign.orders_count}</td>
-                  <td className="px-4 py-3 font-mono">
-                    {formatCurrency(Number(campaign.recovered_revenue))}
-                  </td>
-                  <td className="px-4 py-3">
-                    {canManage && (
-                      <div className="flex flex-wrap gap-1">
-                        {["draft", "paused", "deactivated"].includes(campaign.status) && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              setEditing(campaign);
-                              setFormOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {["draft", "paused", "deactivated", "scheduled"].includes(campaign.status) && (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "activate", id: campaign.id })
-                            }
-                            isLoading={actionMutation.isPending}
-                          >
-                            <Play className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {campaign.status === "active" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "pause", id: campaign.id })
-                            }
-                          >
-                            <Pause className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {campaign.status === "paused" && (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "resume", id: campaign.id })
-                            }
-                          >
-                            <Play className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {["active", "paused", "scheduled"].includes(campaign.status) && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "deactivate", id: campaign.id })
-                            }
-                          >
-                            Stop
-                          </Button>
-                        )}
-                        {["active", "scheduled"].includes(campaign.status) && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "notify", id: campaign.id })
-                            }
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() =>
-                            actionMutation.mutate({ action: "duplicate", id: campaign.id })
-                          }
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        {campaign.status === "deactivated" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "archive", id: campaign.id })
-                            }
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {["draft", "archived"].includes(campaign.status) && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              actionMutation.mutate({ action: "delete", id: campaign.id })
-                            }
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
+                <div key={campaign.id} className="px-4 pb-3">
+                  <MobileDataCard
+                    title={campaign.name}
+                    subtitle={TYPE_LABELS[campaign.campaign_type] ?? campaign.campaign_type}
+                    meta={<Badge variant="outline">{campaign.status}</Badge>}
+                    rows={[
+                      {
+                        label: "Window",
+                        value: `${formatDate(campaign.starts_at)} → ${formatDate(campaign.ends_at)}`,
+                      },
+                      { label: "Orders", value: campaign.orders_count },
+                      {
+                        label: "Recovered",
+                        value: formatCurrency(Number(campaign.recovered_revenue)),
+                      },
+                    ]}
+                    actions={canManage ? renderCampaignActions(campaign) : null}
+                  />
+                </div>
               ))}
-            </tbody>
-          </table>
-        </TableScroll>
+            </>
+          }
+        >
+          <TableScroll bordered={false}>
+            <table className={BACKEND_TABLE_CLASS}>
+              <thead>
+                <tr className="border-b border-border text-left text-muted">
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Type</th>
+                  <th className="px-4 py-3 font-medium">Window</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Orders</th>
+                  <th className="px-4 py-3 font-medium">Recovered</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {campaignsQuery.isLoading &&
+                  Array.from({ length: 4 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+                {!campaignsQuery.isLoading && campaigns.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                      No recovery campaigns yet
+                    </td>
+                  </tr>
+                )}
+                {campaigns.map((campaign) => (
+                  <tr key={campaign.id} className="border-b border-border">
+                    <td className="px-4 py-3 font-medium">{campaign.name}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {TYPE_LABELS[campaign.campaign_type] ?? campaign.campaign_type}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                      {formatDate(campaign.starts_at)} → {formatDate(campaign.ends_at)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline">{campaign.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3 font-mono">{campaign.orders_count}</td>
+                    <td className="px-4 py-3 font-mono">
+                      {formatCurrency(Number(campaign.recovered_revenue))}
+                    </td>
+                    <td className="px-4 py-3">
+                      {canManage ? renderCampaignActions(campaign) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
+        </ResponsiveDataView>
       </Card>
 
       <RevenueRecoveryCampaignForm
