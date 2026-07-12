@@ -9,10 +9,10 @@ interface MealBadgeProps {
 }
 
 const BADGE_TONES: Record<MealBadgeType, string> = {
-  "most-ordered": "border-[var(--primary)]/35 bg-[var(--primary)]/20 text-[var(--primary)]",
-  "chefs-pick": "border-[var(--secondary)]/35 bg-[var(--secondary)]/20 text-emerald-300",
-  "popular-today": "border-amber-500/35 bg-amber-500/15 text-amber-200",
-  "low-stock": "border-[var(--primary)]/35 bg-[var(--primary)]/15 text-[var(--primary)]",
+  "most-ordered": "border-[var(--primary)]/40 bg-[var(--primary)]/15 text-[var(--primary)]",
+  "chefs-pick": "border-emerald-700/50 bg-emerald-600 text-white",
+  "popular-today": "border-amber-700/50 bg-amber-600 text-white",
+  "low-stock": "border-[var(--primary)]/40 bg-[var(--primary)]/15 text-[var(--primary)]",
 };
 
 export function MealBadge({ type, lowStockCount, className }: MealBadgeProps) {
