@@ -48,9 +48,10 @@ export function PlatformSidebar({ mobileOpen = false, onMobileClose }: MobileNav
       <aside
         className={cn(
           "flex h-full w-64 max-w-[85vw] flex-col border-r border-violet-500/20 bg-[#0a0c10]",
-          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:max-w-none lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out",
+          "lg:static lg:z-auto lg:h-full lg:w-64 lg:max-w-none lg:translate-x-0",
           mobileOpen
-            ? "translate-x-0"
+            ? "translate-x-0 pointer-events-auto"
             : "-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0",
         )}
       >

@@ -50,7 +50,7 @@ export function ResponsiveAppShell({
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <div className={cn("flex h-screen bg-background", className)}>
+    <div className={cn("relative flex h-screen w-full overflow-hidden bg-background", className)}>
       {mobileOpen ? (
         <button
           type="button"
@@ -60,9 +60,15 @@ export function ResponsiveAppShell({
         />
       ) : null}
 
-      {renderSidebar({ mobileOpen, onMobileClose: closeMobile })}
+      {/*
+        Mobile: zero-width flex slot so a fixed drawer cannot shrink main content.
+        Desktop: auto width so the static sidebar participates in the row normally.
+      */}
+      <div className="relative z-50 w-0 shrink-0 overflow-visible lg:w-auto lg:shrink-0">
+        {renderSidebar({ mobileOpen, onMobileClose: closeMobile })}
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
         <header
           className={cn(
             "flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 lg:hidden",
@@ -89,7 +95,7 @@ export function ResponsiveAppShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className={cn("p-4 sm:p-6 lg:p-8", contentClassName)}>{children}</div>
         </main>
       </div>
