@@ -19,13 +19,21 @@ class WebSocketGateway
 
     public function emit(string $tenantId, string $channel, string $event, array $payload): void
     {
-        $this->buffer->push($tenantId, $channel, $event, $payload);
+        try {
+            $this->buffer->push($tenantId, $channel, $event, $payload);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         if (config('broadcasting.default') === 'null') {
             return;
         }
 
-        broadcast(new RealtimeMessage($tenantId, $channel, $event, $payload));
+        try {
+            broadcast(new RealtimeMessage($tenantId, $channel, $event, $payload));
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function emitOrderCreated(Order $order): void

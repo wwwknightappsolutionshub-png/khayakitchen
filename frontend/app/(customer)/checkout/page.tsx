@@ -101,6 +101,8 @@ export default function CheckoutPage() {
           options: item.selectedOptions.map((o) => ({ option_id: o.optionId })),
         })),
       });
+      localStorage.setItem("khayaos-customer-phone", data.phone.trim());
+      localStorage.setItem("khayaos-customer-name", data.name.trim());
       if (response.customer_id) {
         localStorage.setItem("khayaos-customer-id", response.customer_id);
       }

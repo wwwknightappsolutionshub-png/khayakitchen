@@ -172,14 +172,36 @@ class OrderService
             $order->load(['items.options']);
 
             DomainEventLogger::log($order->tenant_id, 'OrderCreated', ['order_id' => $order->id], $order->id, 'order');
-            OrderCreated::dispatch($order->fresh(['items.options']));
+
+            $orderId = $order->id;
+            $customerIdForResponse = $customerId;
+            $statusForResponse = $order->status;
+            $totalForResponse = (float) $order->total_amount;
+            $discountForResponse = (float) $order->discount_total;
+            $tenantIdForEvent = $order->tenant_id;
+
+            DB::afterCommit(function () use ($orderId, $tenantIdForEvent) {
+                try {
+                    $fresh = Order::withoutGlobalScopes()
+                        ->where('tenant_id', $tenantIdForEvent)
+                        ->where('id', $orderId)
+                        ->with(['items.options'])
+                        ->first();
+
+                    if ($fresh) {
+                        OrderCreated::dispatch($fresh);
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
 
             return [
-                'order_id' => $order->id,
-                'customer_id' => $customerId,
-                'status' => $order->status,
-                'total' => (float) $order->total_amount,
-                'discount_total' => (float) $order->discount_total,
+                'order_id' => $orderId,
+                'customer_id' => $customerIdForResponse,
+                'status' => $statusForResponse,
+                'total' => $totalForResponse,
+                'discount_total' => $discountForResponse,
             ];
         });
     }

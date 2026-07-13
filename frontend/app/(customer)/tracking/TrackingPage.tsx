@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { OrderStatusTracker } from "@/components/customer/OrderStatusTracker";
 import { CustomerButton } from "@/components/customer/CustomerButton";
+import { CustomerInput } from "@/components/customer/CustomerInput";
 import { useOrderTracking } from "@/hooks/useOrderTracking";
 import { useCartStore } from "@/stores/cart-store";
+
+const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 
 function TrackingSkeleton() {
   return (
@@ -21,8 +25,24 @@ export default function TrackingPage() {
   const searchParams = useSearchParams();
   const storedOrderId = useCartStore((s) => s.activeOrderId);
   const orderId = searchParams.get("id") ?? storedOrderId;
+  const [phoneDraft, setPhoneDraft] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(PHONE_STORAGE_KEY) ?? "";
+  });
+  const [phoneReady, setPhoneReady] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(localStorage.getItem(PHONE_STORAGE_KEY)?.trim());
+  });
 
-  const { data, isLoading, error } = useOrderTracking(orderId);
+  const { data, isLoading, error, refetch } = useOrderTracking(phoneReady ? orderId : null);
+
+  const savePhoneAndLoad = () => {
+    const trimmed = phoneDraft.trim();
+    if (!trimmed) return;
+    localStorage.setItem(PHONE_STORAGE_KEY, trimmed);
+    setPhoneReady(true);
+    void refetch();
+  };
 
   if (!orderId) {
     return (
@@ -42,12 +62,40 @@ export default function TrackingPage() {
         <h1 className="text-2xl font-bold tracking-tight">Order Tracking</h1>
       </header>
 
-      {isLoading && <TrackingSkeleton />}
+      {!phoneReady && (
+        <div className="mb-6 space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="text-sm text-[var(--muted)]">
+            Enter the phone number used at checkout to load this order.
+          </p>
+          <CustomerInput
+            label="Phone number"
+            type="tel"
+            value={phoneDraft}
+            onChange={(e) => setPhoneDraft(e.target.value)}
+          />
+          <CustomerButton className="w-full" onClick={savePhoneAndLoad} disabled={!phoneDraft.trim()}>
+            Load order
+          </CustomerButton>
+        </div>
+      )}
 
-      {error && !data && (
+      {phoneReady && isLoading && <TrackingSkeleton />}
+
+      {phoneReady && error && !data && (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-10 text-center text-sm text-[var(--muted)]">
           <p>Unable to load order status.</p>
-          <p className="mt-1">Your order may still be processing.</p>
+          <p className="mt-1">
+            Confirm the phone number matches the one used at checkout, then try again.
+          </p>
+          <CustomerButton
+            variant="secondary"
+            className="mt-4"
+            onClick={() => {
+              setPhoneReady(false);
+            }}
+          >
+            Change phone
+          </CustomerButton>
         </div>
       )}
 
