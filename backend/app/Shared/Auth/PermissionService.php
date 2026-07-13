@@ -15,6 +15,13 @@ class PermissionService
             'branding.manage',
             'branding.view',
         ],
+        'platform_admin' => [
+            'settings.manage',
+            'campaigns.view',
+        ],
+        'platform_support' => [
+            'campaigns.view',
+        ],
         'owner' => [
             'orders.create',
             'orders.update',

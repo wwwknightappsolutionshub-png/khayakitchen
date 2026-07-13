@@ -18,11 +18,37 @@ class PushNotificationService
             ->where('customer_id', $customerId)
             ->pluck('device_token');
 
+        return $this->deliverTokens($tenantId, $tokens, $title, $body, $context, $customerId, 'customer');
+    }
+
+    public function sendToUser(string $tenantId, string $userId, string $title, string $body, array $context = []): bool
+    {
+        $tokens = DeviceToken::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->pluck('device_token');
+
+        return $this->deliverTokens($tenantId, $tokens, $title, $body, $context, $userId, 'user');
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, string>  $tokens
+     */
+    private function deliverTokens(
+        string $tenantId,
+        $tokens,
+        string $title,
+        string $body,
+        array $context,
+        string $entityId,
+        string $entityType,
+    ): bool {
         if ($tokens->isEmpty()) {
-            $this->logActivity($tenantId, 'push.skipped', $customerId, [
+            $this->logActivity($tenantId, 'push.skipped', $entityId, [
                 'reason' => 'no_device_tokens',
                 'title' => $title,
-            ]);
+                'entity_type' => $entityType,
+            ], $entityType);
 
             return false;
         }
@@ -36,17 +62,19 @@ class PushNotificationService
             } catch (\Throwable $e) {
                 Log::warning('Push delivery failed', [
                     'tenant_id' => $tenantId,
-                    'customer_id' => $customerId,
+                    'entity_id' => $entityId,
+                    'entity_type' => $entityType,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
 
-        $this->logActivity($tenantId, 'push.sent', $customerId, [
+        $this->logActivity($tenantId, 'push.sent', $entityId, [
             'title' => $title,
             'tokens' => $tokens->count(),
             'delivered' => $delivered,
-        ]);
+            'entity_type' => $entityType,
+        ], $entityType);
 
         return $delivered > 0;
     }
@@ -97,15 +125,20 @@ class PushNotificationService
     /**
      * @param  array<string, mixed>  $metadata
      */
-    private function logActivity(string $tenantId, string $action, string $customerId, array $metadata): void
-    {
+    private function logActivity(
+        string $tenantId,
+        string $action,
+        string $entityId,
+        array $metadata,
+        string $entityType = 'customer',
+    ): void {
         DB::table('activity_logs')->insert([
             'id' => (string) Str::uuid(),
             'tenant_id' => $tenantId,
             'user_id' => null,
             'action' => $action,
-            'entity_type' => 'customer',
-            'entity_id' => $customerId,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
             'metadata' => json_encode($metadata),
             'created_at' => now(),
         ]);

@@ -1,5 +1,6 @@
 "use client";
 
+import { Heart, Share2 } from "lucide-react";
 import type { Meal, PromoMealItem } from "@/lib/types";
 import { MealImage } from "@/components/customer/MealImage";
 import { MealBadge } from "@/components/customer/MealBadge";
@@ -12,9 +13,29 @@ interface MenuCardProps {
   highlighted?: boolean;
   priority?: boolean;
   promoOffer?: PromoMealItem | null;
+  likesEnabled?: boolean;
+  likesCount?: number | null;
+  liked?: boolean;
+  onLike?: (meal: Meal) => void;
+  onRefer?: (meal: Meal) => void;
+  likePending?: boolean;
+  referPending?: boolean;
 }
 
-export function MenuCard({ meal, onSelect, highlighted, priority, promoOffer }: MenuCardProps) {
+export function MenuCard({
+  meal,
+  onSelect,
+  highlighted,
+  priority,
+  promoOffer,
+  likesEnabled,
+  likesCount,
+  liked,
+  onLike,
+  onRefer,
+  likePending,
+  referPending,
+}: MenuCardProps) {
   const badges = getMealBadges(meal);
   const pairing = getPairingSuggestion(meal.name);
   const basePrice = toNumber(meal.base_price);
@@ -80,6 +101,56 @@ export function MenuCard({ meal, onSelect, highlighted, priority, promoOffer }: 
             )}
           </div>
         </div>
+
+        {likesEnabled && (
+          <div className="mt-3 flex items-center gap-2">
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLike?.(meal);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onLike?.(meal);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium",
+                liked ? "text-rose-400" : "text-[var(--muted)]",
+                likePending && "opacity-50",
+              )}
+            >
+              <Heart className={cn("h-3.5 w-3.5", liked && "fill-current")} />
+              {likesCount ?? 0}
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRefer?.(meal);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRefer?.(meal);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]",
+                referPending && "opacity-50",
+              )}
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Refer
+            </span>
+          </div>
+        )}
       </div>
     </button>
   );

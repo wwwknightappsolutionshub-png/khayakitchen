@@ -2,6 +2,7 @@
 
 namespace App\Modules\Menu\Application\Services;
 
+use App\Modules\Engagement\Application\Services\MealLikeService;
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Modules\Menu\Domain\Models\MealOption;
 use App\Modules\Menu\Domain\Models\OptionGroup;
@@ -21,20 +22,29 @@ class MenuService
         private PermissionService $permissionService,
         private PlanLimitService $planLimitService,
         private FeatureAccessService $featureAccessService,
+        private MealLikeService $mealLikeService,
     ) {}
 
     public function getMenu(): array
     {
         $meals = $this->mealRepository->getActiveWithOptions();
+        $likeCounts = [];
+        $likesEnabled = $this->featureAccessService->canAccess(MealLikeService::FEATURE_KEY);
+
+        if ($likesEnabled) {
+            $likeCounts = $this->mealLikeService->likeCountsForMeals($meals->pluck('id')->all());
+        }
 
         return [
-            'meals' => $meals->map(function (Meal $meal) {
+            'meals' => $meals->map(function (Meal $meal) use ($likeCounts, $likesEnabled) {
                 return [
                     'id' => $meal->id,
                     'name' => $meal->name,
                     'description' => $meal->description,
                     'image_url' => $meal->image_url,
                     'base_price' => $meal->base_price,
+                    'likes_count' => $likesEnabled ? ($likeCounts[$meal->id] ?? 0) : null,
+                    'likes_enabled' => $likesEnabled,
                     'options' => $meal->optionGroups->map(fn (OptionGroup $group) => [
                         'group' => $group->name,
                         'type' => $group->type,
@@ -47,6 +57,7 @@ class MenuService
                     ])->all(),
                 ];
             })->all(),
+            'menu_likes_refer_enabled' => $likesEnabled,
         ];
     }
 

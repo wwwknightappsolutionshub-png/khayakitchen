@@ -17,6 +17,8 @@ import {
   UtensilsCrossed,
   Leaf,
   X,
+  MessageSquare,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +33,8 @@ const navItems = [
   { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },
   { href: "/crm", label: "CRM", icon: Users, flag: "crm" },
   { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
+  { href: "/inbox", label: "Inbox", icon: MessageSquare, flag: null },
+  { href: "/reviews", label: "Reviews", icon: Star, flag: "kitchen_reviews" },
   { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
   { href: "/revenue-recovery", label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },

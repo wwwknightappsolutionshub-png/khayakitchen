@@ -20,10 +20,21 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
     if (user?.role === "super_admin") {
       router.replace("/platform/dashboard");
+      return;
+    }
+
+    if (user?.role === "platform_admin" || user?.role === "platform_support") {
+      router.replace("/platform/inbox");
     }
   }, [hasHydrated, isAuthenticated, user?.role, router]);
 
-  if (!hasHydrated || !isAuthenticated || user?.role === "super_admin") {
+  if (
+    !hasHydrated ||
+    !isAuthenticated ||
+    user?.role === "super_admin" ||
+    user?.role === "platform_admin" ||
+    user?.role === "platform_support"
+  ) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

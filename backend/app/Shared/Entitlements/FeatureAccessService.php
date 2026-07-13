@@ -39,6 +39,12 @@ class FeatureAccessService
         'marketplace' => 'marketplace',
         'white_label' => 'white_label',
         'ai' => 'ai',
+        'platform_tenant_push' => 'platform_tenant_push',
+        'platform_tenant_email' => 'platform_tenant_email',
+        'platform_tenant_chat' => 'platform_tenant_chat',
+        'tenant_customer_chat' => 'tenant_customer_chat',
+        'menu_likes_refer' => 'menu_likes_refer',
+        'kitchen_reviews' => 'kitchen_reviews',
     ];
 
     /** @var array<string, string> */
@@ -64,6 +70,12 @@ class FeatureAccessService
         'marketplace' => 'marketplace',
         'white_label' => 'white_label',
         'ai' => 'ai',
+        'platform_tenant_push' => 'platform_tenant_push',
+        'platform_tenant_email' => 'platform_tenant_email',
+        'platform_tenant_chat' => 'platform_tenant_chat',
+        'tenant_customer_chat' => 'tenant_customer_chat',
+        'menu_likes_refer' => 'menu_likes_refer',
+        'kitchen_reviews' => 'kitchen_reviews',
     ];
 
     public function __construct(

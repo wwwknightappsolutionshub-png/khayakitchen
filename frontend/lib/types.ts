@@ -39,6 +39,8 @@ export interface Meal {
   image_url?: string;
   base_price: number | string;
   is_active?: boolean;
+  likes_count?: number | null;
+  likes_enabled?: boolean;
   options: MealOptionGroup[];
 }
 
@@ -70,6 +72,7 @@ export interface AdminMeal {
 
 export interface MenuResponse {
   meals: Meal[];
+  menu_likes_refer_enabled?: boolean;
 }
 
 export interface OrderItemPayload {
@@ -622,6 +625,7 @@ export interface Storefront {
   branding: TenantBranding;
   status: RestaurantStatus;
   workspace?: StorefrontWorkspace;
+  review_ticker?: { customer_name: string; summary: string }[];
   pwa?: {
     manifest_path: string;
     start_url: string;
@@ -635,6 +639,58 @@ export interface Storefront {
     >[];
     proximity?: StorefrontProximityConfig;
   };
+}
+
+export interface ChatMessage {
+  id: string;
+  thread_id: string;
+  sender_type: "platform_user" | "tenant_user" | "customer";
+  sender_user_id?: string | null;
+  sender_customer_id?: string | null;
+  sender_label?: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface ChatThread {
+  id: string;
+  type: "platform_tenant" | "tenant_customer";
+  tenant_id: string;
+  subject?: string | null;
+  customer_id?: string | null;
+  messages?: ChatMessage[];
+  updated_at?: string;
+}
+
+export interface PlatformTenantMessage {
+  id: string;
+  tenant_id: string;
+  channel: "push" | "email";
+  title: string;
+  body: string;
+  status: string;
+  created_at: string;
+}
+
+export interface KitchenReview {
+  id: string;
+  customer_name: string;
+  customer_phone?: string | null;
+  body: string;
+  summary?: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}
+
+export interface MealReferPayload {
+  meal_id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  image_url?: string | null;
+  restaurant_name: string;
+  message: string;
+  whatsapp_text: string;
 }
 
 export interface CartItem {

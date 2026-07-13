@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permissions.load' => \App\Shared\Middleware\LoadPermissions::class,
             'feature' => \App\Shared\Middleware\ApplyFeatureFlags::class,
             'platform.super_admin' => \App\Shared\Middleware\EnsureSuperAdmin::class,
+            'platform.staff' => \App\Shared\Middleware\EnsurePlatformStaff::class,
             'customer.session' => \App\Shared\Middleware\ResolveCustomerSession::class,
         ]);
     })

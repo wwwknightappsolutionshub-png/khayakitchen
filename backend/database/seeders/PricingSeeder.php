@@ -35,6 +35,12 @@ class PricingSeeder extends Seeder
             ['key' => 'white_label', 'name' => 'White Label', 'category' => 'platform', 'module' => 'white_label', 'description' => 'White-label branding'],
             ['key' => 'ai', 'name' => 'AI Assistant', 'category' => 'platform', 'module' => 'ai', 'description' => 'AI-powered insights'],
             ['key' => 'super_admin_override', 'name' => 'Super Admin Override', 'category' => 'platform', 'module' => 'platform', 'description' => 'Platform override capability'],
+            ['key' => 'platform_tenant_push', 'name' => 'Platform Tenant Push', 'category' => 'platform', 'module' => 'platform_tenant_push', 'description' => 'Push notifications from platform to tenants'],
+            ['key' => 'platform_tenant_email', 'name' => 'Platform Tenant Email', 'category' => 'platform', 'module' => 'platform_tenant_email', 'description' => 'Email notifications from platform to tenants'],
+            ['key' => 'platform_tenant_chat', 'name' => 'Platform Tenant Chat', 'category' => 'platform', 'module' => 'platform_tenant_chat', 'description' => 'In-app chat between platform staff and tenants'],
+            ['key' => 'tenant_customer_chat', 'name' => 'Tenant Customer Chat', 'category' => 'crm', 'module' => 'tenant_customer_chat', 'description' => 'In-app chat between tenants and customers'],
+            ['key' => 'menu_likes_refer', 'name' => 'Menu Likes & Refer', 'category' => 'orders', 'module' => 'menu_likes_refer', 'description' => 'Customer meal likes and WhatsApp refer'],
+            ['key' => 'kitchen_reviews', 'name' => 'Kitchen Reviews', 'category' => 'crm', 'module' => 'kitchen_reviews', 'description' => 'Customer kitchen reviews with owner moderation'],
         ];
 
         foreach ($features as $feature) {
@@ -160,8 +166,12 @@ class PricingSeeder extends Seeder
         $growthKeys = array_merge($starterKeys, [
             'inventory_tracking', 'loyalty_system', 'whatsapp_notifications', 'pwa_push_notifications',
             'notification_campaigns', 'revenue_recovery', 'delivery', 'coupons',
+            'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat',
         ]);
-        $professionalKeys = array_merge($growthKeys, ['reports', 'forecasting']);
+        $professionalKeys = array_merge($growthKeys, [
+            'reports', 'forecasting',
+            'platform_tenant_push', 'platform_tenant_email', 'platform_tenant_chat',
+        ]);
         $enterpriseKeys = array_merge($professionalKeys, ['accounting', 'api_access', 'marketplace', 'white_label', 'ai']);
 
         $this->syncPlan($starter, $allFeatures, $starterKeys);

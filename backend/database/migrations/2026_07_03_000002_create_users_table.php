@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email');
             $table->string('password');
-            $table->enum('role', ['super_admin', 'owner', 'manager', 'kitchen', 'staff'])->default('staff');
+            $table->enum('role', ['super_admin', 'platform_admin', 'platform_support', 'owner', 'manager', 'kitchen', 'staff'])->default('staff');
             $table->enum('status', ['active', 'disabled'])->default('active');
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();

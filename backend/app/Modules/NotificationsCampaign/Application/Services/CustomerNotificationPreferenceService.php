@@ -60,6 +60,20 @@ class CustomerNotificationPreferenceService
             ['tenant_id' => $tenantId, 'device_token' => $token],
             [
                 'customer_id' => $customerId,
+                'user_id' => null,
+                'platform' => $platform,
+                'created_at' => now(),
+            ],
+        );
+    }
+
+    public function registerStaffDeviceToken(string $tenantId, string $userId, string $token, string $platform = 'web'): DeviceToken
+    {
+        return DeviceToken::updateOrCreate(
+            ['tenant_id' => $tenantId, 'device_token' => $token],
+            [
+                'customer_id' => null,
+                'user_id' => $userId,
                 'platform' => $platform,
                 'created_at' => now(),
             ],

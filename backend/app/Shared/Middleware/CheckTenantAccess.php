@@ -28,6 +28,15 @@ class CheckTenantAccess
             );
         }
 
+        if (in_array($user->role, ['platform_admin', 'platform_support'], true)) {
+            return ApiResponse::error(
+                'Platform staff cannot access tenant routes. Use /api/v1/platform/* messaging endpoints.',
+                'PLATFORM_ONLY',
+                null,
+                403,
+            );
+        }
+
         if ($user->status !== 'active') {
             return ApiResponse::error('User account is disabled', 'USER_DISABLED', null, 403);
         }

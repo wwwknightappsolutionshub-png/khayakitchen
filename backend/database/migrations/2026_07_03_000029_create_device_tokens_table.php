@@ -11,13 +11,15 @@ return new class extends Migration
         Schema::create('device_tokens', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('tenant_id');
-            $table->uuid('customer_id');
+            $table->uuid('customer_id')->nullable();
+            $table->uuid('user_id')->nullable();
             $table->text('device_token');
             $table->string('platform')->default('web');
             $table->timestamp('created_at')->useCurrent();
 
             $table->index('tenant_id');
             $table->index('customer_id');
+            $table->index('user_id');
             $table->unique(['tenant_id', 'device_token']);
         });
     }

@@ -2,6 +2,7 @@
 
 namespace App\Modules\TenantBranding\Interfaces\Controllers;
 
+use App\Modules\Engagement\Application\Services\KitchenReviewService;
 use App\Modules\RevenueRecovery\Application\Services\RevenueRecoveryCampaignService;
 use App\Modules\TenantBranding\Application\Services\RestaurantStatusService;
 use App\Modules\Auth\Application\Services\TenantWorkspaceService;
@@ -16,6 +17,7 @@ class StorefrontController extends Controller
         private RevenueRecoveryCampaignService $revenueRecoveryCampaignService,
         private TenantWorkspaceService $workspaceService,
         private TenantPwaManifestService $pwaManifestService,
+        private KitchenReviewService $kitchenReviewService,
     ) {}
 
     public function show()
@@ -23,6 +25,7 @@ class StorefrontController extends Controller
         $payload = $this->statusService->getStorefront();
         $payload['revenue_recovery'] = $this->revenueRecoveryCampaignService->getStorefrontPayload();
         $payload['workspace'] = $this->workspaceService->getPublicStorefrontConfig();
+        $payload['review_ticker'] = $this->kitchenReviewService->approvedTickerItems();
         $payload['pwa'] = [
             'manifest_path' => '/pwa-manifest/'.$payload['workspace']['slug'],
             'start_url' => $payload['workspace']['ordering_path'],

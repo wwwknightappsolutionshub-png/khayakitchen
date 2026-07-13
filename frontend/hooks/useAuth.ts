@@ -33,6 +33,11 @@ export function useAuth() {
       queryClient.invalidateQueries({ queryKey: ["auth"] });
       if (data.user.role === "super_admin") {
         router.push("/platform/dashboard");
+      } else if (
+        data.user.role === "platform_admin" ||
+        data.user.role === "platform_support"
+      ) {
+        router.push("/platform/inbox");
       } else if (["owner", "manager", "kitchen", "staff"].includes(data.user.role)) {
         router.push("/admin/dashboard");
       } else {

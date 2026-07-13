@@ -1,15 +1,13 @@
 <?php
 
-namespace App\Modules\NotificationsCampaign\Domain\Models;
+namespace App\Modules\Engagement\Domain\Models;
 
-use App\Modules\CRM\Domain\Models\Customer;
 use App\Shared\Database\Traits\BelongsToTenant;
 use App\Shared\Database\Traits\HasTenant;
 use App\Shared\Database\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DeviceToken extends Model
+class PlatformTenantMessage extends Model
 {
     use BelongsToTenant, HasTenant, HasUuid;
 
@@ -17,22 +15,21 @@ class DeviceToken extends Model
 
     protected $fillable = [
         'tenant_id',
-        'customer_id',
-        'user_id',
-        'device_token',
-        'platform',
+        'sender_user_id',
+        'channel',
+        'title',
+        'body',
+        'status',
+        'error_message',
+        'sent_at',
         'created_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'sent_at' => 'datetime',
             'created_at' => 'datetime',
         ];
-    }
-
-    public function customer(): BelongsTo
-    {
-        return $this->belongsTo(Customer::class);
     }
 }

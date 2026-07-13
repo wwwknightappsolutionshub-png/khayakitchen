@@ -8,11 +8,20 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ---
 
-## 1. Last Edit Summary (2026-07-04)
+## 1. Last Edit Summary (2026-07-13)
 
-The most recent production work landed in commit **`ffa9d2f`** on `main`. It completed **Phase 1.0.2 — SaaS Commercialization Layer** and bundled customer UX polish from the same release window.
+The most recent production work is **Engagement Messaging, Likes & Reviews** (platform↔tenant push/email/chat, tenant↔customer chat, menu likes + WhatsApp refer, kitchen reviews + footer ticker, plan entitlements). Reference depth remains Phase 1.0.2 (`ffa9d2f`).
 
 ### What shipped
+
+| Area | Deliverables |
+|------|--------------|
+| **Engagement backend** | Module `App\Modules\Engagement`; migration `2026_07_13_044000_engagement_messaging_likes_reviews.php`; platform messaging/chat/staff APIs; tenant inbox/reviews; customer like/refer/review/chat; feature keys on Growth/Professional+ |
+| **Engagement frontend** | `/platform/inbox`, `/platform/staff`; tenant `/inbox`, `/reviews`; menu like/refer modal; review form; customer chat; footer `ReviewTicker` |
+| **QA** | `EngagementFeaturesTest.php` (5); full suite 71 passed; `npm run build` passed |
+| **Audit docs** | `docs/audit/18_*`, `19_*`, `20_*` implementation, QA, and release reports |
+
+### Prior reference — Phase 1.0.2 (`ffa9d2f`)
 
 | Area | Deliverables |
 |------|--------------|

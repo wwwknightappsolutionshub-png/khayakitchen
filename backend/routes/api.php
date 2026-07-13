@@ -1,5 +1,11 @@
 <?php
 
+use App\Modules\Engagement\Interfaces\Controllers\CustomerEngagementController;
+use App\Modules\Engagement\Interfaces\Controllers\KitchenReviewController;
+use App\Modules\Engagement\Interfaces\Controllers\PlatformChatController;
+use App\Modules\Engagement\Interfaces\Controllers\PlatformStaffUserController;
+use App\Modules\Engagement\Interfaces\Controllers\PlatformTenantMessageController;
+use App\Modules\Engagement\Interfaces\Controllers\TenantEngagementController;
 use App\Modules\Auth\Interfaces\Controllers\AuthController;
 use App\Modules\Auth\Interfaces\Controllers\FeatureFlagController;
 use App\Modules\Auth\Interfaces\Controllers\StaffUserController;
@@ -91,6 +97,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:menu'])->group(function () {
         Route::get('/menu', [MenuController::class, 'index']);
         Route::get('/realtime/order-status/{id}', [RealtimeController::class, 'orderStatus']);
+
+        Route::post('/customer/meals/{mealId}/like', [CustomerEngagementController::class, 'toggleLike']);
+        Route::get('/customer/meals/{mealId}/refer', [CustomerEngagementController::class, 'referMeal']);
+        Route::post('/customer/reviews', [CustomerEngagementController::class, 'submitReview']);
+        Route::post('/customer/chat/threads', [CustomerEngagementController::class, 'openChat']);
+        Route::get('/customer/chat/threads/{id}', [CustomerEngagementController::class, 'showChat']);
+        Route::post('/customer/chat/threads/{id}/messages', [CustomerEngagementController::class, 'postChat']);
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:notifications'])->group(function () {
@@ -213,6 +226,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/entitlements/upgrade-request', [EntitlementController::class, 'requestUpgrade']);
         Route::get('/workspace', [TenantWorkspaceController::class, 'show']);
         Route::patch('/workspace', [TenantWorkspaceController::class, 'update']);
+        Route::get('/engagement/platform-messages', [TenantEngagementController::class, 'platformMessages']);
+        Route::get('/engagement/platform-chat/threads', [TenantEngagementController::class, 'platformThreads']);
+        Route::get('/engagement/customer-chat/threads', [TenantEngagementController::class, 'customerThreads']);
+        Route::post('/engagement/customer-chat/threads', [TenantEngagementController::class, 'openCustomerThread']);
+        Route::get('/engagement/chat/threads/{id}', [TenantEngagementController::class, 'showThread']);
+        Route::post('/engagement/chat/threads/{id}/messages', [TenantEngagementController::class, 'postMessage']);
+        Route::post('/engagement/staff-device-token', [TenantEngagementController::class, 'registerDeviceToken']);
+        Route::get('/engagement/reviews', [KitchenReviewController::class, 'index']);
+        Route::patch('/engagement/reviews/{id}', [KitchenReviewController::class, 'moderate']);
         Route::get('/branding', [BrandingController::class, 'show']);
         Route::patch('/branding', [BrandingController::class, 'update']);
         Route::post('/branding/logo', [BrandingController::class, 'uploadLogo']);
@@ -286,5 +308,19 @@ Route::prefix('v1')->group(function () {
             Route::get('/revenue-recovery/tenants', [PlatformRevenueRecoveryController::class, 'index']);
             Route::get('/revenue-recovery/tenants/{tenantId}', [PlatformRevenueRecoveryController::class, 'show']);
             Route::patch('/revenue-recovery/tenants/{tenantId}', [PlatformRevenueRecoveryController::class, 'update']);
+
+            Route::get('/staff', [PlatformStaffUserController::class, 'index']);
+            Route::post('/staff', [PlatformStaffUserController::class, 'store']);
+        });
+
+    Route::prefix('platform')
+        ->middleware(['auth:sanctum', 'platform.staff', 'throttle:api'])
+        ->group(function () {
+            Route::get('/messages', [PlatformTenantMessageController::class, 'index']);
+            Route::post('/messages', [PlatformTenantMessageController::class, 'store']);
+            Route::get('/chat/threads', [PlatformChatController::class, 'index']);
+            Route::post('/chat/threads', [PlatformChatController::class, 'store']);
+            Route::get('/chat/threads/{id}', [PlatformChatController::class, 'show']);
+            Route::post('/chat/threads/{id}/messages', [PlatformChatController::class, 'postMessage']);
         });
 });
