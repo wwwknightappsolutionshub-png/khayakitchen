@@ -16,7 +16,7 @@ Before any code change, read `docs/IMPLEMENTATION_STANDARD.md`.
 5. **Backend deliverables** — migrations, services, thin controllers, audit logs on mutations, PHPUnit feature tests.
 6. **Frontend deliverables** — types in `lib/types.ts`, API in `services/`, KhayaOS UI (Card, Button, Anek font), `npm run build` must pass.
 7. **QA gate** — `php artisan test` and `npm run build` pass before considering work done.
-8. **Deploy** — see `docs/VPS_DEPLOY.md`. On VPS, **every git command must use** `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. When the user asks for a VPS deploy snippet, use the full block in that doc (pull + log + migrate + build + pm2 restart).
+8. **Deploy** — see `docs/VPS_DEPLOY.md`. On VPS, **every git command must use** `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. When the user asks for a VPS deploy snippet, use the full block in that doc (pull + log + migrate + PricingSeeder + build + pm2 restart).
 
 Reference implementation: Phase 1.0.2 SaaS Commercialization (`ffa9d2f`). Follow the same depth and completeness for all future features.
 
@@ -29,6 +29,7 @@ cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && /www/server/php/83/bin/php artisan migrate --force
+/www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
 cd ../frontend && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```

@@ -10,6 +10,8 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ## 1. Last Edit Summary (2026-07-13)
 
+**Catalog sync fix:** `PricingSeeder` now `updateOrCreate`s features (not `firstOrCreate`) so Feature Library stays aligned with the codebase; VPS deploy always runs `PricingSeeder` after migrate.
+
 The most recent production work is **Engagement Messaging, Likes & Reviews** (platform↔tenant push/email/chat, tenant↔customer chat, menu likes + WhatsApp refer, kitchen reviews + footer ticker, plan entitlements). Reference depth remains Phase 1.0.2 (`ffa9d2f`).
 
 ### What shipped
@@ -52,12 +54,13 @@ git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && composer install --no-dev --optimize-autoloader
 /www/server/php/83/bin/php artisan migrate --force
+/www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
 /www/server/php/83/bin/php artisan config:clear
 cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
 ```
 
-> `node_modules/`/`vendor/` are git-ignored — always run `npm install` + `composer install` after pull, or builds fail with `Module not found` when a dependency was added.
+> `node_modules/`/`vendor/` are git-ignored — always run `npm install` + `composer install` after pull, or builds fail with `Module not found` when a dependency was added. Always run `PricingSeeder` so Feature Library keys and plan entitlements stay in sync with the codebase (`updateOrCreate`).
 
 Verify: `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline` → latest commit on `main`. Hard-refresh browser after deploy.
 
@@ -96,7 +99,7 @@ Every feature that mutates data must include:
 4. **Controllers** — thin; validation via Form Requests; authorization via policies/middleware  
 5. **Routes** — registered in `routes/api.php` with correct tenant/platform middleware  
 6. **Audit logging** — all platform mutations and entitlement overrides logged with actor + reason  
-7. **Limit/feature enforcement** — enforced in API/services; hiding nav items alone is insufficient  
+7. **Limit/feature enforcement** — enforced in API/services; hiding nav items alone is insufficient. New billable feature keys must be added to `PricingSeeder` (and plan matrices); deploy always re-runs that seeder.  
 8. **PHPUnit tests** — feature tests for happy path, authorization, and limit violations  
 
 ### 2.4 Frontend requirements

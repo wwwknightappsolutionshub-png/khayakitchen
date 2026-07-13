@@ -43,8 +43,17 @@ class PricingSeeder extends Seeder
             ['key' => 'kitchen_reviews', 'name' => 'Kitchen Reviews', 'category' => 'crm', 'module' => 'kitchen_reviews', 'description' => 'Customer kitchen reviews with owner moderation'],
         ];
 
+        // updateOrCreate keeps Feature Library in sync with this seeder (name/module/category).
+        // firstOrCreate left stale display fields and missed entitlement keys on existing deploys.
+        // withTrashed + clear deleted_at restores catalog rows archived via Super Admin soft-delete.
         foreach ($features as $feature) {
-            Feature::firstOrCreate(['key' => $feature['key']], $feature);
+            Feature::withTrashed()->updateOrCreate(
+                ['key' => $feature['key']],
+                array_merge($feature, [
+                    'status' => $feature['status'] ?? 'active',
+                    'deleted_at' => null,
+                ]),
+            );
         }
 
         $starter = Plan::firstOrCreate(['slug' => 'starter'], [
