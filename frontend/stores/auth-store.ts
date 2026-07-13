@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/lib/types";
 import { setAuthToken, setTenantId, setTenantSlug } from "@/lib/api-client";
 
@@ -13,6 +13,12 @@ interface AuthState {
   setUser: (user: User) => void;
   setHasHydrated: (value: boolean) => void;
 }
+
+type PersistedAuth = {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -38,20 +44,41 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "khayaos-auth",
-      partialize: (state) => ({
+      version: 2,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state): PersistedAuth => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      migrate: (persisted): PersistedAuth => {
+        const state = (persisted ?? {}) as Record<string, unknown>;
+        return {
+          user: (state.user as User | null) ?? null,
+          token: (state.token as string | null) ?? null,
+          isAuthenticated: Boolean(state.isAuthenticated),
+        };
+      },
+      merge: (persisted, current) => {
+        const incoming = (persisted ?? {}) as Partial<PersistedAuth>;
+        return {
+          ...current,
+          user: incoming.user ?? current.user,
+          token: incoming.token ?? current.token,
+          isAuthenticated: incoming.isAuthenticated ?? current.isAuthenticated,
+          // Never restore hasHydrated from storage (stale false caused endless spinners).
+          hasHydrated: current.hasHydrated,
+        };
+      },
       onRehydrateStorage: () => (state, error) => {
         if (error) {
-          useAuthStore.getState().setHasHydrated(true);
+          useAuthStore.setState({ hasHydrated: true });
           return;
         }
         if (state?.token) setAuthToken(state.token);
         setTenantId(state?.user?.tenant_id ?? null);
         setTenantSlug(state?.user?.tenant_slug ?? null);
-        useAuthStore.getState().setHasHydrated(true);
+        useAuthStore.setState({ hasHydrated: true });
       },
     },
   ),

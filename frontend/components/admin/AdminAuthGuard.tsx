@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -9,9 +9,21 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (hasHydrated) return;
+    const timer = window.setTimeout(() => {
+      useAuthStore.setState({ hasHydrated: true });
+      setHydrationTimedOut(true);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [hasHydrated]);
+
+  const ready = hasHydrated || hydrationTimedOut;
+
+  useEffect(() => {
+    if (!ready) return;
 
     if (!isAuthenticated) {
       router.replace("/login");
@@ -26,10 +38,10 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     if (user?.role === "platform_admin" || user?.role === "platform_support") {
       router.replace("/platform/inbox");
     }
-  }, [hasHydrated, isAuthenticated, user?.role, router]);
+  }, [ready, isAuthenticated, user?.role, router]);
 
   if (
-    !hasHydrated ||
+    !ready ||
     !isAuthenticated ||
     user?.role === "super_admin" ||
     user?.role === "platform_admin" ||

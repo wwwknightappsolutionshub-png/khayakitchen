@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -11,10 +11,22 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
   const isPlatformStaff = isAuthenticated && !!user?.role && PLATFORM_ROLES.has(user.role);
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (hasHydrated) return;
+    const timer = window.setTimeout(() => {
+      useAuthStore.setState({ hasHydrated: true });
+      setHydrationTimedOut(true);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [hasHydrated]);
+
+  const ready = hasHydrated || hydrationTimedOut;
+
+  useEffect(() => {
+    if (!ready) return;
 
     if (!isAuthenticated) {
       router.replace("/login");
@@ -24,9 +36,9 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
     if (!user?.role || !PLATFORM_ROLES.has(user.role)) {
       router.replace("/admin/dashboard");
     }
-  }, [hasHydrated, isAuthenticated, user?.role, router]);
+  }, [ready, isAuthenticated, user?.role, router]);
 
-  if (!hasHydrated || !isPlatformStaff) {
+  if (!ready || !isPlatformStaff) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0a0c10]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
