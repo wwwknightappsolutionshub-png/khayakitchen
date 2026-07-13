@@ -8,8 +8,11 @@ import { useStorefront } from "@/hooks/useStorefront";
 import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
 import {
   type BeforeInstallPromptEvent,
+  clearDeferredInstallPrompt,
+  getDeferredInstallPrompt,
   isIosDevice,
   isStandaloneDisplay,
+  subscribeInstallPrompt,
 } from "@/lib/pwa-install";
 
 const PROMPT_DELAY_MS = 8_000;
@@ -27,7 +30,6 @@ export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [iosMode, setIosMode] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const readyToPromptRef = useRef(false);
   const scheduledRef = useRef(false);
   const openedRef = useRef(false);
@@ -48,20 +50,12 @@ export function PwaInstallPrompt() {
   };
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const onBeforeInstall = (event: Event) => {
-      event.preventDefault();
-      const promptEvent = event as BeforeInstallPromptEvent;
-      deferredPromptRef.current = promptEvent;
-      setDeferredPrompt(promptEvent);
-      if (readyToPromptRef.current) {
-        openInstallUi(promptEvent, false);
+    return subscribeInstallPrompt((event) => {
+      setDeferredPrompt(event);
+      if (readyToPromptRef.current && event) {
+        openInstallUi(event, false);
       }
-    };
-
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
@@ -76,7 +70,7 @@ export function PwaInstallPrompt() {
       readyToPromptRef.current = true;
       if (!canShowForSlug(slug) || openedRef.current) return;
 
-      const promptEvent = deferredPromptRef.current;
+      const promptEvent = getDeferredInstallPrompt();
       if (promptEvent) {
         openInstallUi(promptEvent, false);
         return;
@@ -117,7 +111,7 @@ export function PwaInstallPrompt() {
     try {
       await deferredPrompt.prompt();
       await deferredPrompt.userChoice;
-      deferredPromptRef.current = null;
+      clearDeferredInstallPrompt();
       setDeferredPrompt(null);
       if (slug) {
         localStorage.setItem(dismissStorageKey(slug), "1");

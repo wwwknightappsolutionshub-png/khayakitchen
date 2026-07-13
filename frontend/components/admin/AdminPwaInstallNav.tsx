@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
   type BeforeInstallPromptEvent,
+  clearDeferredInstallPrompt,
+  isAndroidDevice,
   isIosDevice,
   isStandaloneDisplay,
   registerStaffWebPush,
   refreshStaffWebPushIfGranted,
+  subscribeInstallPrompt,
 } from "@/lib/pwa-install";
 import { cn } from "@/lib/utils";
 
@@ -23,12 +26,11 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
   const [ready, setReady] = useState(false);
   const [installed, setInstalled] = useState(true);
   const [open, setOpen] = useState(false);
-  const [iosMode, setIosMode] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pushDone, setPushDone] = useState(false);
-  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+  const [installOutcome, setInstallOutcome] = useState<string | null>(null);
 
   useEffect(() => {
     const syncInstalled = () => {
@@ -40,31 +42,26 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
     syncInstalled();
     void refreshStaffWebPushIfGranted();
 
+    const unsubscribe = subscribeInstallPrompt((event) => {
+      setDeferredPrompt(event);
+    });
+
     const media = window.matchMedia("(display-mode: standalone)");
     const onMedia = () => syncInstalled();
     media.addEventListener("change", onMedia);
     window.addEventListener("appinstalled", syncInstalled);
 
-    const onBeforeInstall = (event: Event) => {
-      event.preventDefault();
-      const promptEvent = event as BeforeInstallPromptEvent;
-      deferredPromptRef.current = promptEvent;
-      setDeferredPrompt(promptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-
     return () => {
+      unsubscribe();
       media.removeEventListener("change", onMedia);
       window.removeEventListener("appinstalled", syncInstalled);
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
     };
   }, []);
 
   const openModal = () => {
     setError(null);
     setPushDone(false);
-    setIosMode(isIosDevice() && !deferredPromptRef.current);
-    setDeferredPrompt(deferredPromptRef.current);
+    setInstallOutcome(null);
     setOpen(true);
     onNavigate?.();
   };
@@ -94,23 +91,25 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
   };
 
   const install = async () => {
-    const promptEvent = deferredPromptRef.current;
-    if (!promptEvent) {
-      await enableNotifications();
-      return;
-    }
+    if (!deferredPrompt) return;
 
     setBusy(true);
     setError(null);
+    setInstallOutcome(null);
     try {
-      await promptEvent.prompt();
-      await promptEvent.userChoice;
-      deferredPromptRef.current = null;
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      clearDeferredInstallPrompt();
       setDeferredPrompt(null);
-      setInstalled(isStandaloneDisplay());
-      await registerStaffWebPush({ requestPermission: true });
-      setPushDone(true);
-      setOpen(false);
+
+      if (choice.outcome === "accepted") {
+        setInstallOutcome("Install started. Open KhayaOS from your home screen when ready.");
+        setInstalled(isStandaloneDisplay());
+        await registerStaffWebPush({ requestPermission: true });
+        setPushDone(true);
+      } else {
+        setInstallOutcome("Install was dismissed. You can try again anytime.");
+      }
     } catch {
       setError("Install was cancelled or failed. You can try again.");
     } finally {
@@ -119,6 +118,10 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
   };
 
   if (!ready || installed) return null;
+
+  const ios = isIosDevice();
+  const android = isAndroidDevice();
+  const canNativeInstall = !!deferredPrompt && !ios;
 
   return (
     <>
@@ -145,23 +148,41 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted">
-              Install the admin app for faster access and to receive platform push alerts on this
-              device. You can also enable notifications without installing.
+              Install the admin app for faster access and platform push alerts on this device.
             </p>
 
-            {iosMode ? (
+            {canNativeInstall ? (
+              <p className="text-sm text-foreground">
+                Tap <span className="font-semibold">Install</span> to add KhayaOS to your home screen.
+              </p>
+            ) : ios ? (
               <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
                 <li>Tap the Share button in Safari</li>
                 <li>Choose Add to Home Screen</li>
-                <li>Open the installed app, then tap Enable notifications below</li>
+                <li>Confirm Add, then open the installed app</li>
+                <li>Return here and tap Enable notifications</li>
               </ol>
-            ) : null}
+            ) : android ? (
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
+                <li>Tap the Chrome menu (⋮) in the top-right</li>
+                <li>Choose Install app or Add to Home screen</li>
+                <li>Confirm Install, then open KhayaOS from your home screen</li>
+                <li>Tap Enable notifications below to receive platform push</li>
+              </ol>
+            ) : (
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
+                <li>Open your browser menu</li>
+                <li>Choose Install app or Add to Home screen</li>
+                <li>Open the installed app, then enable notifications below</li>
+              </ol>
+            )}
 
             {error ? (
               <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
                 {error}
               </p>
             ) : null}
+            {installOutcome ? <p className="text-sm text-secondary">{installOutcome}</p> : null}
             {pushDone ? (
               <p className="text-sm text-secondary">This device is registered for push alerts.</p>
             ) : null}
@@ -173,7 +194,7 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
               <Button variant="secondary" isLoading={busy} onClick={() => void enableNotifications()}>
                 Enable notifications
               </Button>
-              {!iosMode && deferredPrompt ? (
+              {canNativeInstall ? (
                 <Button isLoading={busy} onClick={() => void install()}>
                   Install
                 </Button>

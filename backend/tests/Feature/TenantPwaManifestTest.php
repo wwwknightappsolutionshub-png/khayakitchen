@@ -30,6 +30,9 @@ class TenantPwaManifestTest extends TestCase
         $this->assertNotEmpty($response->json('name'));
         $this->assertIsArray($response->json('icons'));
         $this->assertNotEmpty($response->json('icons'));
+        $iconSrcs = collect($response->json('icons'))->pluck('src')->implode(' ');
+        $this->assertStringContainsString('icon-192.png', $iconSrcs);
+        $this->assertStringContainsString('icon-512.png', $iconSrcs);
     }
 
     public function test_pwa_manifest_returns_404_for_unknown_slug(): void

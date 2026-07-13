@@ -7,6 +7,54 @@ export interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+type InstallPromptListener = (event: BeforeInstallPromptEvent | null) => void;
+
+let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
+let captureBound = false;
+const installPromptListeners = new Set<InstallPromptListener>();
+
+function notifyInstallPromptListeners(): void {
+  for (const listener of installPromptListeners) {
+    listener(deferredInstallPrompt);
+  }
+}
+
+/** Capture beforeinstallprompt as early as possible (once per page load). */
+export function bindPwaInstallPromptCapture(): void {
+  if (typeof window === "undefined" || captureBound) return;
+  captureBound = true;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event as BeforeInstallPromptEvent;
+    notifyInstallPromptListeners();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    notifyInstallPromptListeners();
+  });
+}
+
+export function getDeferredInstallPrompt(): BeforeInstallPromptEvent | null {
+  return deferredInstallPrompt;
+}
+
+export function subscribeInstallPrompt(
+  listener: InstallPromptListener,
+): () => void {
+  installPromptListeners.add(listener);
+  listener(deferredInstallPrompt);
+  return () => {
+    installPromptListeners.delete(listener);
+  };
+}
+
+export function clearDeferredInstallPrompt(): void {
+  deferredInstallPrompt = null;
+  notifyInstallPromptListeners();
+}
+
 export function isStandaloneDisplay(): boolean {
   if (typeof window === "undefined") return false;
   const media = window.matchMedia("(display-mode: standalone)").matches;
@@ -23,6 +71,11 @@ export function isIosDevice(): boolean {
     /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
   );
+}
+
+export function isAndroidDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return /Android/i.test(window.navigator.userAgent);
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {

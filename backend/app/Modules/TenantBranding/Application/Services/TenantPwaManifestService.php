@@ -42,19 +42,33 @@ class TenantPwaManifestService
         $shortName = mb_substr($name, 0, 12);
         $themeColor = (string) ($branding['primary_color'] ?: '#E07A5F');
         $logoUrl = $this->absoluteIconUrl($branding['logo_url'] ?? null);
+        $frontend = rtrim((string) config('app.frontend_url', 'http://localhost:3000'), '/');
 
+        // Chrome installability requires 192 + 512 PNG icons; keep logo first when available.
         $icons = [
+            [
+                'src' => $frontend.'/icon-192.png',
+                'sizes' => '192x192',
+                'type' => 'image/png',
+                'purpose' => 'any',
+            ],
+            [
+                'src' => $frontend.'/icon-512.png',
+                'sizes' => '512x512',
+                'type' => 'image/png',
+                'purpose' => 'any',
+            ],
+            [
+                'src' => $frontend.'/icon-512.png',
+                'sizes' => '512x512',
+                'type' => 'image/png',
+                'purpose' => 'maskable',
+            ],
             [
                 'src' => $logoUrl,
                 'sizes' => 'any',
                 'type' => $this->iconMimeType($logoUrl),
                 'purpose' => 'any',
-            ],
-            [
-                'src' => $logoUrl,
-                'sizes' => '512x512',
-                'type' => $this->iconMimeType($logoUrl),
-                'purpose' => 'maskable',
             ],
         ];
 

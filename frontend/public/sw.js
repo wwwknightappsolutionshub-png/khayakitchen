@@ -34,7 +34,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(payload.title || "KhayaOS", {
       body: payload.body || "",
       data: payload.data || {},
-      icon: payload.icon || "/icon.svg",
+      icon: payload.icon || "/icon-192.png",
     }),
   );
 });
