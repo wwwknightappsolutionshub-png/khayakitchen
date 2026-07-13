@@ -52,6 +52,12 @@ export default function KitchenPage() {
   const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
   const loadError =
     error instanceof Error ? error.message : isError ? "Failed to load kitchen orders." : null;
+  const updateError =
+    updateMutation.error instanceof Error
+      ? updateMutation.error.message
+      : updateMutation.isError
+        ? "Failed to update order."
+        : null;
 
   return (
     <BackendPage>
@@ -92,6 +98,19 @@ export default function KitchenPage() {
           <p>{loadError}</p>
           <button type="button" className="mt-2 underline" onClick={() => void refetch()}>
             Retry
+          </button>
+        </div>
+      )}
+
+      {updateError && (
+        <div className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p>{updateError}</p>
+          <button
+            type="button"
+            className="mt-2 underline"
+            onClick={() => updateMutation.reset()}
+          >
+            Dismiss
           </button>
         </div>
       )}
@@ -213,6 +232,7 @@ function KitchenOrderCard({
                   <Button
                     size="lg"
                     className="min-h-12 w-full text-base"
+                    disabled={updateMutation.isPending}
                     onClick={() => updateMutation.mutate({ id: order.id, status: "accepted" })}
                   >
                     Accept
@@ -221,6 +241,7 @@ function KitchenOrderCard({
                     size="lg"
                     variant="danger"
                     className="min-h-12 w-full text-base"
+                    disabled={updateMutation.isPending}
                     onClick={() => updateMutation.mutate({ id: order.id, status: "cancelled" })}
                   >
                     Reject

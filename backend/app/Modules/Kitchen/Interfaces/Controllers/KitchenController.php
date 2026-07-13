@@ -21,7 +21,7 @@ class KitchenController extends Controller
     public function update(Request $request, string $id)
     {
         $data = $request->validate([
-            'status' => ['required', 'in:accepted,preparing,ready,completed'],
+            'status' => ['required', 'in:accepted,preparing,ready,completed,cancelled'],
         ]);
 
         $order = $this->orderService->updateStatus($id, $data['status'], $request->get('permissions', []));

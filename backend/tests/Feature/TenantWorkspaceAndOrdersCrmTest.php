@@ -127,6 +127,34 @@ class TenantWorkspaceAndOrdersCrmTest extends TestCase
         $this->assertNotNull(collect($kitchenOrders)->firstWhere('id', $order->id));
     }
 
+    public function test_kitchen_can_reject_pending_order(): void
+    {
+        ['token' => $token, 'tenant' => $tenant] = $this->ownerContext();
+
+        $order = Order::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => null,
+            'status' => 'pending',
+            'order_type' => 'pickup',
+            'total_amount' => 9.5,
+            'discount_total' => 0,
+        ]);
+
+        $reject = $this->patchJson("/api/v1/kitchen/orders/{$order->id}", [
+            'status' => 'cancelled',
+        ], [
+            'Authorization' => "Bearer {$token}",
+            'X-Tenant-Slug' => $tenant->slug,
+        ]);
+
+        $reject->assertOk();
+        $reject->assertJsonPath('order.status', 'cancelled');
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'cancelled',
+        ]);
+    }
+
     public function test_crm_strategic_analytics_returns_period_metrics(): void
     {
         ['token' => $token, 'tenant' => $tenant] = $this->ownerContext();
