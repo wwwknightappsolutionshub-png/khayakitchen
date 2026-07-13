@@ -26,7 +26,9 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      hasHydrated: false,
+      // Start true so auth screens never wait on a gated spinner before paint.
+      // Persist rehydrate still refreshes token/tenant; AuthHydration keeps this in sync.
+      hasHydrated: true,
       setHasHydrated: (value) => set({ hasHydrated: value }),
       setAuth: (user, token) => {
         setAuthToken(token);

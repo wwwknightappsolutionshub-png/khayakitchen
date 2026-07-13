@@ -3,7 +3,7 @@
   "short_name": "KhayaOS",
   "description": "Business Operating System for Food Businesses",
   "id": "/",
-  "start_url": "/admin/dashboard",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0F0F10",

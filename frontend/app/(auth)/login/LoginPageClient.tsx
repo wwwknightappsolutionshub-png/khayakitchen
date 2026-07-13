@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,8 +25,13 @@ export default function LoginPageClient() {
   const prefilledEmail = searchParams.get("email") ?? "";
   const prefilledTenant =
     searchParams.get("tenant") ?? searchParams.get("tenant_slug") ?? "";
-  const { login, isLoading } = useAuth();
+  const { login, isLoggingIn } = useAuth();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Recover from stuck PWA boot gates / soft-nav shells.
+    document.documentElement.style.visibility = "";
+  }, []);
 
   const {
     register,
@@ -106,7 +111,7 @@ export default function LoginPageClient() {
               ) : null}
             </p>
           )}
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoggingIn}>
             Sign In
           </Button>
         </form>

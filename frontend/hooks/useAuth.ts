@@ -67,6 +67,8 @@ export function useAuth() {
     user: meQuery.data ?? user,
     isAuthenticated,
     isLoading: meQuery.isLoading || loginMutation.isPending,
+    /** Login form should not spin for background /me refreshes. */
+    isLoggingIn: loginMutation.isPending,
     login,
     logout,
     loginError: loginMutation.error,

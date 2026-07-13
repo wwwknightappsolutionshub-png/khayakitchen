@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "6";
+export const PWA_CACHE_EPOCH = "7";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -15,11 +15,11 @@ export function getPwaBootGateScript(pageBuild: string): string {
   var CACHE_EPOCH=${JSON.stringify(PWA_CACHE_EPOCH)};
   var MAX_RESETS=${MAX_RESET_ATTEMPTS};
   var root=document.documentElement;
-  // Never hide the document — auth pages must paint immediately. Stale builds
-  // still hard-reset below; blank/invisible html caused "endless spinner" reports.
+  var path=(location.pathname||"");
+  var isAuthPath=path==="/login")||path.indexOf("/login/")===0||path==="/forgot-password")||path==="/reset-password"||path==="/verify-email"||path==="/verify-email-pending"||path==="/get-started";
 
   function showPage(){
-    root.style.visibility="";
+    try{root.style.visibility="";}catch(e){}
   }
 
   function pinCurrentBuild(){
@@ -29,25 +29,43 @@ export function getPwaBootGateScript(pageBuild: string): string {
     showPage();
   }
 
+  // Auth pages must never enter a reset/reload loop — paint immediately.
+  if(isAuthPath){
+    pinCurrentBuild();
+    return;
+  }
+
   try{
     if(sessionStorage.getItem(RELOAD_KEY)==="1"){
       sessionStorage.removeItem(RELOAD_KEY);
-      showPage();
+      pinCurrentBuild();
       return;
     }
-  }catch(e){}
+  }catch(e){
+    pinCurrentBuild();
+    return;
+  }
 
   function hardReset(serverBuild){
     var count=0;
-    try{count=parseInt(sessionStorage.getItem(RESET_COUNT_KEY)||"0",10)||0;}catch(e){}
+    try{count=parseInt(sessionStorage.getItem(RESET_COUNT_KEY)||"0",10)||0;}catch(e){
+      pinCurrentBuild();
+      return;
+    }
     if(count>=MAX_RESETS){
       pinCurrentBuild();
       return;
     }
-    try{sessionStorage.setItem(RESET_COUNT_KEY,String(count+1));}catch(e){}
+    try{sessionStorage.setItem(RESET_COUNT_KEY,String(count+1));}catch(e){
+      pinCurrentBuild();
+      return;
+    }
     try{localStorage.setItem(BUILD_KEY,serverBuild||pageBuild);}catch(e){}
     try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
-    try{sessionStorage.setItem(RELOAD_KEY,"1");}catch(e){}
+    try{sessionStorage.setItem(RELOAD_KEY,"1");}catch(e){
+      pinCurrentBuild();
+      return;
+    }
     var tasks=[];
     if("serviceWorker" in navigator){
       tasks.push(
@@ -81,15 +99,12 @@ export function getPwaBootGateScript(pageBuild: string): string {
     try{storedEpoch=localStorage.getItem(EPOCH_KEY);}catch(e){}
     var stalePage=pageBuild!==serverBuild;
     var staleStorage=Boolean(storedBuild&&storedBuild!==serverBuild);
-    var staleEpoch=storedEpoch!==CACHE_EPOCH;
+    var staleEpoch=Boolean(storedEpoch)&&storedEpoch!==CACHE_EPOCH;
     if(stalePage||staleStorage||staleEpoch){
       hardReset(serverBuild);
       return;
     }
-    try{localStorage.setItem(BUILD_KEY,serverBuild);}catch(e){}
-    try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
-    try{sessionStorage.removeItem(RESET_COUNT_KEY);}catch(e){}
-    showPage();
+    pinCurrentBuild();
   }
 
   var finished=false;
