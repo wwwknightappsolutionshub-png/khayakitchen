@@ -9,6 +9,8 @@ export interface BeforeInstallPromptEvent extends Event {
 
 type InstallPromptListener = (event: BeforeInstallPromptEvent | null) => void;
 
+const PWA_INSTALLED_KEY = "khayaos_pwa_installed";
+
 let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
 let captureBound = false;
 const installPromptListeners = new Set<InstallPromptListener>();
@@ -17,6 +19,16 @@ function notifyInstallPromptListeners(): void {
   for (const listener of installPromptListeners) {
     listener(deferredInstallPrompt);
   }
+}
+
+export function markPwaInstalled(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(PWA_INSTALLED_KEY, "1");
+}
+
+export function clearPwaInstalledMark(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(PWA_INSTALLED_KEY);
 }
 
 /** Capture beforeinstallprompt as early as possible (once per page load). */
@@ -31,6 +43,7 @@ export function bindPwaInstallPromptCapture(): void {
   });
 
   window.addEventListener("appinstalled", () => {
+    markPwaInstalled();
     deferredInstallPrompt = null;
     notifyInstallPromptListeners();
   });
@@ -57,11 +70,42 @@ export function clearDeferredInstallPrompt(): void {
 
 export function isStandaloneDisplay(): boolean {
   if (typeof window === "undefined") return false;
-  const media = window.matchMedia("(display-mode: standalone)").matches;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches;
+  const fullscreen = window.matchMedia("(display-mode: fullscreen)").matches;
+  const minimalUi = window.matchMedia("(display-mode: minimal-ui)").matches;
   const iosStandalone =
     "standalone" in navigator &&
     Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-  return media || iosStandalone;
+  return standalone || fullscreen || minimalUi || iosStandalone;
+}
+
+/** True when running as installed app, or when install was completed on this device. */
+export async function detectPwaInstalled(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (isStandaloneDisplay()) {
+    markPwaInstalled();
+    return true;
+  }
+  if (localStorage.getItem(PWA_INSTALLED_KEY) === "1") {
+    return true;
+  }
+
+  const nav = navigator as Navigator & {
+    getInstalledRelatedApps?: () => Promise<Array<{ platform?: string; url?: string }>>;
+  };
+  if (typeof nav.getInstalledRelatedApps === "function") {
+    try {
+      const related = await nav.getInstalledRelatedApps();
+      if (related.length > 0) {
+        markPwaInstalled();
+        return true;
+      }
+    } catch {
+      // Unsupported or blocked — fall through.
+    }
+  }
+
+  return false;
 }
 
 export function isIosDevice(): boolean {
@@ -76,6 +120,21 @@ export function isIosDevice(): boolean {
 export function isAndroidDevice(): boolean {
   if (typeof window === "undefined") return false;
   return /Android/i.test(window.navigator.userAgent);
+}
+
+export function notificationPermission(): NotificationPermission | "unsupported" {
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  return Notification.permission;
+}
+
+export function notificationBlockedHelp(): string {
+  if (isIosDevice()) {
+    return "Notifications are blocked. On iPhone: Settings → Notifications → find KhayaOS or Safari → Allow Notifications.";
+  }
+  if (isAndroidDevice()) {
+    return "Notifications are blocked. On Android: Settings → Apps → Chrome (or KhayaOS) → Notifications → Allow, then try again.";
+  }
+  return "Notifications are blocked in this browser. Allow notifications for this site in browser settings, then try again.";
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
