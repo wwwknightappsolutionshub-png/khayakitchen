@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "5";
+export const PWA_CACHE_EPOCH = "6";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -15,7 +15,8 @@ export function getPwaBootGateScript(pageBuild: string): string {
   var CACHE_EPOCH=${JSON.stringify(PWA_CACHE_EPOCH)};
   var MAX_RESETS=${MAX_RESET_ATTEMPTS};
   var root=document.documentElement;
-  root.style.visibility="hidden";
+  // Never hide the document — auth pages must paint immediately. Stale builds
+  // still hard-reset below; blank/invisible html caused "endless spinner" reports.
 
   function showPage(){
     root.style.visibility="";

@@ -26,7 +26,9 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     if (!ready) return;
 
     if (!isAuthenticated) {
-      router.replace("/login");
+      // Full navigation — soft replace can leave this spinner on /login forever
+      // when the PWA opens start_url /admin/dashboard as a guest.
+      window.location.replace("/login");
       return;
     }
 

@@ -29,7 +29,8 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
     if (!ready) return;
 
     if (!isAuthenticated) {
-      router.replace("/login");
+      // Full navigation so a stuck soft transition cannot leave a spinner on /login.
+      window.location.replace("/login");
       return;
     }
 
