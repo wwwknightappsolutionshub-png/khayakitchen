@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useStorefront } from "@/hooks/useStorefront";
 import { applyWorkspaceRuntime } from "@/lib/workspace-runtime";
+import { bindOrderingTenant } from "@/lib/api-client";
 
 function darken(hex: string, amount = 0.12): string {
   const normalized = hex.replace("#", "");
@@ -19,6 +20,7 @@ export function StorefrontTheme({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (data?.workspace) {
       applyWorkspaceRuntime(data.workspace);
+      bindOrderingTenant(data.workspace.slug, data.workspace.tenant_id);
     }
   }, [data?.workspace]);
 

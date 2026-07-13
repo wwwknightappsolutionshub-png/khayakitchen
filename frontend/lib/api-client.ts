@@ -63,6 +63,20 @@ export function setTenantSlug(tenantSlug: string | null) {
   }
 }
 
+/** Bind customer ordering session to a shared /r/{slug} workspace. */
+export function bindOrderingTenant(tenantSlug: string, tenantId?: string | null) {
+  if (typeof window === "undefined") return;
+  const slug = tenantSlug.trim();
+  if (!slug) return;
+  localStorage.setItem("khayaos_tenant_slug", slug);
+  if (tenantId) {
+    localStorage.setItem("khayaos_tenant_id", tenantId);
+  } else {
+    // Drop stale UUID so it cannot override the scanned slug on the API.
+    localStorage.removeItem("khayaos_tenant_id");
+  }
+}
+
 async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, skipAuth, headers: customHeaders, ...fetchOptions } = options;
 

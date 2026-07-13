@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { setTenantSlug } from "@/lib/api-client";
+import { bindOrderingTenant } from "@/lib/api-client";
 
 export default function OrderingEntryPage() {
   const params = useParams<{ slug: string }>();
@@ -11,7 +11,7 @@ export default function OrderingEntryPage() {
 
   useEffect(() => {
     if (!slug) return;
-    setTenantSlug(slug);
+    bindOrderingTenant(slug);
     router.replace("/");
   }, [slug, router]);
 

@@ -17,13 +17,16 @@ class ResolveTenant
         $user = $request->user();
         $tenantId = null;
 
+        // Authenticated tenant staff always resolve from their account.
         if ($user && $user->tenant_id) {
             $tenantId = $user->tenant_id;
-        } elseif ($request->header('X-Tenant-ID')) {
-            $tenantId = $request->header('X-Tenant-ID');
         } elseif ($slug = $request->header('X-Tenant-Slug')) {
+            // Prefer slug for shared ordering links (/r/{slug}) so a stale
+            // X-Tenant-ID from another workspace cannot hijack guest orders.
             $tenant = Tenant::withoutGlobalScopes()->where('slug', $slug)->first();
             $tenantId = $tenant?->id;
+        } elseif ($request->header('X-Tenant-ID')) {
+            $tenantId = $request->header('X-Tenant-ID');
         } elseif ($host = $request->getHost()) {
             $parts = explode('.', $host);
             if (count($parts) > 2 && $parts[0] !== 'api' && $parts[0] !== 'www') {
