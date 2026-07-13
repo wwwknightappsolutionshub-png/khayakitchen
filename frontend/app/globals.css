@@ -108,6 +108,25 @@ h1, h2, h3, h4, h5, h6 {
   animation: fade-in 0.2s ease-out;
 }
 
+/* Super Admin / platform — dark tokens for tables, cards, muted copy */
+.platform-app {
+  --background: #0a0c10;
+  --foreground: #f0f2f5;
+  --surface: #0f1118;
+  --surface-elevated: #1a1e28;
+  --muted: #a8b2c0;
+  --border: #2e3440;
+  color: var(--foreground);
+}
+
+.platform-app table {
+  color: var(--foreground);
+}
+
+.platform-app thead {
+  color: var(--muted);
+}
+
 /* Admin + platform backend pages */
 .backend-page {
   min-width: 0;
