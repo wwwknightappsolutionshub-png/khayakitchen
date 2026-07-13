@@ -20,6 +20,13 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+function firstDetail(details: Record<string, unknown> | undefined, key: string): string | null {
+  const value = details?.[key];
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  if (typeof value === "string") return value;
+  return null;
+}
+
 export default function LoginPageClient() {
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams.get("email") ?? "";
@@ -27,9 +34,9 @@ export default function LoginPageClient() {
     searchParams.get("tenant") ?? searchParams.get("tenant_slug") ?? "";
   const { login, isLoggingIn } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [showWorkspaceSlug, setShowWorkspaceSlug] = useState(Boolean(prefilledTenant));
 
   useEffect(() => {
-    // Recover from stuck PWA boot gates / soft-nav shells.
     document.documentElement.style.visibility = "";
   }, []);
 
@@ -37,6 +44,7 @@ export default function LoginPageClient() {
     register,
     handleSubmit,
     formState: { errors },
+    setError: setFieldError,
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: prefilledEmail, password: "", tenant_slug: prefilledTenant },
@@ -45,9 +53,17 @@ export default function LoginPageClient() {
   const onSubmit = async (data: LoginForm) => {
     setError(null);
     try {
+      // Backend resolves workspace from email when the address is unique.
       await login(data.email, data.password, data.tenant_slug?.trim() || undefined);
     } catch (err) {
       if (err instanceof ApiClientError) {
+        const tenantMessage = firstDetail(err.details, "tenant_slug");
+        if (tenantMessage) {
+          setShowWorkspaceSlug(true);
+          setFieldError("tenant_slug", { type: "server", message: tenantMessage });
+          setError(tenantMessage);
+          return;
+        }
         setError(err.message);
       } else {
         setError("Login failed. Please try again.");
@@ -89,16 +105,29 @@ export default function LoginPageClient() {
               Forgot password?
             </Link>
           </div>
-          <Input
-            label="Workspace slug"
-            type="text"
-            autoComplete="organization"
-            placeholder="your-restaurant"
-            tooltip="From your welcome email if you have multiple workspaces."
-            error={errors.tenant_slug?.message}
-            {...register("tenant_slug")}
-          />
-          {error && (
+          {showWorkspaceSlug ? (
+            <Input
+              label="Workspace slug"
+              type="text"
+              autoComplete="organization"
+              placeholder="your-restaurant"
+              tooltip="Only needed if this email belongs to more than one workspace."
+              error={errors.tenant_slug?.message}
+              {...register("tenant_slug")}
+            />
+          ) : (
+            <p className="text-center text-xs text-muted">
+              Your workspace is chosen automatically from your email.{" "}
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => setShowWorkspaceSlug(true)}
+              >
+                Enter slug manually
+              </button>
+            </p>
+          )}
+          {error && !errors.tenant_slug && (
             <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
               {error}
               {error.includes("fetch") || error.includes("Failed") ? (
