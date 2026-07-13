@@ -1,13 +1,16 @@
 "use client";
 
+import { MessageCircle } from "lucide-react";
 import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useStorefront } from "@/hooks/useStorefront";
 import { NewsTicker } from "@/components/customer/NewsTicker";
 import { RestaurantStatusPill } from "@/components/customer/RestaurantStatusPill";
 import { parseTickerMessages } from "@/lib/ticker-defaults";
+import { useUiStore } from "@/stores/ui-store";
 
 export function CustomerHeader() {
   const { data } = useStorefront();
+  const openCustomerChat = useUiStore((s) => s.openCustomerChat);
   const name = data?.branding?.restaurant_name ?? "Khaya Kitchen";
   const logo = data?.branding?.logo_url;
   const status = data?.status?.status ?? "open";
@@ -32,7 +35,17 @@ export function CustomerHeader() {
             )}
             <span className="truncate text-base font-semibold leading-tight tracking-tight">{name}</span>
           </CustomerRouteLink>
-          <RestaurantStatusPill status={status} closingAt={closingAt} promoEndsAt={promoEndsAt} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <RestaurantStatusPill status={status} closingAt={closingAt} promoEndsAt={promoEndsAt} />
+            <button
+              type="button"
+              aria-label="Chat with restaurant"
+              onClick={openCustomerChat}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] transition-colors hover:bg-[var(--surface-elevated)]"
+            >
+              <MessageCircle className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </button>
+          </div>
         </div>
         {showTicker && (
           <div className="w-full overflow-hidden pb-2.5">

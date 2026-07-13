@@ -11,7 +11,6 @@ import { SocialProof } from "@/components/customer/SocialProof";
 import { MealReferModal } from "@/components/customer/MealReferModal";
 import { ReviewTicker } from "@/components/customer/ReviewTicker";
 import { KitchenReviewForm } from "@/components/customer/KitchenReviewForm";
-import { CustomerChatPanel } from "@/components/customer/CustomerChatPanel";
 import { useMenu } from "@/hooks/useMenu";
 import { usePromoMeals } from "@/hooks/usePromoMeals";
 import { useRevenueRecoveryOffers } from "@/hooks/useRevenueRecoveryOffers";
@@ -218,7 +217,6 @@ export default function MenuPage() {
       </div>
 
       <KitchenReviewForm />
-      <CustomerChatPanel />
 
       <div className="mt-8 pb-4">
         <ReviewTicker items={reviewTicker} />

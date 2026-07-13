@@ -4,6 +4,9 @@ interface UiState {
   cartBounce: boolean;
   triggerCartBounce: () => void;
   clearCartBounce: () => void;
+  customerChatOpen: boolean;
+  openCustomerChat: () => void;
+  closeCustomerChat: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -13,4 +16,7 @@ export const useUiStore = create<UiState>((set) => ({
     setTimeout(() => set({ cartBounce: false }), 250);
   },
   clearCartBounce: () => set({ cartBounce: false }),
+  customerChatOpen: false,
+  openCustomerChat: () => set({ customerChatOpen: true }),
+  closeCustomerChat: () => set({ customerChatOpen: false }),
 }));

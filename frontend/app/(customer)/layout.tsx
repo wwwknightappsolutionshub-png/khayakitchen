@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { CustomerNav } from "@/components/customer/CustomerNav";
 import { CustomerStatusLayer } from "@/components/customer/CustomerStatusLayer";
+import { CustomerChatPanel } from "@/components/customer/CustomerChatPanel";
 import { StickyCartBar } from "@/components/customer/StickyCartBar";
 import { NotificationOptInPrompt } from "@/components/customer/NotificationOptInPrompt";
 import { ProximityLayer } from "@/components/customer/ProximityLayer";
@@ -51,6 +52,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <CustomerHeader />
         <CustomerStatusLayer />
         <CustomerLayoutShell>{children}</CustomerLayoutShell>
+        <CustomerChatPanel />
         <StickyCartBar />
         <CustomerNav />
         <BuildStamp />
