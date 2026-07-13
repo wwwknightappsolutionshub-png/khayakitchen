@@ -180,6 +180,38 @@ class EngagementFeaturesTest extends TestCase
         $ok->assertCreated();
     }
 
+    public function test_guest_can_open_and_message_customer_chat(): void
+    {
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->enableFeature($tenant->id, 'tenant_customer_chat');
+
+        $open = $this->postJson('/api/v1/customer/chat/threads', [
+            'guest_key' => 'guest-menu-chat-key-1',
+            'name' => 'Walk-in Guest',
+            'subject' => 'Help',
+        ], [
+            'X-Tenant-Slug' => 'pilot',
+        ]);
+        $open->assertCreated();
+        $threadId = $open->json('thread.id');
+        $this->assertNotEmpty($threadId);
+
+        $post = $this->postJson("/api/v1/customer/chat/threads/{$threadId}/messages", [
+            'guest_key' => 'guest-menu-chat-key-1',
+            'body' => 'Hello from guest',
+        ], [
+            'X-Tenant-Slug' => 'pilot',
+        ]);
+        $post->assertCreated();
+        $post->assertJsonPath('message.body', 'Hello from guest');
+
+        $show = $this->getJson("/api/v1/customer/chat/threads/{$threadId}?guest_key=guest-menu-chat-key-1", [
+            'X-Tenant-Slug' => 'pilot',
+        ]);
+        $show->assertOk();
+        $this->assertNotEmpty($show->json('thread.messages'));
+    }
+
     public function test_super_admin_can_create_platform_support_user(): void
     {
         $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();

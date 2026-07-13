@@ -20,15 +20,17 @@ class CustomerEngagementController extends Controller
     public function openChat(Request $request)
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'max:32'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'guest_key' => ['nullable', 'string', 'max:64'],
             'name' => ['nullable', 'string', 'max:120'],
             'subject' => ['nullable', 'string', 'max:200'],
         ]);
 
         $thread = $this->chatService->openCustomerThread(
-            $data['phone'],
+            $data['phone'] ?? null,
             $data['name'] ?? 'Guest',
             $data['subject'] ?? null,
+            $data['guest_key'] ?? null,
         );
 
         return ApiResponse::success(['thread' => $thread], 201);
@@ -37,22 +39,33 @@ class CustomerEngagementController extends Controller
     public function showChat(Request $request, string $id)
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'max:32'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'guest_key' => ['nullable', 'string', 'max:64'],
         ]);
 
         return ApiResponse::success([
-            'thread' => $this->chatService->messagesForCustomer($id, $data['phone']),
+            'thread' => $this->chatService->messagesForCustomer(
+                $id,
+                $data['phone'] ?? null,
+                $data['guest_key'] ?? null,
+            ),
         ]);
     }
 
     public function postChat(Request $request, string $id)
     {
         $data = $request->validate([
-            'phone' => ['required', 'string', 'max:32'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'guest_key' => ['nullable', 'string', 'max:64'],
             'body' => ['required', 'string', 'max:5000'],
         ]);
 
-        $message = $this->chatService->postCustomerMessage($id, $data['phone'], $data['body']);
+        $message = $this->chatService->postCustomerMessage(
+            $id,
+            $data['phone'] ?? null,
+            $data['body'],
+            $data['guest_key'] ?? null,
+        );
 
         return ApiResponse::success(['message' => $message], 201);
     }

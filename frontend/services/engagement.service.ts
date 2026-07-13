@@ -121,19 +121,32 @@ export const engagementService = {
     return api.post<{ review: KitchenReview }>("/customer/reviews", payload);
   },
 
-  openCustomerChat(payload: { phone: string; name?: string; subject?: string }) {
+  openCustomerChat(payload: {
+    phone?: string;
+    guest_key?: string;
+    name?: string;
+    subject?: string;
+  }) {
     return api.post<{ thread: ChatThread }>("/customer/chat/threads", payload);
   },
 
-  getCustomerChat(threadId: string, phone: string) {
+  getCustomerChat(threadId: string, identity: { phone?: string; guest_key?: string }) {
     return api.get<{ thread: ChatThread }>(`/customer/chat/threads/${threadId}`, {
-      params: { phone },
+      params: {
+        phone: identity.phone,
+        guest_key: identity.guest_key,
+      },
     });
   },
 
-  postCustomerChatMessage(threadId: string, phone: string, body: string) {
+  postCustomerChatMessage(
+    threadId: string,
+    identity: { phone?: string; guest_key?: string },
+    body: string,
+  ) {
     return api.post<{ message: ChatMessage }>(`/customer/chat/threads/${threadId}/messages`, {
-      phone,
+      phone: identity.phone,
+      guest_key: identity.guest_key,
       body,
     });
   },

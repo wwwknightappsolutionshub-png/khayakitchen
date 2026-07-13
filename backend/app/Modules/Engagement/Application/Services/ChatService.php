@@ -118,18 +118,11 @@ class ChatService
         return $thread;
     }
 
-    public function openCustomerThread(string $phone, string $name, ?string $subject = null): ChatThread
+    public function openCustomerThread(?string $phone, string $name, ?string $subject = null, ?string $guestKey = null): ChatThread
     {
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
 
-        $customer = Customer::where('phone', $phone)->first();
-        if (! $customer) {
-            $customer = Customer::create([
-                'tenant_id' => $this->tenantContext->id(),
-                'name' => $name ?: 'Guest',
-                'phone' => $phone,
-            ]);
-        }
+        $customer = $this->resolveCustomerForChat($phone, $name, $guestKey);
 
         $thread = ChatThread::where('type', 'tenant_customer')
             ->where('customer_id', $customer->id)
@@ -173,10 +166,10 @@ class ChatService
         return $thread;
     }
 
-    public function messagesForCustomer(string $threadId, string $phone): ChatThread
+    public function messagesForCustomer(string $threadId, ?string $phone, ?string $guestKey = null): ChatThread
     {
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
-        $customer = Customer::where('phone', $phone)->firstOrFail();
+        $customer = $this->findCustomerForChat($phone, $guestKey);
         $thread = ChatThread::with('messages')->findOrFail($threadId);
 
         if ($thread->type !== 'tenant_customer' || $thread->customer_id !== $customer->id) {
@@ -252,10 +245,10 @@ class ChatService
         return $message;
     }
 
-    public function postCustomerMessage(string $threadId, string $phone, string $body): ChatMessage
+    public function postCustomerMessage(string $threadId, ?string $phone, string $body, ?string $guestKey = null): ChatMessage
     {
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
-        $customer = Customer::where('phone', $phone)->firstOrFail();
+        $customer = $this->findCustomerForChat($phone, $guestKey);
         $thread = ChatThread::findOrFail($threadId);
 
         if ($thread->type !== 'tenant_customer' || $thread->customer_id !== $customer->id) {
@@ -270,6 +263,54 @@ class ChatService
             $customer->name,
             $body,
         );
+    }
+
+    private function findCustomerForChat(?string $phone, ?string $guestKey = null): Customer
+    {
+        $lookupPhone = $this->lookupPhone($phone, $guestKey);
+        $customer = Customer::where('phone', $lookupPhone)->first();
+        if (! $customer) {
+            abort(404, 'Chat customer not found');
+        }
+
+        return $customer;
+    }
+
+    private function resolveCustomerForChat(?string $phone, string $name, ?string $guestKey = null): Customer
+    {
+        $lookupPhone = $this->lookupPhone($phone, $guestKey);
+
+        $customer = Customer::where('phone', $lookupPhone)->first();
+        if (! $customer) {
+            $customer = Customer::create([
+                'tenant_id' => $this->tenantContext->id(),
+                'name' => $name !== '' ? $name : 'Guest',
+                'phone' => $lookupPhone,
+            ]);
+        } elseif ($name !== '' && $name !== 'Guest' && ($customer->name === 'Guest' || $customer->name === '')) {
+            $customer->update(['name' => $name]);
+        }
+
+        return $customer;
+    }
+
+    private function lookupPhone(?string $phone, ?string $guestKey = null): string
+    {
+        $phone = $phone !== null ? trim($phone) : '';
+        $guestKey = $guestKey !== null ? trim($guestKey) : '';
+
+        if ($phone === '' && $guestKey === '') {
+            throw ValidationException::withMessages([
+                'phone' => ['A phone number or guest key is required for chat.'],
+            ]);
+        }
+
+        return $phone !== '' ? $phone : $this->guestPhoneFromKey($guestKey);
+    }
+
+    private function guestPhoneFromKey(string $guestKey): string
+    {
+        return 'g-'.substr(hash('sha256', $guestKey), 0, 28);
     }
 
     private function createMessage(

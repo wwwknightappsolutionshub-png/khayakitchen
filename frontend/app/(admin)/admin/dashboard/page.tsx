@@ -7,10 +7,14 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { LiveDashboardStatusControl } from "@/components/admin/LiveDashboardStatusControl";
 import { TopSellingItems } from "@/components/admin/TopSellingItems";
 import { LiveOrdersFeed } from "@/components/admin/LiveOrdersFeed";
+import { InsightChart } from "@/components/admin/InsightChart";
+import { NewOrderAlertBadge } from "@/components/admin/NewOrderAlertBadge";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
+import { useNewOrderAlerts } from "@/hooks/useNewOrderAlerts";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 import { useAuthStore } from "@/stores/auth-store";
+import { cn } from "@/lib/utils";
 
 export default function LiveRestaurantDashboardPage() {
   const { summary, status } = useLiveDashboard();
@@ -18,6 +22,7 @@ export default function LiveRestaurantDashboardPage() {
   const canManage = role === "owner" || role === "super_admin";
   const data = summary.data;
   const restaurantStatus = status.data?.status;
+  const { newCount, muted, setMuted, clearAlerts } = useNewOrderAlerts(data?.liveOrders);
 
   return (
     <BackendPage>
@@ -29,7 +34,13 @@ export default function LiveRestaurantDashboardPage() {
             <p className="text-sm text-muted">Mobile POS · hybrid real-time</p>
           </div>
         </div>
-        <div className="backend-header-actions">
+        <div className="backend-header-actions flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <NewOrderAlertBadge
+            count={newCount}
+            muted={muted}
+            onToggleMute={() => setMuted(!muted)}
+            onClear={clearAlerts}
+          />
           <ReconnectingIndicator />
         </div>
       </header>
@@ -46,7 +57,14 @@ export default function LiveRestaurantDashboardPage() {
               value={data?.averageOrderValue ?? 0}
               format="currency"
             />
-            <KpiCard label="Pending Orders" value={data?.pendingOrdersCount ?? 0} />
+            <div
+              className={cn(
+                "rounded-[var(--radius)]",
+                newCount > 0 && "ring-2 ring-danger ring-offset-2 ring-offset-background",
+              )}
+            >
+              <KpiCard label="Pending Orders" value={data?.pendingOrdersCount ?? 0} />
+            </div>
           </>
         )}
       </section>
@@ -71,8 +89,8 @@ export default function LiveRestaurantDashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Top Selling Today</CardTitle>
           </CardHeader>
@@ -81,7 +99,7 @@ export default function LiveRestaurantDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Live Orders</CardTitle>
           </CardHeader>
@@ -89,20 +107,20 @@ export default function LiveRestaurantDashboardPage() {
             <LiveOrdersFeed orders={data?.liveOrders ?? []} isLoading={summary.isLoading} />
           </CardContent>
         </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Insight</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary.isLoading ? (
-              <CardSkeleton />
-            ) : (
-              <p className="text-sm leading-relaxed text-foreground">{data?.insight}</p>
-            )}
-          </CardContent>
-        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Insight</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InsightChart
+            insight={data?.insight ?? "Loading insight…"}
+            mealPopularity={data?.mealPopularity ?? []}
+            isLoading={summary.isLoading}
+          />
+        </CardContent>
+      </Card>
     </BackendPage>
   );
 }
