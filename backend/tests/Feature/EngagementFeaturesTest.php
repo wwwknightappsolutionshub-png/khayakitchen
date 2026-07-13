@@ -230,4 +230,29 @@ class EngagementFeaturesTest extends TestCase
             'role' => 'platform_support',
         ]);
     }
+
+    public function test_tenant_staff_can_register_device_token_for_push(): void
+    {
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+        $token = $owner->createToken('test')->plainTextToken;
+        $deviceToken = json_encode([
+            'endpoint' => 'https://push.example/staff-token-1',
+            'keys' => ['p256dh' => 'x', 'auth' => 'y'],
+        ], JSON_THROW_ON_ERROR);
+
+        $response = $this->postJson('/api/v1/engagement/staff-device-token', [
+            'device_token' => $deviceToken,
+            'platform' => 'web',
+        ], [
+            'Authorization' => "Bearer {$token}",
+            'X-Tenant-Slug' => 'pilot',
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('device_tokens', [
+            'tenant_id' => $owner->tenant_id,
+            'user_id' => $owner->id,
+            'platform' => 'web',
+        ]);
+    }
 }

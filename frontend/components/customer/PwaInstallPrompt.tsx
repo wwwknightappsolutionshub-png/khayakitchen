@@ -6,34 +6,16 @@ import { ModalPortal } from "@/components/ui/ModalPortal";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { useStorefront } from "@/hooks/useStorefront";
 import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
+import {
+  type BeforeInstallPromptEvent,
+  isIosDevice,
+  isStandaloneDisplay,
+} from "@/lib/pwa-install";
 
 const PROMPT_DELAY_MS = 8_000;
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
-
 function dismissStorageKey(slug: string): string {
   return `khayaos-pwa-install-dismissed:${slug}`;
-}
-
-function isStandaloneDisplay(): boolean {
-  if (typeof window === "undefined") return false;
-  const media = window.matchMedia("(display-mode: standalone)").matches;
-  const iosStandalone =
-    "standalone" in navigator &&
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-  return media || iosStandalone;
-}
-
-function isIosDevice(): boolean {
-  if (typeof window === "undefined") return false;
-  const ua = window.navigator.userAgent;
-  return (
-    /iPad|iPhone|iPod/.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
 }
 
 export function PwaInstallPrompt() {

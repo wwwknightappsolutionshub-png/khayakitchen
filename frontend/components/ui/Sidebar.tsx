@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 
 const navItems = [
@@ -103,6 +104,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             </Link>
           );
         })}
+        <AdminPwaInstallNav onNavigate={onMobileClose} />
       </nav>
 
       <div className="border-t border-border p-3">
