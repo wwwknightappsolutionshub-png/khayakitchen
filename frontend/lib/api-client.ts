@@ -2,6 +2,11 @@ import type { ApiError } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
+const STAFF_TENANT_SLUG_KEY = "khayaos_tenant_slug";
+const STAFF_TENANT_ID_KEY = "khayaos_tenant_id";
+const ORDERING_TENANT_SLUG_KEY = "khayaos_ordering_tenant_slug";
+const ORDERING_TENANT_ID_KEY = "khayaos_ordering_tenant_id";
+
 export class ApiClientError extends Error {
   code: string;
   status: number;
@@ -26,14 +31,58 @@ function getStoredToken(): string | null {
   return localStorage.getItem("khayaos_token");
 }
 
-function getStoredTenantId(): string | null {
+function getStaffTenantId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("khayaos_tenant_id") ?? process.env.NEXT_PUBLIC_TENANT_ID ?? null;
+  return localStorage.getItem(STAFF_TENANT_ID_KEY);
 }
 
-function getStoredTenantSlug(): string | null {
-  if (typeof window === "undefined") return process.env.NEXT_PUBLIC_TENANT_SLUG ?? null;
-  return localStorage.getItem("khayaos_tenant_slug") ?? process.env.NEXT_PUBLIC_TENANT_SLUG ?? null;
+function getStaffTenantSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STAFF_TENANT_SLUG_KEY);
+}
+
+export function getOrderingTenantSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ORDERING_TENANT_SLUG_KEY);
+}
+
+export function getOrderingTenantId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ORDERING_TENANT_ID_KEY);
+}
+
+/** True for guest/storefront APIs that must follow /r/{slug}, not staff workspace. */
+export function isCustomerFacingEndpoint(endpoint: string): boolean {
+  if (endpoint.startsWith("/storefront")) return true;
+  if (endpoint.startsWith("/customer/")) return true;
+  if (endpoint === "/menu" || endpoint.startsWith("/menu?")) return true;
+  if (endpoint.startsWith("/realtime/public-config")) return true;
+  if (endpoint.startsWith("/realtime/order-status/")) return true;
+  return false;
+}
+
+function resolveTenantHeaders(endpoint: string): { tenantId: string | null; tenantSlug: string | null } {
+  if (isCustomerFacingEndpoint(endpoint)) {
+    const orderingSlug = getOrderingTenantSlug();
+    if (orderingSlug) {
+      return {
+        tenantSlug: orderingSlug,
+        // Prefer slug alone so a stale staff UUID cannot fight the shared link.
+        tenantId: getOrderingTenantId(),
+      };
+    }
+    // Cold open of `/` with no /r/{slug} yet — optional demo default only.
+    // Never fall back to staff auth workspace (that caused cart kitchen switches).
+    return {
+      tenantId: null,
+      tenantSlug: process.env.NEXT_PUBLIC_TENANT_SLUG ?? null,
+    };
+  }
+
+  return {
+    tenantId: getStaffTenantId() ?? process.env.NEXT_PUBLIC_TENANT_ID ?? null,
+    tenantSlug: getStaffTenantSlug() ?? process.env.NEXT_PUBLIC_TENANT_SLUG ?? null,
+  };
 }
 
 export function setAuthToken(token: string | null) {
@@ -45,21 +94,23 @@ export function setAuthToken(token: string | null) {
   }
 }
 
+/** Staff/admin workspace only — never touches shared ordering bind. */
 export function setTenantId(tenantId: string | null) {
   if (typeof window === "undefined") return;
   if (tenantId) {
-    localStorage.setItem("khayaos_tenant_id", tenantId);
+    localStorage.setItem(STAFF_TENANT_ID_KEY, tenantId);
   } else {
-    localStorage.removeItem("khayaos_tenant_id");
+    localStorage.removeItem(STAFF_TENANT_ID_KEY);
   }
 }
 
+/** Staff/admin workspace only — never touches shared ordering bind. */
 export function setTenantSlug(tenantSlug: string | null) {
   if (typeof window === "undefined") return;
   if (tenantSlug) {
-    localStorage.setItem("khayaos_tenant_slug", tenantSlug);
+    localStorage.setItem(STAFF_TENANT_SLUG_KEY, tenantSlug);
   } else {
-    localStorage.removeItem("khayaos_tenant_slug");
+    localStorage.removeItem(STAFF_TENANT_SLUG_KEY);
   }
 }
 
@@ -68,12 +119,11 @@ export function bindOrderingTenant(tenantSlug: string, tenantId?: string | null)
   if (typeof window === "undefined") return;
   const slug = tenantSlug.trim();
   if (!slug) return;
-  localStorage.setItem("khayaos_tenant_slug", slug);
+  localStorage.setItem(ORDERING_TENANT_SLUG_KEY, slug);
   if (tenantId) {
-    localStorage.setItem("khayaos_tenant_id", tenantId);
+    localStorage.setItem(ORDERING_TENANT_ID_KEY, tenantId);
   } else {
-    // Drop stale UUID so it cannot override the scanned slug on the API.
-    localStorage.removeItem("khayaos_tenant_id");
+    localStorage.removeItem(ORDERING_TENANT_ID_KEY);
   }
 }
 
@@ -93,7 +143,9 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
     ...(customHeaders as Record<string, string>),
   };
 
-  if (!skipAuth) {
+  const customerFacing = isCustomerFacingEndpoint(endpoint);
+  // Staff tokens on another restaurant's storefront trip tenant.access (403).
+  if (!skipAuth && !customerFacing) {
     const token = getStoredToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
@@ -109,10 +161,8 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
   const isPublicPricingRoute = endpoint === "/pricing/plans";
 
   if (!isPlatformRoute && !isAuthLoginRoute && !isPublicAuthRoute && !isPublicSignupRoute && !isPublicPricingRoute) {
-    const tenantId = getStoredTenantId();
+    const { tenantId, tenantSlug } = resolveTenantHeaders(endpoint);
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
-
-    const tenantSlug = getStoredTenantSlug();
     if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;
   }
 
@@ -186,16 +236,16 @@ async function uploadFormData<T>(
   }
 
   const headers: Record<string, string> = { Accept: "application/json" };
+  const customerFacing = isCustomerFacingEndpoint(endpoint);
 
-  if (!skipAuth) {
+  if (!skipAuth && !customerFacing) {
     const token = getStoredToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
   if (!endpoint.startsWith("/platform") && endpoint !== "/signup" && endpoint !== "/pricing/plans") {
-    const tenantId = getStoredTenantId();
+    const { tenantId, tenantSlug } = resolveTenantHeaders(endpoint);
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
-    const tenantSlug = getStoredTenantSlug();
     if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;
   }
 

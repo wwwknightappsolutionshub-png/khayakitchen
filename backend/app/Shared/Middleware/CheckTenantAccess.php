@@ -37,6 +37,12 @@ class CheckTenantAccess
             );
         }
 
+        // Customer storefront/order APIs follow X-Tenant-Slug from shared links.
+        // Do not reject staff who still have a leftover Sanctum session while ordering elsewhere.
+        if ($this->isCustomerFacingRequest($request)) {
+            return $next($request);
+        }
+
         if ($user->status !== 'active') {
             return ApiResponse::error('User account is disabled', 'USER_DISABLED', null, 403);
         }
@@ -61,5 +67,16 @@ class CheckTenantAccess
         }
 
         return $next($request);
+    }
+
+    private function isCustomerFacingRequest(Request $request): bool
+    {
+        $path = $request->path();
+
+        return str_starts_with($path, 'api/v1/storefront')
+            || str_starts_with($path, 'api/v1/customer/')
+            || $path === 'api/v1/menu'
+            || str_starts_with($path, 'api/v1/realtime/public-config')
+            || str_starts_with($path, 'api/v1/realtime/order-status/');
     }
 }

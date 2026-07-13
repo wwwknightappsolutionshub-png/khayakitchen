@@ -16,15 +16,21 @@ class ResolveTenant
     {
         $user = $request->user();
         $tenantId = null;
+        $isCustomerFacing = $this->isCustomerFacingRequest($request);
 
-        // Authenticated tenant staff always resolve from their account.
-        if ($user && $user->tenant_id) {
-            $tenantId = $user->tenant_id;
-        } elseif ($slug = $request->header('X-Tenant-Slug')) {
-            // Prefer slug for shared ordering links (/r/{slug}) so a stale
-            // X-Tenant-ID from another workspace cannot hijack guest orders.
+        // Shared ordering links (/r/{slug}) must win over a leftover staff session.
+        if ($isCustomerFacing && ($slug = $request->header('X-Tenant-Slug'))) {
             $tenant = Tenant::withoutGlobalScopes()->where('slug', $slug)->first();
             $tenantId = $tenant?->id;
+        } elseif ($user && $user->tenant_id && ! $isCustomerFacing) {
+            // Authenticated tenant staff always resolve from their account on admin APIs.
+            $tenantId = $user->tenant_id;
+        } elseif ($slug = $request->header('X-Tenant-Slug')) {
+            // Prefer slug for shared ordering links so a stale X-Tenant-ID cannot hijack guest orders.
+            $tenant = Tenant::withoutGlobalScopes()->where('slug', $slug)->first();
+            $tenantId = $tenant?->id;
+        } elseif ($user && $user->tenant_id) {
+            $tenantId = $user->tenant_id;
         } elseif ($request->header('X-Tenant-ID')) {
             $tenantId = $request->header('X-Tenant-ID');
         } elseif ($host = $request->getHost()) {
@@ -60,5 +66,16 @@ class ResolveTenant
         $request->attributes->set('tenant', $this->tenantContext->tenant());
 
         return $next($request);
+    }
+
+    private function isCustomerFacingRequest(Request $request): bool
+    {
+        $path = $request->path();
+
+        return str_starts_with($path, 'api/v1/storefront')
+            || str_starts_with($path, 'api/v1/customer/')
+            || $path === 'api/v1/menu'
+            || str_starts_with($path, 'api/v1/realtime/public-config')
+            || str_starts_with($path, 'api/v1/realtime/order-status/');
     }
 }

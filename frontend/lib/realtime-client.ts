@@ -16,7 +16,12 @@ function getToken(): string | null {
 
 function getTenantId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("khayaos_tenant_id") ?? process.env.NEXT_PUBLIC_TENANT_ID ?? null;
+  return (
+    localStorage.getItem("khayaos_ordering_tenant_id") ??
+    localStorage.getItem("khayaos_tenant_id") ??
+    process.env.NEXT_PUBLIC_TENANT_ID ??
+    null
+  );
 }
 
 export class RealtimeClient {

@@ -76,8 +76,11 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
         if (state?.token) setAuthToken(state.token);
-        setTenantId(state?.user?.tenant_id ?? null);
-        setTenantSlug(state?.user?.tenant_slug ?? null);
+        // Only restore staff workspace. Never clear/overwrite shared /r/{slug} ordering bind.
+        if (state?.user) {
+          setTenantId(state.user.tenant_id ?? null);
+          setTenantSlug(state.user.tenant_slug ?? null);
+        }
         useAuthStore.setState({ hasHydrated: true });
       },
     },
