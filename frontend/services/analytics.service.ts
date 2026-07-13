@@ -36,15 +36,28 @@ export interface CustomerHomeSummary {
 
 export const analyticsService = {
   async getOperationsSummary(): Promise<OperationsSummary> {
-    const [kpis, trends, ordersResult, menuResult] = await Promise.all([
+    const [kpisResult, trendsResult, ordersResult, menuResult] = await Promise.allSettled([
       dashboardService.getKpis(),
       dashboardService.getSalesTrends(),
       ordersService.getOrders(),
       menuService.getMenu(),
     ]);
 
-    const meals = menuResult.meals ?? [];
-    const allOrders = ordersResult.orders ?? [];
+    if (ordersResult.status === "rejected") {
+      throw ordersResult.reason instanceof Error
+        ? ordersResult.reason
+        : new Error("Failed to load orders for operations summary.");
+    }
+
+    const kpis =
+      kpisResult.status === "fulfilled"
+        ? kpisResult.value
+        : { revenue_today: 0, orders_today: 0 };
+    const trends =
+      trendsResult.status === "fulfilled" ? trendsResult.value : { trends: [] };
+    const meals =
+      menuResult.status === "fulfilled" ? (menuResult.value.meals ?? []) : [];
+    const allOrders = ordersResult.value.orders ?? [];
     const todayOrders = filterTodayOrders(allOrders);
     const { rows, meals: mealPopularity, addons: addonPopularity } = aggregateTopSellers(
       todayOrders,

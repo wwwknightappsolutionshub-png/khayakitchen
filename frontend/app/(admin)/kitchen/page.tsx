@@ -21,7 +21,7 @@ export default function KitchenPage() {
   const pollInterval = useHybridInterval(4_000, 5_000);
   const [newTicketId, setNewTicketId] = useState<string | null>(null);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["kitchen", "orders"],
     queryFn: () => kitchenService.getActiveOrders(),
     refetchInterval: pollInterval,
@@ -47,9 +47,11 @@ export default function KitchenPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kitchen"] }),
   });
 
-  const orders = data?.orders ?? [];
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.has(o.status));
   const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
+  const loadError =
+    error instanceof Error ? error.message : isError ? "Failed to load kitchen orders." : null;
 
   return (
     <BackendPage>
@@ -85,6 +87,15 @@ export default function KitchenPage() {
         </div>
       )}
 
+      {loadError && (
+        <div className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p>{loadError}</p>
+          <button type="button" className="mt-2 underline" onClick={() => void refetch()}>
+            Retry
+          </button>
+        </div>
+      )}
+
       {isFetching && !isLoading && (
         <p className="mb-3 text-xs text-muted">Syncing…</p>
       )}
@@ -97,7 +108,7 @@ export default function KitchenPage() {
         </div>
       )}
 
-      {!isLoading && orders.length === 0 && (
+      {!isLoading && !loadError && orders.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center py-16 text-center">
             <ChefHat className="mb-4 h-12 w-12 text-muted" />

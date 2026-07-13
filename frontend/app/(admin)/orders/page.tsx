@@ -18,7 +18,7 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["orders", statusFilter],
     queryFn: () =>
       ordersService.getOrders(statusFilter === "all" ? undefined : statusFilter),
@@ -30,7 +30,9 @@ export default function OrdersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 
-  const orders = data?.orders ?? [];
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
+  const loadError =
+    error instanceof Error ? error.message : isError ? "Failed to load orders." : null;
 
   const orderActions = (order: (typeof orders)[number]) => (
     <>
@@ -80,6 +82,15 @@ export default function OrdersPage() {
         ))}
       </div>
 
+      {loadError && (
+        <div className="mb-4 rounded-[var(--radius)] border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p>{loadError}</p>
+          <button type="button" className="mt-2 underline" onClick={() => void refetch()}>
+            Retry
+          </button>
+        </div>
+      )}
+
       <Card>
         <ResponsiveDataView
           mobile={
@@ -87,7 +98,7 @@ export default function OrdersPage() {
               {isLoading && (
                 <p className="py-6 text-center text-sm text-muted">Loading orders…</p>
               )}
-              {!isLoading && orders.length === 0 && (
+              {!isLoading && !loadError && orders.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted">No orders found</p>
               )}
               {orders.map((order) => (
@@ -127,7 +138,7 @@ export default function OrdersPage() {
               <tbody>
                 {isLoading &&
                   Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={9} />)}
-                {!isLoading && orders.length === 0 && (
+                {!isLoading && !loadError && orders.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-4 py-8 text-center text-muted">
                       No orders found

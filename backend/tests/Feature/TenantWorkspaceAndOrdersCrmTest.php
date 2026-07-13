@@ -115,6 +115,16 @@ class TenantWorkspaceAndOrdersCrmTest extends TestCase
         $this->assertSame('Ada Obi', $match['customer_name']);
         $this->assertSame('+2348011112222', $match['customer_phone']);
         $this->assertSame('card', $match['payment_channel']);
+
+        $kitchen = $this->getJson('/api/v1/kitchen/orders', [
+            'Authorization' => "Bearer {$token}",
+            'X-Tenant-Slug' => $tenant->slug,
+        ]);
+
+        $kitchen->assertOk();
+        $kitchenOrders = $kitchen->json('orders');
+        $this->assertIsArray($kitchenOrders);
+        $this->assertNotNull(collect($kitchenOrders)->firstWhere('id', $order->id));
     }
 
     public function test_crm_strategic_analytics_returns_period_metrics(): void

@@ -171,6 +171,9 @@ class FeatureAccessService
                 $flags[$moduleKey] = $this->canAccess($featureKey, $tenantId);
             }
 
+            // Kitchen UI maps to the orders entitlement.
+            $flags['kitchen'] = $flags['orders'] ?? $this->canAccess('orders', $tenantId);
+
             return $flags;
         });
     }

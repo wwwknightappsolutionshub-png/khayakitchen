@@ -16,7 +16,7 @@ class OrderRepository extends BaseRepository
     public function list(?string $status = null)
     {
         $query = $this->query()
-            ->with(['items.options', 'customer', 'latestPayment'])
+            ->with(['items.options', 'customer', 'payments'])
             ->orderByDesc('created_at');
 
         if ($status) {
@@ -26,7 +26,10 @@ class OrderRepository extends BaseRepository
         return $query->get()->map(function (Order $order) {
             $order->setAttribute('customer_name', $order->customer?->name);
             $order->setAttribute('customer_phone', $order->customer?->phone);
-            $order->setAttribute('payment_channel', $order->latestPayment?->provider);
+            $latestPayment = $order->payments
+                ->sortByDesc(fn ($payment) => $payment->created_at?->timestamp ?? 0)
+                ->first();
+            $order->setAttribute('payment_channel', $latestPayment?->provider);
 
             return $order;
         });
