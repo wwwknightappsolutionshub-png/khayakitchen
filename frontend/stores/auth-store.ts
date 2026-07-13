@@ -43,11 +43,15 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          useAuthStore.getState().setHasHydrated(true);
+          return;
+        }
         if (state?.token) setAuthToken(state.token);
         setTenantId(state?.user?.tenant_id ?? null);
         setTenantSlug(state?.user?.tenant_slug ?? null);
-        state?.setHasHydrated(true);
+        useAuthStore.getState().setHasHydrated(true);
       },
     },
   ),

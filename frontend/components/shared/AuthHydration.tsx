@@ -1,37 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 
+/**
+ * Waits for zustand persist rehydration before rendering the app.
+ * Uses the store's `hasHydrated` flag (set by onRehydrateStorage) as the
+ * source of truth, with a short safety timeout so /login never hangs.
+ */
 export function AuthHydration({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
 
   useEffect(() => {
-    const markReady = () => {
+    const finish = () => {
       useAuthStore.getState().setHasHydrated(true);
-      setReady(true);
     };
 
-    const safetyTimeout = window.setTimeout(markReady, 2000);
+    let unsubscribe: (() => void) | undefined;
+    let safetyTimeout = 0;
 
-    if (useAuthStore.persist.hasHydrated()) {
-      markReady();
-      window.clearTimeout(safetyTimeout);
+    try {
+      const persistApi = useAuthStore.persist;
+      if (persistApi?.hasHydrated?.()) {
+        finish();
+        return;
+      }
+
+      unsubscribe = persistApi?.onFinishHydration?.(() => {
+        finish();
+        if (safetyTimeout) window.clearTimeout(safetyTimeout);
+      });
+    } catch {
+      finish();
       return;
     }
 
-    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
-      markReady();
-      window.clearTimeout(safetyTimeout);
-    });
+    safetyTimeout = window.setTimeout(finish, 500);
 
     return () => {
-      window.clearTimeout(safetyTimeout);
-      unsubscribe();
+      if (safetyTimeout) window.clearTimeout(safetyTimeout);
+      unsubscribe?.();
     };
   }, []);
 
-  if (!ready) {
+  if (!hasHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
