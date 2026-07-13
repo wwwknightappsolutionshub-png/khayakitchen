@@ -7,6 +7,7 @@ import { ThemeBoot } from "@/components/shared/ThemeBoot";
 import { AuthHydration } from "@/components/shared/AuthHydration";
 import { PwaBootGate } from "@/components/shared/PwaBootGate";
 import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
+import { ChunkLoadRecovery } from "@/components/shared/ChunkLoadRecovery";
 import { getBuildId } from "@/lib/build-id";
 import "./globals.css";
 
@@ -85,6 +86,7 @@ export default function RootLayout({
           <ToastProvider>
             <ThemeBoot />
             <PwaLifecycle />
+            <ChunkLoadRecovery />
             <AuthHydration>{children}</AuthHydration>
           </ToastProvider>
         </QueryProvider>

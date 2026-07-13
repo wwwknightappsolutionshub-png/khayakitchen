@@ -25,11 +25,13 @@ export async function unregisterServiceWorkers(): Promise<void> {
 
 function buildRedirectUrl(path = "/"): string {
   const url = new URL(path, window.location.origin);
+  // Drop prior cache-bust params so the URL stays usable.
+  url.searchParams.delete("_v");
   url.searchParams.set("_v", String(Date.now()));
   return url.toString();
 }
 
-/** Wipe SW + Cache Storage, then navigate to home (never reload /reset-app). */
+/** Wipe SW + Cache Storage, then navigate (defaults to current path for login recovery). */
 export async function hardResetPwa(nextBuildId?: string, redirectTo = "/"): Promise<void> {
   const serverBuild = nextBuildId ?? (await fetchServerBuildId());
   if (serverBuild) {

@@ -1,9 +1,10 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "7";
+export const PWA_CACHE_EPOCH = "8";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
 export const MAX_RESET_ATTEMPTS = 2;
+export const CHUNK_RELOAD_KEY = "khayaos_chunk_reload";
 
 export function getPwaBootGateScript(pageBuild: string): string {
   return `
@@ -15,8 +16,6 @@ export function getPwaBootGateScript(pageBuild: string): string {
   var CACHE_EPOCH=${JSON.stringify(PWA_CACHE_EPOCH)};
   var MAX_RESETS=${MAX_RESET_ATTEMPTS};
   var root=document.documentElement;
-  var path=(location.pathname||"");
-  var isAuthPath=path==="/login")||path.indexOf("/login/")===0||path==="/forgot-password")||path==="/reset-password"||path==="/verify-email"||path==="/verify-email-pending"||path==="/get-started";
 
   function showPage(){
     try{root.style.visibility="";}catch(e){}
@@ -29,11 +28,8 @@ export function getPwaBootGateScript(pageBuild: string): string {
     showPage();
   }
 
-  // Auth pages must never enter a reset/reload loop — paint immediately.
-  if(isAuthPath){
-    pinCurrentBuild();
-    return;
-  }
+  // Always paint immediately — never leave auth/login blank.
+  showPage();
 
   try{
     if(sessionStorage.getItem(RELOAD_KEY)==="1"){
@@ -90,7 +86,7 @@ export function getPwaBootGateScript(pageBuild: string): string {
 
   function evaluate(serverBuild){
     if(!serverBuild){
-      showPage();
+      pinCurrentBuild();
       return;
     }
     var storedBuild=null;
@@ -120,6 +116,34 @@ export function getPwaBootGateScript(pageBuild: string): string {
     .then(function(res){return res.ok?res.json():null;})
     .then(function(data){finish(data&&data.build);})
     .catch(function(){finish(null);});
+
+  // Catch deleted /_next/static chunks from a previous deploy (before React boots).
+  var chunkReloadKey=${JSON.stringify(CHUNK_RELOAD_KEY)};
+  window.addEventListener("error",function(event){
+    var target=event&&event.target;
+    var src=target&&target.src?String(target.src):"";
+    if(!src||src.indexOf("/_next/static/")<0)return;
+    try{
+      if(sessionStorage.getItem(chunkReloadKey)==="1")return;
+      sessionStorage.setItem(chunkReloadKey,"1");
+    }catch(e){}
+    var tasks=[];
+    if("serviceWorker" in navigator){
+      tasks.push(navigator.serviceWorker.getRegistrations().then(function(regs){
+        return Promise.all(regs.map(function(r){return r.unregister();}));
+      }));
+    }
+    if("caches" in window){
+      tasks.push(caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(key){return caches.delete(key);}));
+      }));
+    }
+    Promise.all(tasks).finally(function(){
+      var targetPath=window.location.pathname+window.location.search;
+      var sep=targetPath.indexOf("?")>=0?"&":"?";
+      window.location.replace(targetPath+sep+"_v="+Date.now());
+    });
+  },true);
 })(${JSON.stringify(pageBuild)});
 `.trim();
 }
