@@ -19,6 +19,7 @@ import {
   X,
   MessageSquare,
   Star,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/revenue-recovery", label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },
   { href: "/reports", label: "Reports", icon: BarChart3, flag: "reporting" },
+  { href: "/staff-performance", label: "Staff performance", icon: Activity, flag: "staff_performance" },
   { href: "/settings", label: "Settings", icon: Settings, flag: null },
 ];
 
@@ -50,7 +52,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { isEnabled } = useFeatureFlags();
 
-  const visibleItems = navItems.filter((item) => !item.flag || isEnabled(item.flag));
+  const visibleItems = navItems.filter((item) => {
+    if (item.href === "/staff-performance") {
+      return (
+        (user?.role === "owner" || user?.role === "manager") &&
+        (!item.flag || isEnabled(item.flag))
+      );
+    }
+    return !item.flag || isEnabled(item.flag);
+  });
 
   return (
     <aside

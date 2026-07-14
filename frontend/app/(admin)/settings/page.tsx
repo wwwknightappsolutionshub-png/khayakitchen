@@ -14,15 +14,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ApiClientError } from "@/lib/api-client";
 import { applyWorkspaceRuntime } from "@/lib/workspace-runtime";
+import { useToast } from "@/providers/ToastProvider";
 import { authService } from "@/services/auth.service";
 import { featureFlagsService } from "@/services/feature-flags.service";
 import { staffService } from "@/services/staff.service";
 import { workspaceService } from "@/services/workspace.service";
 
-const ROLES = ["owner", "manager", "kitchen", "staff"] as const;
+const ROLES = [
+  { value: "staff", label: "Waiter (floor staff)" },
+  { value: "kitchen", label: "Chef (kitchen)" },
+  { value: "manager", label: "Manager" },
+  { value: "owner", label: "Owner" },
+] as const;
+
+type StaffRole = (typeof ROLES)[number]["value"];
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { user, setUser } = useAuth();
   const { flags } = useFeatureFlags();
   const [showStaffForm, setShowStaffForm] = useState(false);
@@ -50,8 +59,9 @@ export default function SettingsPage() {
     name: "",
     email: "",
     password: "",
-    role: "staff" as (typeof ROLES)[number],
+    role: "staff" as StaffRole,
   });
+  const [staffError, setStaffError] = useState<string | null>(null);
 
   const displayedEmail = emailForm.email || user?.email || "";
   const canEditWorkspace = user?.role === "owner" || user?.role === "super_admin";
@@ -94,10 +104,18 @@ export default function SettingsPage() {
 
   const createStaffMutation = useMutation({
     mutationFn: () => staffService.createStaff(staffForm),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      setStaffError(null);
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       setShowStaffForm(false);
       setStaffForm({ name: "", email: "", password: "", role: "staff" });
+      showToast(
+        "Staff created",
+        `${response.user.name} was added. An invite was sent to ${response.user.email} (if email is configured).`,
+      );
+    },
+    onError: (err) => {
+      setStaffError(err instanceof ApiClientError ? err.message : "Failed to create staff user.");
     },
   });
 
@@ -478,6 +496,11 @@ export default function SettingsPage() {
           <CardContent>
             {showStaffForm && canManageStaff && (
               <div className="mb-6 space-y-4 rounded-[var(--radius)] border border-border bg-surface-elevated/50 p-4">
+                {staffError && (
+                  <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
+                    {staffError}
+                  </p>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Name"
@@ -491,10 +514,11 @@ export default function SettingsPage() {
                     onChange={(e) => setStaffForm((f) => ({ ...f, email: e.target.value }))}
                   />
                   <Input
-                    label="Password"
+                    label="Temporary password"
                     type="password"
                     value={staffForm.password}
                     onChange={(e) => setStaffForm((f) => ({ ...f, password: e.target.value }))}
+                    tooltip="Sent to the staff email. Minimum 8 characters."
                   />
                   <div>
                     <label className="mb-1.5 block text-sm font-medium">Role</label>
@@ -504,13 +528,13 @@ export default function SettingsPage() {
                       onChange={(e) =>
                         setStaffForm((f) => ({
                           ...f,
-                          role: e.target.value as (typeof ROLES)[number],
+                          role: e.target.value as StaffRole,
                         }))
                       }
                     >
                       {ROLES.map((r) => (
-                        <option key={r} value={r} className="capitalize">
-                          {r}
+                        <option key={r.value} value={r.value}>
+                          {r.label}
                         </option>
                       ))}
                     </select>
@@ -554,7 +578,9 @@ export default function SettingsPage() {
                     <tr key={member.id} className="border-b border-border">
                       <td className="px-4 py-3 font-medium">{member.name}</td>
                       <td className="px-4 py-3 text-muted">{member.email}</td>
-                      <td className="px-4 py-3 capitalize">{member.role}</td>
+                      <td className="px-4 py-3">
+                        {ROLES.find((r) => r.value === member.role)?.label ?? member.role}
+                      </td>
                       <td className="px-4 py-3">
                         <Badge variant={member.status === "disabled" ? "outline" : "secondary"}>
                           {member.status ?? "active"}

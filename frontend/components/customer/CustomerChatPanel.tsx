@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { ModalPortal } from "@/components/ui/ModalPortal";
 import { engagementService } from "@/services/engagement.service";
 import { useUiStore } from "@/stores/ui-store";
+import { useHybridInterval } from "@/hooks/useHybridInterval";
+import { useChatTyping, useTypingPublisher } from "@/hooks/useChatTyping";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 const NAME_STORAGE_KEY = "khayaos-customer-name";
@@ -24,10 +26,12 @@ function getOrCreateGuestKey(): string {
   return key;
 }
 
-function chatIdentity(phone: string): { phone?: string; guest_key?: string } {
+/** Always keep guest_key so checkout phone does not orphan the guest thread. */
+function chatIdentity(phone: string): { phone?: string; guest_key: string } {
+  const guest_key = getOrCreateGuestKey();
   const trimmed = phone.trim();
-  if (trimmed) return { phone: trimmed };
-  return { guest_key: getOrCreateGuestKey() };
+  if (trimmed) return { phone: trimmed, guest_key };
+  return { guest_key };
 }
 
 export function CustomerChatPanel() {
@@ -48,14 +52,39 @@ export function CustomerChatPanel() {
   });
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const pollInterval = useHybridInterval(3_000, 8_000);
+
+  useEffect(() => {
+    if (!open) return;
+    setPhone(localStorage.getItem(PHONE_STORAGE_KEY) ?? "");
+    setName(localStorage.getItem(NAME_STORAGE_KEY) ?? "");
+  }, [open]);
+
   const identity = chatIdentity(phone);
+  const remoteTyping = useChatTyping(open ? threadId : null, ["customer"]);
+
+  const publishTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!threadId) return;
+      return engagementService.setCustomerChatTyping(threadId, identity, isTyping);
+    },
+    [threadId, identity.phone, identity.guest_key],
+  );
+  const onCompose = useTypingPublisher(open && !!threadId, publishTyping);
 
   const thread = useQuery({
-    queryKey: ["customer-chat", threadId, identity.phone ?? identity.guest_key],
+    queryKey: ["customer-chat", threadId, identity.phone ?? "", identity.guest_key],
     queryFn: () => engagementService.getCustomerChat(threadId!, identity),
     enabled: open && !!threadId,
-    refetchInterval: open ? 5000 : false,
+    refetchInterval: open ? pollInterval : false,
+    retry: false,
   });
+
+  useEffect(() => {
+    if (thread.isError && thread.error) {
+      setError(thread.error instanceof Error ? thread.error.message : "Chat failed");
+    }
+  }, [thread.isError, thread.error]);
 
   const openChat = useMutation({
     mutationFn: () =>
@@ -80,13 +109,16 @@ export function CustomerChatPanel() {
       engagementService.postCustomerChatMessage(threadId!, identity, body),
     onSuccess: () => {
       setBody("");
+      onCompose(false);
       setError(null);
       queryClient.invalidateQueries({
-        queryKey: ["customer-chat", threadId, identity.phone ?? identity.guest_key],
+        queryKey: ["customer-chat", threadId, identity.phone ?? "", identity.guest_key],
       });
     },
     onError: (err: Error) => setError(err.message),
   });
+
+  const messages = useMemo(() => thread.data?.thread.messages ?? [], [thread.data]);
 
   return (
     <ModalPortal open={open} onClose={closeCustomerChat}>
@@ -137,7 +169,7 @@ export function CustomerChatPanel() {
             {threadId && (
               <div className="space-y-3">
                 <div className="max-h-56 space-y-2 overflow-y-auto">
-                  {(thread.data?.thread.messages ?? []).map((m) => (
+                  {messages.map((m) => (
                     <div
                       key={m.id}
                       className="rounded-xl bg-[var(--surface-elevated)] p-2 text-sm"
@@ -148,14 +180,22 @@ export function CustomerChatPanel() {
                       <p>{m.body}</p>
                     </div>
                   ))}
-                  {(thread.data?.thread.messages ?? []).length === 0 && (
+                  {messages.length === 0 && (
                     <p className="text-sm text-[var(--muted)]">No messages yet. Say hello.</p>
                   )}
                 </div>
+                {remoteTyping && (
+                  <p className="text-xs italic text-[var(--muted)]">
+                    {remoteTyping.actor_label} is typing…
+                  </p>
+                )}
                 <textarea
                   className="min-h-20 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm"
                   value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                  onChange={(e) => {
+                    setBody(e.target.value);
+                    onCompose(e.target.value.trim().length > 0);
+                  }}
                   placeholder="Type a message"
                 />
                 <Button

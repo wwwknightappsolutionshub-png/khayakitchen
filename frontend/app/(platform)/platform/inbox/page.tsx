@@ -32,12 +32,14 @@ export default function PlatformInboxPage() {
   const threads = useQuery({
     queryKey: ["platform", "chat-threads", tenantId],
     queryFn: () => engagementService.listPlatformChatThreads(tenantId || undefined),
+    refetchInterval: tab === "chat" ? 4_000 : false,
   });
 
   const thread = useQuery({
     queryKey: ["platform", "chat", activeThreadId],
     queryFn: () => engagementService.getPlatformChat(activeThreadId!),
     enabled: !!activeThreadId,
+    refetchInterval: activeThreadId ? 2_500 : false,
   });
 
   const sendMessage = useMutation({
@@ -70,6 +72,7 @@ export default function PlatformInboxPage() {
     mutationFn: () => engagementService.postPlatformChatMessage(activeThreadId!, chatBody),
     onSuccess: () => {
       setChatBody("");
+      void engagementService.setPlatformChatTyping(activeThreadId!, false);
       queryClient.invalidateQueries({ queryKey: ["platform", "chat", activeThreadId] });
     },
     onError: (err: Error) => setError(err.message),
@@ -204,7 +207,14 @@ export default function PlatformInboxPage() {
               <textarea
                 className="min-h-20 w-full rounded-lg border border-violet-500/30 bg-[#0a0c10] px-3 py-2 text-violet-100"
                 value={chatBody}
-                onChange={(e) => setChatBody(e.target.value)}
+                onChange={(e) => {
+                  setChatBody(e.target.value);
+                  if (activeThreadId) {
+                    void engagementService
+                      .setPlatformChatTyping(activeThreadId, e.target.value.trim().length > 0)
+                      .catch(() => undefined);
+                  }
+                }}
                 placeholder="Reply…"
               />
               <Button

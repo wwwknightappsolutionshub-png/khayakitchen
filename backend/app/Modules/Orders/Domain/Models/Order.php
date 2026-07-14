@@ -26,12 +26,18 @@ class Order extends Model
         'revenue_recovery_campaign_id',
         'created_by',
         'updated_by',
+        'accepted_by',
+        'completed_by',
+        'accepted_at',
+        'completed_at',
     ];
 
     protected function casts(): array
     {
         return [
             'scheduled_time' => 'datetime',
+            'accepted_at' => 'datetime',
+            'completed_at' => 'datetime',
             'total_amount' => 'decimal:2',
             'discount_total' => 'decimal:2',
         ];

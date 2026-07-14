@@ -2,6 +2,7 @@
 
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ResponsiveAppShell } from "@/components/shared/ResponsiveAppShell";
+import { CustomerChatUrgencyAlerts } from "@/components/admin/CustomerChatUrgencyAlerts";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AdminShellProps {
@@ -25,6 +26,7 @@ export function AdminShell({ children }: AdminShellProps) {
       mobileSubtitle={subtitle}
       renderSidebar={(props) => <Sidebar {...props} />}
     >
+      <CustomerChatUrgencyAlerts />
       {children}
     </ResponsiveAppShell>
   );

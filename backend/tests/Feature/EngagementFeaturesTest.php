@@ -212,6 +212,64 @@ class EngagementFeaturesTest extends TestCase
         $this->assertNotEmpty($show->json('thread.messages'));
     }
 
+    public function test_guest_chat_survives_phone_checkout_identity(): void
+    {
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->enableFeature($tenant->id, 'tenant_customer_chat');
+
+        $open = $this->postJson('/api/v1/customer/chat/threads', [
+            'guest_key' => 'guest-then-order-key',
+            'name' => 'Walk-in',
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $open->assertCreated();
+        $threadId = $open->json('thread.id');
+
+        $this->postJson("/api/v1/customer/chat/threads/{$threadId}/messages", [
+            'guest_key' => 'guest-then-order-key',
+            'body' => 'Before order',
+        ], ['X-Tenant-Slug' => 'pilot'])->assertCreated();
+
+        // After placing an order the client sends phone + guest_key together.
+        $show = $this->getJson(
+            "/api/v1/customer/chat/threads/{$threadId}?phone=%2B2348011112222&guest_key=guest-then-order-key",
+            ['X-Tenant-Slug' => 'pilot'],
+        );
+        $show->assertOk();
+
+        $post = $this->postJson("/api/v1/customer/chat/threads/{$threadId}/messages", [
+            'phone' => '+2348011112222',
+            'guest_key' => 'guest-then-order-key',
+            'body' => 'After checkout phone saved',
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $post->assertCreated();
+    }
+
+    public function test_customer_and_tenant_can_send_typing_status(): void
+    {
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->enableFeature($tenant->id, 'tenant_customer_chat');
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+
+        $open = $this->postJson('/api/v1/customer/chat/threads', [
+            'guest_key' => 'guest-typing-key',
+            'name' => 'Typer',
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $open->assertCreated();
+        $threadId = $open->json('thread.id');
+
+        $customerTyping = $this->postJson("/api/v1/customer/chat/threads/{$threadId}/typing", [
+            'guest_key' => 'guest-typing-key',
+            'is_typing' => true,
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $customerTyping->assertOk();
+
+        $this->actingAs($owner, 'sanctum');
+        $staffTyping = $this->postJson("/api/v1/engagement/chat/threads/{$threadId}/typing", [
+            'is_typing' => true,
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $staffTyping->assertOk();
+    }
+
     public function test_super_admin_can_create_platform_support_user(): void
     {
         $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();

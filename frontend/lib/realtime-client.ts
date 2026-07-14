@@ -114,6 +114,8 @@ export class RealtimeClient {
         "RevenueUpdated",
         "OrderCountUpdated",
         "NewKitchenTicket",
+        "ChatMessageCreated",
+        "ChatTyping",
       ];
 
       for (const event of events) {

@@ -8,6 +8,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   ready: { label: "Ready", className: "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30" },
   completed: { label: "Completed", className: "bg-status-completed/20 text-status-completed" },
   cancelled: { label: "Rejected", className: "bg-red-500/20 text-red-400 ring-1 ring-red-500/30" },
+  undone: { label: "Undone", className: "bg-zinc-500/20 text-zinc-300 ring-1 ring-zinc-500/40" },
 };
 
 export function getKitchenCardClass(status: string, isNew: boolean): string {
@@ -19,6 +20,7 @@ export function getKitchenCardClass(status: string, isNew: boolean): string {
     ready: "border-emerald-500/50 bg-emerald-500/5",
     completed: "border-border bg-surface-elevated/30 opacity-75",
     cancelled: "border-red-500/40 bg-red-500/5 opacity-75",
+    undone: "border-zinc-500/40 bg-zinc-500/5 opacity-80",
   };
   return map[status] ?? "border-border hover:border-primary/30";
 }

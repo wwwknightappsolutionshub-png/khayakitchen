@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/Card";
 import { StatusBadge, getKitchenCardClass } from "@/components/ui/StatusBadge";
@@ -11,15 +11,22 @@ import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator
 import { kitchenService } from "@/services/kitchen.service";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
+import { getOrderAgeCardClass, getOrderAgeTone } from "@/lib/order-age";
 import { ChefHat, Clock, Bell } from "lucide-react";
 
-const ACTIVE_STATUSES = new Set(["pending", "accepted", "preparing", "ready"]);
+const ACTIVE_STATUSES = new Set(["accepted", "preparing", "ready"]);
 
 export default function KitchenPage() {
   const queryClient = useQueryClient();
   const pollInterval = useHybridInterval(4_000, 5_000);
   const [newTicketId, setNewTicketId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["kitchen", "orders"],
@@ -30,9 +37,12 @@ export default function KitchenPage() {
 
   const onRealtimeEvent = useCallback(
     (event: string, payload: Record<string, unknown>) => {
-      if (event === "NewKitchenTicket" || event === "OrderCreated") {
+      if (event === "NewKitchenTicket" || event === "OrderStatusChanged") {
         const orderId = payload.order_id as string | undefined;
-        if (orderId) setNewTicketId(orderId);
+        const status = payload.status as string | undefined;
+        if (orderId && (event === "NewKitchenTicket" || status === "accepted")) {
+          setNewTicketId(orderId);
+        }
         queryClient.invalidateQueries({ queryKey: ["kitchen"] });
       }
     },
@@ -44,7 +54,10 @@ export default function KitchenPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       kitchenService.updateOrderStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kitchen"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kitchen"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
   });
 
   const orders = Array.isArray(data?.orders) ? data.orders : [];
@@ -66,7 +79,10 @@ export default function KitchenPage() {
           <ChefHat className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">Kitchen</h1>
-            <p className="text-sm text-muted">New orders appear immediately · tap-friendly</p>
+            <p className="text-sm text-muted">
+              Accepted tickets appear after floor staff · Preparing confirms you have it · Ready for
+              waiter
+            </p>
           </div>
         </div>
         <div className="backend-header-actions">
@@ -81,7 +97,7 @@ export default function KitchenPage() {
         >
           <div className="flex items-center gap-2 text-sm font-medium">
             <Bell className="h-4 w-4 text-primary" />
-            New order #{newTicketId.slice(0, 6).toUpperCase()}
+            New accepted order #{newTicketId.slice(0, 6).toUpperCase()}
           </div>
           <button
             type="button"
@@ -131,8 +147,8 @@ export default function KitchenPage() {
         <Card>
           <CardContent className="flex flex-col items-center py-16 text-center">
             <ChefHat className="mb-4 h-12 w-12 text-muted" />
-            <p className="text-xl font-medium">No active orders</p>
-            <p className="text-muted">New tickets appear instantly when connected</p>
+            <p className="text-xl font-medium">No kitchen tickets</p>
+            <p className="text-muted">Orders appear here once floor staff accepts them</p>
           </CardContent>
         </Card>
       )}
@@ -144,6 +160,7 @@ export default function KitchenPage() {
               key={order.id}
               order={order}
               isNew={order.id === newTicketId}
+              nowMs={nowMs}
               updateMutation={updateMutation}
             />
           ))}
@@ -152,13 +169,14 @@ export default function KitchenPage() {
 
       {recentOrders.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-medium text-muted">Recently completed / rejected</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">Recently completed / cancelled</h2>
           <div className="grid gap-4">
             {recentOrders.map((order) => (
               <KitchenOrderCard
                 key={order.id}
                 order={order}
                 isNew={false}
+                nowMs={nowMs}
                 updateMutation={updateMutation}
                 readOnly
               />
@@ -175,25 +193,33 @@ type KitchenOrder = {
   status: string;
   order_type: string;
   total_amount: number;
+  created_at?: string;
   items?: { id: string; quantity: number; meal?: { name: string } }[];
 };
 
 function KitchenOrderCard({
   order,
   isNew,
+  nowMs,
   updateMutation,
   readOnly = false,
 }: {
   order: KitchenOrder;
   isNew: boolean;
+  nowMs: number;
   updateMutation: {
     mutate: (vars: { id: string; status: string }) => void;
     isPending: boolean;
   };
   readOnly?: boolean;
 }) {
+  const ageClass =
+    order.created_at && ACTIVE_STATUSES.has(order.status)
+      ? getOrderAgeCardClass(getOrderAgeTone(order.created_at, nowMs))
+      : getKitchenCardClass(order.status, isNew);
+
   return (
-    <Card className={`border-2 transition-colors ${getKitchenCardClass(order.status, isNew)}`}>
+    <Card className={cn("border-2 transition-colors", ageClass, isNew && "ring-2 ring-primary/40")}>
       <CardContent className="py-4 sm:py-5">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
@@ -226,56 +252,30 @@ function KitchenOrderCard({
             {formatCurrency(order.total_amount)}
           </span>
           {!readOnly && (
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {order.status === "pending" && (
-                <>
-                  <Button
-                    size="lg"
-                    className="min-h-12 w-full text-base"
-                    disabled={updateMutation.isPending}
-                    onClick={() => updateMutation.mutate({ id: order.id, status: "accepted" })}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="danger"
-                    className="min-h-12 w-full text-base"
-                    disabled={updateMutation.isPending}
-                    onClick={() => updateMutation.mutate({ id: order.id, status: "cancelled" })}
-                  >
-                    Reject
-                  </Button>
-                </>
-              )}
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
               {order.status === "accepted" && (
                 <Button
                   size="lg"
                   variant="secondary"
                   className="min-h-12 w-full text-base"
+                  disabled={updateMutation.isPending}
                   onClick={() => updateMutation.mutate({ id: order.id, status: "preparing" })}
                 >
-                  Cooking
+                  Preparing
                 </Button>
               )}
               {order.status === "preparing" && (
                 <Button
                   size="lg"
                   className="min-h-12 w-full text-base"
+                  disabled={updateMutation.isPending}
                   onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
                 >
                   Ready
                 </Button>
               )}
               {order.status === "ready" && (
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="min-h-12 w-full text-base"
-                  onClick={() => updateMutation.mutate({ id: order.id, status: "completed" })}
-                >
-                  Complete
-                </Button>
+                <p className="text-sm text-muted">Waiting for floor staff to complete</p>
               )}
             </div>
           )}

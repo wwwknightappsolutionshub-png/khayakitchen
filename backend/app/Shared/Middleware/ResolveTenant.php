@@ -59,9 +59,8 @@ class ResolveTenant
             $this->tenantContext->setTenant($tenant);
         }
 
-        if ($user) {
-            $this->tenantContext->setUser($user);
-        }
+        // Always sync (including null) so prior-request actors cannot leak into this request.
+        $this->tenantContext->setUser($user);
 
         $request->attributes->set('tenant', $this->tenantContext->tenant());
 

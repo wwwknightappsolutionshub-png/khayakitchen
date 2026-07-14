@@ -70,6 +70,24 @@ class CustomerEngagementController extends Controller
         return ApiResponse::success(['message' => $message], 201);
     }
 
+    public function setTyping(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'max:32'],
+            'guest_key' => ['nullable', 'string', 'max:64'],
+            'is_typing' => ['required', 'boolean'],
+        ]);
+
+        $this->chatService->setCustomerTyping(
+            $id,
+            $data['phone'] ?? null,
+            (bool) $data['is_typing'],
+            $data['guest_key'] ?? null,
+        );
+
+        return ApiResponse::success(['ok' => true]);
+    }
+
     public function toggleLike(Request $request, string $mealId)
     {
         $data = $request->validate([

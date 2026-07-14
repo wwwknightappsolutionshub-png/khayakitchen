@@ -19,6 +19,7 @@ use App\Modules\Pricing\Application\Services\PlanLimitService;
 use App\Modules\RevenueRecovery\Application\Services\RevenueRecoveryCampaignService;
 use App\Modules\RevenueRecovery\Application\Services\RevenueRecoveryPricingService;
 use App\Modules\RevenueRecovery\Domain\Models\RevenueRecoveryCampaign;
+use App\Modules\StaffPerformance\Domain\Models\OrderStatusEvent;
 use App\Modules\TenantBranding\Application\Services\RestaurantStatusService;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Entitlements\FeatureAccessService;
@@ -30,6 +31,10 @@ use Illuminate\Validation\ValidationException;
 class OrderService
 {
     private const STATUS_FLOW = ['pending', 'accepted', 'preparing', 'ready', 'completed'];
+
+    private const OPEN_STATUSES = ['pending', 'accepted', 'preparing', 'ready'];
+
+    private const TERMINAL_STATUSES = ['completed', 'cancelled', 'undone'];
 
     public function __construct(
         private OrderRepository $orderRepository,
@@ -224,24 +229,52 @@ class OrderService
 
         $order = $this->orderRepository->findOrFail($id);
 
-        if ($order->status === 'completed') {
-            throw ValidationException::withMessages(['status' => ['Completed orders cannot be edited.']]);
-        }
-
-        if ($order->status === 'cancelled') {
-            throw ValidationException::withMessages(['status' => ['Cancelled orders cannot be updated.']]);
+        if (in_array($order->status, self::TERMINAL_STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'status' => [ucfirst($order->status).' orders cannot be updated.'],
+            ]);
         }
 
         $previous = $order->status;
-        $order->update([
+        $user = $this->tenantContext->user() ?? auth('sanctum')->user();
+        $this->assertStatusTransitionAllowed($previous, $status, $user?->role);
+
+        $actorId = $user?->id;
+        $updates = [
             'status' => $status,
-            'updated_by' => $this->tenantContext->user()?->id,
+            'updated_by' => $actorId,
+        ];
+
+        if ($status === 'accepted' && $previous !== 'accepted') {
+            $updates['accepted_by'] = $actorId;
+            $updates['accepted_at'] = now();
+        }
+
+        if ($status === 'completed' && $previous !== 'completed') {
+            $updates['completed_by'] = $actorId;
+            $updates['completed_at'] = now();
+            if (! $order->accepted_at) {
+                $updates['accepted_at'] = $order->accepted_at ?? $order->created_at ?? now();
+                $updates['accepted_by'] = $order->accepted_by ?? $actorId;
+            }
+        }
+
+        $order->update($updates);
+
+        OrderStatusEvent::create([
+            'tenant_id' => $order->tenant_id,
+            'order_id' => $order->id,
+            'user_id' => $actorId,
+            'from_status' => $previous,
+            'to_status' => $status,
+            'created_at' => now(),
         ]);
 
         DomainEventLogger::log($order->tenant_id, 'OrderStatusUpdated', [
             'order_id' => $order->id,
             'from' => $previous,
             'to' => $status,
+            'user_id' => $actorId,
         ], $order->id, 'order');
 
         OrderStatusUpdated::dispatch($order->fresh(['items.options']), $previous);
@@ -257,6 +290,49 @@ class OrderService
         }
 
         return $order->fresh(['items.options']);
+    }
+
+    private function assertStatusTransitionAllowed(string $from, string $to, ?string $role): void
+    {
+        if ($to === 'cancelled') {
+            if (! in_array($from, self::OPEN_STATUSES, true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Only open orders can be cancelled.'],
+                ]);
+            }
+
+            return;
+        }
+
+        if ($to === 'undone') {
+            throw ValidationException::withMessages([
+                'status' => ['Undone status is set automatically at end of day.'],
+            ]);
+        }
+
+        $fromIndex = array_search($from, self::STATUS_FLOW, true);
+        $toIndex = array_search($to, self::STATUS_FLOW, true);
+
+        if ($fromIndex === false || $toIndex === false || $toIndex !== $fromIndex + 1) {
+            throw ValidationException::withMessages([
+                'status' => ["Invalid status transition from {$from} to {$to}."],
+            ]);
+        }
+
+        // Owners and managers can drive the full flow.
+        if (in_array($role, ['owner', 'manager', 'super_admin'], true)) {
+            return;
+        }
+
+        $allowedTargets = match ($role) {
+            'staff' => ['accepted', 'completed', 'cancelled'],
+            'kitchen' => ['preparing', 'ready', 'cancelled'],
+            default => [],
+        };
+
+        if (! in_array($to, $allowedTargets, true)) {
+            abort(403, 'Your role cannot set this order status');
+        }
     }
 
     public function cancelOrder(string $id, array $permissions): Order
@@ -277,11 +353,12 @@ class OrderService
 
         return $this->orderRepository->list(null)
             ->filter(function (Order $o) {
-                if (in_array($o->status, ['pending', 'accepted', 'preparing', 'ready'], true)) {
+                // Floor staff accepts first; kitchen works accepted → preparing → ready.
+                if (in_array($o->status, ['accepted', 'preparing', 'ready'], true)) {
                     return true;
                 }
 
-                if ($o->status === 'cancelled') {
+                if (in_array($o->status, ['cancelled', 'undone'], true)) {
                     return $o->updated_at >= now()->subHours(24);
                 }
 
@@ -293,10 +370,10 @@ class OrderService
             })
             ->sortBy(fn (Order $o) => [
                 match ($o->status) {
-                    'pending' => 0,
-                    'accepted' => 1,
-                    'preparing' => 2,
-                    'ready' => 3,
+                    'accepted' => 0,
+                    'preparing' => 1,
+                    'ready' => 2,
+                    'undone' => 3,
                     'cancelled' => 4,
                     'completed' => 5,
                     default => 6,
@@ -304,6 +381,36 @@ class OrderService
                 $o->scheduled_time ?? $o->created_at,
             ])
             ->values();
+    }
+
+    /**
+     * End-of-day: unfinished orders from prior calendar days become undone.
+     *
+     * @return int Number of orders affected
+     */
+    public function markPriorDayOrdersUndone(bool $dryRun = false): int
+    {
+        $cutoff = now()->startOfDay();
+
+        $query = Order::withoutGlobalScopes()
+            ->whereIn('status', self::OPEN_STATUSES)
+            ->where('created_at', '<', $cutoff);
+
+        $count = $query->count();
+
+        if ($dryRun || $count === 0) {
+            return $count;
+        }
+
+        Order::withoutGlobalScopes()
+            ->whereIn('status', self::OPEN_STATUSES)
+            ->where('created_at', '<', $cutoff)
+            ->update([
+                'status' => 'undone',
+                'updated_at' => now(),
+            ]);
+
+        return $count;
     }
 
     public function showCustomerOrder(string $id, string $phone): Order

@@ -150,4 +150,28 @@ export const engagementService = {
       body,
     });
   },
+
+  setCustomerChatTyping(
+    threadId: string,
+    identity: { phone?: string; guest_key?: string },
+    isTyping: boolean,
+  ) {
+    return api.post(`/customer/chat/threads/${threadId}/typing`, {
+      phone: identity.phone,
+      guest_key: identity.guest_key,
+      is_typing: isTyping,
+    });
+  },
+
+  setTenantChatTyping(threadId: string, isTyping: boolean) {
+    return api.post(`/engagement/chat/threads/${threadId}/typing`, {
+      is_typing: isTyping,
+    });
+  },
+
+  setPlatformChatTyping(threadId: string, isTyping: boolean) {
+    return api.post(`/platform/chat/threads/${threadId}/typing`, {
+      is_typing: isTyping,
+    });
+  },
 };

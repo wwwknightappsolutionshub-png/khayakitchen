@@ -8,6 +8,7 @@ use App\Modules\Engagement\Domain\Models\ChatMessage;
 use App\Modules\Engagement\Domain\Models\ChatThread;
 use App\Modules\NotificationsCampaign\Application\Services\PushNotificationService;
 use App\Modules\Pricing\Application\Services\AuditLogService;
+use App\Modules\Realtime\Infrastructure\WebSocketGateway;
 use App\Shared\Auth\PermissionService;
 use App\Shared\Auth\PlatformRoles;
 use App\Shared\Entitlements\FeatureAccessService;
@@ -27,6 +28,7 @@ class ChatService
         private TenantContext $tenantContext,
         private PushNotificationService $pushNotificationService,
         private AuditLogService $auditLogService,
+        private WebSocketGateway $webSocketGateway,
     ) {}
 
     public function listPlatformThreads(?string $tenantId = null): Collection
@@ -123,12 +125,14 @@ class ChatService
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
 
         $customer = $this->resolveCustomerForChat($phone, $name, $guestKey);
+        $this->reassignGuestThreadsToPhoneCustomer($phone, $guestKey, $customer);
 
         $thread = ChatThread::where('type', 'tenant_customer')
             ->where('customer_id', $customer->id)
             ->orderByDesc('updated_at')
             ->first();
 
+        $created = false;
         if (! $thread) {
             $thread = ChatThread::create([
                 'type' => 'tenant_customer',
@@ -136,6 +140,15 @@ class ChatService
                 'subject' => $subject ?: 'Customer support',
                 'customer_id' => $customer->id,
             ]);
+            $created = true;
+        }
+
+        if ($created) {
+            $this->notifyTenantStaffOfCustomerChat(
+                $thread,
+                'Customer opened chat',
+                ($customer->name ?: 'Guest').' started a chat with the restaurant.',
+            );
         }
 
         return $thread->load('messages');
@@ -169,12 +182,8 @@ class ChatService
     public function messagesForCustomer(string $threadId, ?string $phone, ?string $guestKey = null): ChatThread
     {
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
-        $customer = $this->findCustomerForChat($phone, $guestKey);
         $thread = ChatThread::with('messages')->findOrFail($threadId);
-
-        if ($thread->type !== 'tenant_customer' || $thread->customer_id !== $customer->id) {
-            abort(403, 'Chat access denied');
-        }
+        $this->assertCustomerOwnsThread($thread, $phone, $guestKey);
 
         return $thread;
     }
@@ -204,6 +213,8 @@ class ChatService
         );
 
         $this->notifyTenantUsersOfPlatformChat($thread, $body);
+        $this->broadcastMessage($thread, $message);
+        $this->broadcastTyping($thread, 'platform_user', PlatformRoles::labelForRole($platformUser->role), false);
 
         return $message;
     }
@@ -242,20 +253,19 @@ class ChatService
             );
         }
 
+        $this->broadcastMessage($thread, $message);
+        $this->broadcastTyping($thread, 'tenant_user', $user?->name ?? 'Staff', false);
+
         return $message;
     }
 
     public function postCustomerMessage(string $threadId, ?string $phone, string $body, ?string $guestKey = null): ChatMessage
     {
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
-        $customer = $this->findCustomerForChat($phone, $guestKey);
         $thread = ChatThread::findOrFail($threadId);
+        $customer = $this->assertCustomerOwnsThread($thread, $phone, $guestKey);
 
-        if ($thread->type !== 'tenant_customer' || $thread->customer_id !== $customer->id) {
-            abort(403, 'Chat access denied');
-        }
-
-        return $this->createMessage(
+        $message = $this->createMessage(
             $thread,
             'customer',
             null,
@@ -263,22 +273,142 @@ class ChatService
             $customer->name,
             $body,
         );
+
+        $this->notifyTenantStaffOfCustomerChat(
+            $thread,
+            'Urgent: customer message',
+            ($customer->name ?: 'Guest').': '.$body,
+        );
+
+        $this->broadcastMessage($thread, $message);
+        $this->broadcastTyping($thread, 'customer', $customer->name ?: 'Guest', false);
+
+        return $message;
     }
 
-    private function findCustomerForChat(?string $phone, ?string $guestKey = null): Customer
+    public function setTenantTyping(string $threadId, bool $isTyping, array $permissions): void
     {
-        $lookupPhone = $this->lookupPhone($phone, $guestKey);
-        $customer = Customer::where('phone', $lookupPhone)->first();
-        if (! $customer) {
-            abort(404, 'Chat customer not found');
+        $thread = ChatThread::findOrFail($threadId);
+        $user = $this->tenantContext->user();
+
+        if ($thread->type === 'platform_tenant') {
+            $this->permissionService->authorize($permissions, 'settings.manage');
+            $this->assertTenantFeature(self::FEATURE_PLATFORM_TENANT);
+        } else {
+            $this->permissionService->authorize($permissions, 'crm.manage');
+            $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
         }
 
-        return $customer;
+        $this->broadcastTyping($thread, 'tenant_user', $user?->name ?? 'Staff', $isTyping);
+    }
+
+    public function setCustomerTyping(string $threadId, ?string $phone, bool $isTyping, ?string $guestKey = null): void
+    {
+        $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
+        $thread = ChatThread::findOrFail($threadId);
+        $customer = $this->assertCustomerOwnsThread($thread, $phone, $guestKey);
+        $this->broadcastTyping($thread, 'customer', $customer->name ?: 'Guest', $isTyping);
+    }
+
+    public function setPlatformTyping(User $platformUser, string $threadId, bool $isTyping): void
+    {
+        if (! PlatformRoles::isPlatformStaff($platformUser)) {
+            abort(403, 'Platform staff access required');
+        }
+
+        $thread = ChatThread::withoutGlobalScopes()->findOrFail($threadId);
+        if ($thread->type !== 'platform_tenant') {
+            abort(404);
+        }
+
+        $this->broadcastTyping(
+            $thread,
+            'platform_user',
+            PlatformRoles::labelForRole($platformUser->role),
+            $isTyping,
+        );
+    }
+
+    private function assertCustomerOwnsThread(ChatThread $thread, ?string $phone, ?string $guestKey = null): Customer
+    {
+        if ($thread->type !== 'tenant_customer') {
+            abort(403, 'Chat access denied');
+        }
+
+        $this->reassignGuestThreadsToPhoneCustomer(
+            $phone,
+            $guestKey,
+            $this->resolveCustomerForChat($phone, 'Guest', $guestKey),
+        );
+        $thread->refresh();
+
+        $candidates = $this->candidateCustomers($phone, $guestKey);
+        foreach ($candidates as $candidate) {
+            if ($thread->customer_id === $candidate->id) {
+                return $candidate;
+            }
+        }
+
+        abort(403, 'Chat access denied');
+    }
+
+    /**
+     * @return list<Customer>
+     */
+    private function candidateCustomers(?string $phone, ?string $guestKey = null): array
+    {
+        $candidates = [];
+        $phone = $phone !== null ? trim($phone) : '';
+        $guestKey = $guestKey !== null ? trim($guestKey) : '';
+
+        if ($phone !== '') {
+            $byPhone = Customer::where('phone', $phone)->first();
+            if ($byPhone) {
+                $candidates[] = $byPhone;
+            }
+        }
+
+        if ($guestKey !== '') {
+            $byGuest = Customer::where('phone', $this->guestPhoneFromKey($guestKey))->first();
+            if ($byGuest) {
+                $candidates[] = $byGuest;
+            }
+        }
+
+        return $candidates;
+    }
+
+    private function reassignGuestThreadsToPhoneCustomer(?string $phone, ?string $guestKey, Customer $phoneCustomer): void
+    {
+        $phone = $phone !== null ? trim($phone) : '';
+        $guestKey = $guestKey !== null ? trim($guestKey) : '';
+        if ($phone === '' || $guestKey === '') {
+            return;
+        }
+
+        $guestCustomer = Customer::where('phone', $this->guestPhoneFromKey($guestKey))->first();
+        if (! $guestCustomer || $guestCustomer->id === $phoneCustomer->id) {
+            return;
+        }
+
+        ChatThread::where('type', 'tenant_customer')
+            ->where('customer_id', $guestCustomer->id)
+            ->update(['customer_id' => $phoneCustomer->id]);
     }
 
     private function resolveCustomerForChat(?string $phone, string $name, ?string $guestKey = null): Customer
     {
-        $lookupPhone = $this->lookupPhone($phone, $guestKey);
+        $phone = $phone !== null ? trim($phone) : '';
+        $guestKey = $guestKey !== null ? trim($guestKey) : '';
+
+        if ($phone === '' && $guestKey === '') {
+            throw ValidationException::withMessages([
+                'phone' => ['A phone number or guest key is required for chat.'],
+            ]);
+        }
+
+        // Prefer real phone CRM row when available (post-checkout).
+        $lookupPhone = $phone !== '' ? $phone : $this->guestPhoneFromKey($guestKey);
 
         $customer = Customer::where('phone', $lookupPhone)->first();
         if (! $customer) {
@@ -292,20 +422,6 @@ class ChatService
         }
 
         return $customer;
-    }
-
-    private function lookupPhone(?string $phone, ?string $guestKey = null): string
-    {
-        $phone = $phone !== null ? trim($phone) : '';
-        $guestKey = $guestKey !== null ? trim($guestKey) : '';
-
-        if ($phone === '' && $guestKey === '') {
-            throw ValidationException::withMessages([
-                'phone' => ['A phone number or guest key is required for chat.'],
-            ]);
-        }
-
-        return $phone !== '' ? $phone : $this->guestPhoneFromKey($guestKey);
     }
 
     private function guestPhoneFromKey(string $guestKey): string
@@ -341,6 +457,37 @@ class ChatService
         return $message;
     }
 
+    private function broadcastMessage(ChatThread $thread, ChatMessage $message): void
+    {
+        if (! $thread->tenant_id) {
+            return;
+        }
+
+        $this->webSocketGateway->emitChatMessageCreated($thread->tenant_id, $thread->type, $thread->id, [
+            'id' => $message->id,
+            'thread_id' => $thread->id,
+            'sender_type' => $message->sender_type,
+            'sender_label' => $message->sender_label,
+            'body' => $message->body,
+            'created_at' => optional($message->created_at)?->toIso8601String(),
+        ]);
+    }
+
+    private function broadcastTyping(ChatThread $thread, string $actorType, string $actorLabel, bool $isTyping): void
+    {
+        if (! $thread->tenant_id) {
+            return;
+        }
+
+        $this->webSocketGateway->emitChatTyping($thread->tenant_id, $thread->type, [
+            'thread_id' => $thread->id,
+            'thread_type' => $thread->type,
+            'actor_type' => $actorType,
+            'actor_label' => $actorLabel,
+            'is_typing' => $isTyping,
+        ]);
+    }
+
     private function assertTenantFeature(string $featureKey): void
     {
         $tenantId = $this->tenantContext->id();
@@ -364,6 +511,30 @@ class ChatService
                 'New platform message',
                 $body,
                 ['thread_id' => $thread->id],
+            );
+        }
+    }
+
+    private function notifyTenantStaffOfCustomerChat(ChatThread $thread, string $title, string $body): void
+    {
+        $users = User::withoutGlobalScopes()
+            ->where('tenant_id', $thread->tenant_id)
+            ->whereIn('role', ['owner', 'manager'])
+            ->where('status', 'active')
+            ->get();
+
+        foreach ($users as $user) {
+            $this->pushNotificationService->sendToUser(
+                $thread->tenant_id,
+                $user->id,
+                $title,
+                $body,
+                [
+                    'thread_id' => $thread->id,
+                    'urgency' => 'high',
+                    'kind' => 'customer_chat',
+                    'url' => '/inbox',
+                ],
             );
         }
     }

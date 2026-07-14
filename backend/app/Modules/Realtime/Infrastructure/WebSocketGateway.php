@@ -48,8 +48,38 @@ class WebSocketGateway
         $this->emit($order->tenant_id, 'admin', 'OrderCreated', $payload);
         $this->emit($order->tenant_id, 'kitchen', 'OrderCreated', $payload);
         $this->emit($order->tenant_id, 'customer', 'OrderCreated', $payload);
-        $this->emitKitchenTicket($order);
+        // Kitchen tickets appear after floor staff accepts (see emitOrderStatusChanged).
         $this->maybeEmitDashboardMetrics($order->tenant_id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $messagePayload
+     */
+    public function emitChatMessageCreated(string $tenantId, string $threadType, string $threadId, array $messagePayload): void
+    {
+        $payload = [
+            'thread_id' => $threadId,
+            'thread_type' => $threadType,
+            'message' => $messagePayload,
+        ];
+
+        $this->emit($tenantId, 'admin', 'ChatMessageCreated', $payload);
+
+        if ($threadType === 'tenant_customer') {
+            $this->emit($tenantId, 'customer', 'ChatMessageCreated', $payload);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $typingPayload
+     */
+    public function emitChatTyping(string $tenantId, string $threadType, array $typingPayload): void
+    {
+        $this->emit($tenantId, 'admin', 'ChatTyping', $typingPayload);
+
+        if ($threadType === 'tenant_customer') {
+            $this->emit($tenantId, 'customer', 'ChatTyping', $typingPayload);
+        }
     }
 
     public function emitOrderStatusChanged(Order $order, string $previousStatus): void

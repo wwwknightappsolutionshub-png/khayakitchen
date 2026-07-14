@@ -65,6 +65,18 @@ export function RealtimeProvider({
             queryClient.invalidateQueries({ queryKey: ["order-tracking", orderId] });
           }
           break;
+        case "ChatMessageCreated": {
+          const threadId = payload.thread_id as string | undefined;
+          queryClient.invalidateQueries({ queryKey: ["engagement"] });
+          queryClient.invalidateQueries({ queryKey: ["customer-chat"] });
+          queryClient.invalidateQueries({ queryKey: ["platform", "chat"] });
+          queryClient.invalidateQueries({ queryKey: ["platform", "chat-threads"] });
+          if (threadId) {
+            queryClient.invalidateQueries({ queryKey: ["engagement", "thread", threadId] });
+            queryClient.invalidateQueries({ queryKey: ["platform", "chat", threadId] });
+          }
+          break;
+        }
         case "RevenueUpdated":
         case "OrderCountUpdated":
           if (debounceRef.current) clearTimeout(debounceRef.current);

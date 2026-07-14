@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('customer_id')->nullable();
-            $table->enum('status', ['pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'accepted', 'preparing', 'ready', 'completed', 'cancelled', 'undone'])->default('pending');
             $table->enum('order_type', ['pickup', 'delivery'])->default('pickup');
             $table->timestamp('scheduled_time')->nullable();
             $table->decimal('total_amount', 10, 2)->default(0);

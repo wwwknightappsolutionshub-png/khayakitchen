@@ -67,4 +67,104 @@ class OrderLifecycleTest extends TestCase
 
         $this->assertDatabaseHas('crm_profiles', ['customer_id' => $customerId]);
     }
+
+    public function test_prior_day_open_orders_are_marked_undone(): void
+    {
+        $this->seed();
+
+        $meal = Meal::firstOrFail();
+        $create = $this->postJson('/api/v1/customer/orders', [
+            'name' => 'Overnight Guest',
+            'phone' => '+2348099990002',
+            'order_type' => 'pickup',
+            'payment_method' => 'cash',
+            'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $create->assertCreated();
+        $orderId = $create->json('order_id');
+
+        Order::where('id', $orderId)->update([
+            'created_at' => now()->subDay()->setTime(18, 0),
+            'updated_at' => now()->subDay()->setTime(18, 0),
+            'status' => 'pending',
+        ]);
+
+        $this->artisan('orders:mark-undone')->assertSuccessful();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'status' => 'undone',
+        ]);
+    }
+
+    public function test_staff_accept_kitchen_prepare_staff_complete_flow(): void
+    {
+        $this->seed();
+
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+        $waiter = User::create([
+            'tenant_id' => $owner->tenant_id,
+            'name' => 'Waiter Flow',
+            'email' => 'waiter.flow@example.test',
+            'password' => 'password123',
+            'role' => 'staff',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+        $chef = User::create([
+            'tenant_id' => $owner->tenant_id,
+            'name' => 'Chef Flow',
+            'email' => 'chef.flow@example.test',
+            'password' => 'password123',
+            'role' => 'kitchen',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+        $meal = Meal::firstOrFail();
+
+        $create = $this->postJson('/api/v1/customer/orders', [
+            'name' => 'Flow Guest',
+            'phone' => '+2348099990003',
+            'order_type' => 'pickup',
+            'payment_method' => 'cash',
+            'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $create->assertCreated();
+        $orderId = $create->json('order_id');
+
+        $this->actingAs($chef, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'accepted'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertForbidden();
+
+        $this->actingAs($waiter, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'accepted'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertOk();
+
+        $this->actingAs($waiter, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'preparing'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertForbidden();
+
+        $this->actingAs($chef, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'preparing'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertOk();
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'ready'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertOk();
+
+        $this->actingAs($chef, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertForbidden();
+
+        $this->actingAs($waiter, 'sanctum');
+        $this->patchJson("/api/v1/orders/{$orderId}/status", ['status' => 'completed'], [
+            'X-Tenant-Slug' => 'pilot',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('orders', ['id' => $orderId, 'status' => 'completed']);
+    }
 }

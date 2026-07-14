@@ -45,6 +45,7 @@ class FeatureAccessService
         'tenant_customer_chat' => 'tenant_customer_chat',
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
+        'staff_performance' => 'staff_performance',
     ];
 
     /** @var array<string, string> */
@@ -76,6 +77,7 @@ class FeatureAccessService
         'tenant_customer_chat' => 'tenant_customer_chat',
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
+        'staff_performance' => 'staff_performance',
     ];
 
     public function __construct(
@@ -100,6 +102,14 @@ class FeatureAccessService
         $override = $this->overrideService->getActiveFeatureOverride($tenantId, $featureKey);
         if ($override !== null) {
             return $override;
+        }
+
+        // All tiers get staff performance free for the first 30 days after tenant creation.
+        if ($featureKey === 'staff_performance') {
+            $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
+            if ($tenant?->created_at && $tenant->created_at->gte(now()->subDays(30))) {
+                return true;
+            }
         }
 
         $subscription = $this->getActiveSubscription($tenantId);

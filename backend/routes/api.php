@@ -9,6 +9,7 @@ use App\Modules\Engagement\Interfaces\Controllers\TenantEngagementController;
 use App\Modules\Auth\Interfaces\Controllers\AuthController;
 use App\Modules\Auth\Interfaces\Controllers\FeatureFlagController;
 use App\Modules\Auth\Interfaces\Controllers\StaffUserController;
+use App\Modules\StaffPerformance\Interfaces\Controllers\StaffPerformanceController;
 use App\Modules\Auth\Interfaces\Controllers\TenantWorkspaceController;
 use App\Modules\CRM\Interfaces\Controllers\CustomerController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryController;
@@ -104,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/customer/chat/threads', [CustomerEngagementController::class, 'openChat']);
         Route::get('/customer/chat/threads/{id}', [CustomerEngagementController::class, 'showChat']);
         Route::post('/customer/chat/threads/{id}/messages', [CustomerEngagementController::class, 'postChat']);
+        Route::post('/customer/chat/threads/{id}/typing', [CustomerEngagementController::class, 'setTyping']);
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:notifications'])->group(function () {
@@ -220,6 +222,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/staff', [StaffUserController::class, 'index']);
         Route::post('/staff', [StaffUserController::class, 'store']);
         Route::put('/staff/{id}', [StaffUserController::class, 'update']);
+        Route::get('/staff-performance', [StaffPerformanceController::class, 'overview'])
+            ->middleware('feature:staff_performance');
 
         Route::get('/feature-flags', [FeatureFlagController::class, 'index']);
         Route::get('/entitlements', [EntitlementController::class, 'index']);
@@ -232,6 +236,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/engagement/customer-chat/threads', [TenantEngagementController::class, 'openCustomerThread']);
         Route::get('/engagement/chat/threads/{id}', [TenantEngagementController::class, 'showThread']);
         Route::post('/engagement/chat/threads/{id}/messages', [TenantEngagementController::class, 'postMessage']);
+        Route::post('/engagement/chat/threads/{id}/typing', [TenantEngagementController::class, 'setTyping']);
         Route::post('/engagement/staff-device-token', [TenantEngagementController::class, 'registerDeviceToken']);
         Route::get('/engagement/reviews', [KitchenReviewController::class, 'index']);
         Route::patch('/engagement/reviews/{id}', [KitchenReviewController::class, 'moderate']);
@@ -322,5 +327,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/chat/threads', [PlatformChatController::class, 'store']);
             Route::get('/chat/threads/{id}', [PlatformChatController::class, 'show']);
             Route::post('/chat/threads/{id}/messages', [PlatformChatController::class, 'postMessage']);
+            Route::post('/chat/threads/{id}/typing', [PlatformChatController::class, 'setTyping']);
         });
 });

@@ -51,4 +51,19 @@ class PlatformChatController extends Controller
 
         return ApiResponse::success(['message' => $message], 201);
     }
+
+    public function setTyping(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'is_typing' => ['required', 'boolean'],
+        ]);
+
+        $this->chatService->setPlatformTyping(
+            $request->user(),
+            $id,
+            (bool) $data['is_typing'],
+        );
+
+        return ApiResponse::success(['ok' => true]);
+    }
 }

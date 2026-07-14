@@ -41,6 +41,7 @@ class PricingSeeder extends Seeder
             ['key' => 'tenant_customer_chat', 'name' => 'Tenant Customer Chat', 'category' => 'crm', 'module' => 'tenant_customer_chat', 'description' => 'In-app chat between tenants and customers'],
             ['key' => 'menu_likes_refer', 'name' => 'Menu Likes & Refer', 'category' => 'orders', 'module' => 'menu_likes_refer', 'description' => 'Customer meal likes and WhatsApp refer'],
             ['key' => 'kitchen_reviews', 'name' => 'Kitchen Reviews', 'category' => 'crm', 'module' => 'kitchen_reviews', 'description' => 'Customer kitchen reviews with owner moderation'],
+            ['key' => 'staff_performance', 'name' => 'Staff Performance', 'category' => 'reporting', 'module' => 'staff_performance', 'description' => 'Waiter and chef performance tracking (free first 30 days)'],
         ];
 
         // updateOrCreate keeps Feature Library in sync with this seeder (name/module/category).
@@ -178,7 +179,7 @@ class PricingSeeder extends Seeder
             'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat',
         ]);
         $professionalKeys = array_merge($growthKeys, [
-            'reports', 'forecasting',
+            'reports', 'forecasting', 'staff_performance',
             'platform_tenant_push', 'platform_tenant_email', 'platform_tenant_chat',
         ]);
         $enterpriseKeys = array_merge($professionalKeys, ['accounting', 'api_access', 'marketplace', 'white_label', 'ai']);
