@@ -34,6 +34,47 @@ class SeasonalPromoAndBadgesTest extends TestCase
         $this->assertDatabaseHas('features', ['key' => 'seasonal_promo', 'module' => 'seasonal_promo']);
     }
 
+    public function test_database_seeder_publishes_sample_promo_for_pilot(): void
+    {
+        $tenant = \App\Modules\Auth\Domain\Models\Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->assertDatabaseHas('seasonal_promos', [
+            'tenant_id' => $tenant->id,
+            'is_published' => true,
+        ]);
+
+        $promo = SeasonalPromo::withoutGlobalScopes()->where('tenant_id', $tenant->id)->firstOrFail();
+        $this->assertNotEmpty($promo->headline);
+        $this->assertNotEmpty($promo->meal_id);
+
+        $storefront = $this->getJson('/api/v1/storefront', ['X-Tenant-Slug' => 'pilot']);
+        $storefront->assertOk();
+        $this->assertSame($promo->headline, $storefront->json('seasonal_promo.headline'));
+    }
+
+    public function test_owner_can_turn_seasonal_promo_off(): void
+    {
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+        $this->actingAs($owner, 'sanctum');
+
+        $promo = SeasonalPromo::firstOrFail();
+        $this->assertTrue($promo->is_published);
+
+        $update = $this->patchJson('/api/v1/seasonal-promo', [
+            'is_published' => false,
+        ], ['X-Tenant-Slug' => 'pilot']);
+
+        $update->assertOk();
+        $this->assertFalse((bool) $update->json('promo.is_published'));
+        $this->assertDatabaseHas('seasonal_promos', [
+            'tenant_id' => $owner->tenant_id,
+            'is_published' => false,
+        ]);
+
+        $storefront = $this->getJson('/api/v1/storefront', ['X-Tenant-Slug' => 'pilot']);
+        $storefront->assertOk();
+        $this->assertNull($storefront->json('seasonal_promo'));
+    }
+
     public function test_owner_can_publish_seasonal_promo_and_storefront_exposes_it(): void
     {
         $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();

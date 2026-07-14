@@ -231,5 +231,7 @@ class DatabaseSeeder extends Seeder
             'is_accepting_orders' => true,
             'promo_alerts_enabled' => true,
         ]);
+
+        $this->call(SeasonalPromoSeeder::class);
     }
 }
