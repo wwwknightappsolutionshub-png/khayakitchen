@@ -42,6 +42,7 @@ class PricingSeeder extends Seeder
             ['key' => 'menu_likes_refer', 'name' => 'Menu Likes & Refer', 'category' => 'orders', 'module' => 'menu_likes_refer', 'description' => 'Customer meal likes and WhatsApp refer', 'implemented_at' => '2026-07-13'],
             ['key' => 'kitchen_reviews', 'name' => 'Kitchen Reviews', 'category' => 'crm', 'module' => 'kitchen_reviews', 'description' => 'Customer kitchen reviews with owner moderation', 'implemented_at' => '2026-07-13'],
             ['key' => 'staff_performance', 'name' => 'Staff Performance', 'category' => 'reporting', 'module' => 'staff_performance', 'description' => 'Waiter and chef performance tracking (free first 30 days)', 'implemented_at' => '2026-07-14'],
+            ['key' => 'seasonal_promo', 'name' => 'Seasonal Promo', 'category' => 'marketing', 'module' => 'seasonal_promo', 'description' => 'Monthly/seasonal full-screen customer promo splash with menu CTA (free first 30 days)', 'implemented_at' => '2026-07-14'],
         ];
 
         // updateOrCreate keeps Feature Library in sync (name/module/category/implemented_at).
@@ -178,7 +179,7 @@ class PricingSeeder extends Seeder
             'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat',
         ]);
         $professionalKeys = array_merge($growthKeys, [
-            'reports', 'forecasting', 'staff_performance',
+            'reports', 'forecasting', 'staff_performance', 'seasonal_promo',
             'platform_tenant_push', 'platform_tenant_email', 'platform_tenant_chat',
         ]);
         $enterpriseKeys = array_merge($professionalKeys, ['accounting', 'api_access', 'marketplace', 'white_label', 'ai']);

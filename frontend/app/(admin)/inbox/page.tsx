@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { Button } from "@/components/ui/Button";
@@ -52,6 +52,11 @@ export default function TenantInboxPage() {
     refetchInterval: threadPoll,
   });
 
+  useEffect(() => {
+    if (!thread.data) return;
+    queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
+  }, [thread.data, queryClient]);
+
   const post = useMutation({
     mutationFn: () => engagementService.postTenantChatMessage(activeThreadId!, body),
     onSuccess: () => {
@@ -60,10 +65,16 @@ export default function TenantInboxPage() {
       queryClient.invalidateQueries({ queryKey: ["engagement", "thread", activeThreadId] });
       queryClient.invalidateQueries({ queryKey: ["engagement", "customer-threads"] });
       queryClient.invalidateQueries({ queryKey: ["engagement", "platform-threads"] });
+      queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
     },
     onError: (err: Error) => setError(err.message),
   });
 
+  // Opening a thread marks customer messages read on the API.
+  const openThread = (id: string) => {
+    setActiveThreadId(id);
+    queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
+  };
   const messages = useMemo(() => thread.data?.thread.messages ?? [], [thread.data]);
 
   return (
@@ -108,7 +119,7 @@ export default function TenantInboxPage() {
                 key={t.id}
                 type="button"
                 className="block w-full rounded-lg border border-border p-2 text-left text-sm"
-                onClick={() => setActiveThreadId(t.id)}
+                onClick={() => openThread(t.id)}
               >
                 {t.subject || "Platform chat"}
               </button>
@@ -119,7 +130,7 @@ export default function TenantInboxPage() {
                 key={t.id}
                 type="button"
                 className="block w-full rounded-lg border border-border p-2 text-left text-sm"
-                onClick={() => setActiveThreadId(t.id)}
+                onClick={() => openThread(t.id)}
               >
                 {t.subject || t.customer_id?.slice(0, 8)}
               </button>

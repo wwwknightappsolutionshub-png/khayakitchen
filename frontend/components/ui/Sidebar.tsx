@@ -20,10 +20,12 @@ import {
   MessageSquare,
   Star,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useEngagementBadges } from "@/hooks/useEngagementBadges";
 import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 
@@ -35,8 +37,9 @@ const navItems = [
   { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },
   { href: "/crm", label: "CRM", icon: Users, flag: "crm" },
   { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare, flag: null },
-  { href: "/reviews", label: "Reviews", icon: Star, flag: "kitchen_reviews" },
+  { href: "/inbox", label: "Inbox", icon: MessageSquare, flag: null, badge: "chat" as const },
+  { href: "/reviews", label: "Reviews", icon: Star, flag: "kitchen_reviews", badge: "reviews" as const },
+  { href: "/seasonal-promo", label: "Seasonal Promo", icon: Sparkles, flag: "seasonal_promo" },
   { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
   { href: "/revenue-recovery", label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
   { href: "/branding", label: "Branding", icon: Store, flag: null },
@@ -51,9 +54,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { isEnabled } = useFeatureFlags();
+  const { unreadChat, pendingReviews } = useEngagementBadges();
 
   const visibleItems = navItems.filter((item) => {
-    if (item.href === "/staff-performance") {
+    if (item.href === "/staff-performance" || item.href === "/seasonal-promo") {
       return (
         (user?.role === "owner" || user?.role === "manager") &&
         (!item.flag || isEnabled(item.flag))
@@ -97,6 +101,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const badgeCount =
+            item.badge === "chat"
+              ? unreadChat
+              : item.badge === "reviews"
+                ? pendingReviews
+                : 0;
           return (
             <Link
               key={item.href}
@@ -109,8 +119,18 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
                   : "text-muted hover:bg-surface-elevated hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              <span className="relative shrink-0">
+                <Icon className="h-4 w-4" />
+                {badgeCount > 0 && (
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-surface" />
+                )}
+              </span>
+              <span className="flex-1">{item.label}</span>
+              {badgeCount > 0 && (
+                <span className="rounded-full bg-danger/15 px-1.5 py-0.5 text-[10px] font-semibold text-danger">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
             </Link>
           );
         })}

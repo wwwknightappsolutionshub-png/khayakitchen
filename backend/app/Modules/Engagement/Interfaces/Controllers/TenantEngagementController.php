@@ -17,6 +17,7 @@ class TenantEngagementController extends Controller
         private PlatformTenantMessagingService $messagingService,
         private CustomerNotificationPreferenceService $preferenceService,
         private TenantContext $tenantContext,
+        private \App\Modules\Engagement\Application\Services\KitchenReviewService $kitchenReviewService,
     ) {}
 
     public function platformMessages(Request $request)
@@ -94,6 +95,18 @@ class TenantEngagementController extends Controller
         );
 
         return ApiResponse::success(['ok' => true]);
+    }
+
+    public function notificationBadges(Request $request)
+    {
+        $permissions = $request->get('permissions', []);
+        $chat = $this->chatService->customerChatBadgeCounts($permissions);
+
+        return ApiResponse::success([
+            'unread_customer_messages' => $chat['unread_customer_messages'],
+            'unread_chat_threads' => $chat['unread_threads'],
+            'pending_reviews' => $this->kitchenReviewService->pendingCount(),
+        ]);
     }
 
     public function registerDeviceToken(Request $request)

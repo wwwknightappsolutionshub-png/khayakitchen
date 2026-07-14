@@ -10,6 +10,7 @@ use App\Modules\Auth\Interfaces\Controllers\AuthController;
 use App\Modules\Auth\Interfaces\Controllers\FeatureFlagController;
 use App\Modules\Auth\Interfaces\Controllers\StaffUserController;
 use App\Modules\StaffPerformance\Interfaces\Controllers\StaffPerformanceController;
+use App\Modules\SeasonalPromo\Interfaces\Controllers\SeasonalPromoController;
 use App\Modules\Auth\Interfaces\Controllers\TenantWorkspaceController;
 use App\Modules\CRM\Interfaces\Controllers\CustomerController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryController;
@@ -240,6 +241,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/engagement/staff-device-token', [TenantEngagementController::class, 'registerDeviceToken']);
         Route::get('/engagement/reviews', [KitchenReviewController::class, 'index']);
         Route::patch('/engagement/reviews/{id}', [KitchenReviewController::class, 'moderate']);
+        Route::get('/engagement/notification-badges', [TenantEngagementController::class, 'notificationBadges']);
+        Route::get('/seasonal-promo', [SeasonalPromoController::class, 'show'])
+            ->middleware('feature:seasonal_promo');
+        Route::patch('/seasonal-promo', [SeasonalPromoController::class, 'update'])
+            ->middleware('feature:seasonal_promo');
+        Route::post('/seasonal-promo/image', [SeasonalPromoController::class, 'uploadImage'])
+            ->middleware('feature:seasonal_promo');
         Route::get('/branding', [BrandingController::class, 'show']);
         Route::patch('/branding', [BrandingController::class, 'update']);
         Route::post('/branding/logo', [BrandingController::class, 'uploadLogo']);

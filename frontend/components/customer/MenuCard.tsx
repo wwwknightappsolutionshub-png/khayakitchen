@@ -48,6 +48,7 @@ export function MenuCard({
   return (
     <button
       type="button"
+      id={`meal-${meal.id}`}
       onClick={() => onSelect(meal)}
       className={cn(
         "customer-press group w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-left",

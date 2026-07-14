@@ -46,6 +46,7 @@ class FeatureAccessService
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
         'staff_performance' => 'staff_performance',
+        'seasonal_promo' => 'seasonal_promo',
     ];
 
     /** @var array<string, string> */
@@ -78,7 +79,20 @@ class FeatureAccessService
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
         'staff_performance' => 'staff_performance',
+        'seasonal_promo' => 'seasonal_promo',
     ];
+
+    /**
+     * Paid features free for all tiers during the shared first-30-days tenant trial.
+     *
+     * @var list<string>
+     */
+    public const SHARED_FREE_TRIAL_FEATURES = [
+        'staff_performance',
+        'seasonal_promo',
+    ];
+
+    public const FREE_TRIAL_DAYS = 30;
 
     public function __construct(
         private TenantContext $tenantContext,
@@ -104,12 +118,9 @@ class FeatureAccessService
             return $override;
         }
 
-        // All tiers get staff performance free for the first 30 days after tenant creation.
-        if ($featureKey === 'staff_performance') {
-            $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
-            if ($tenant?->created_at && $tenant->created_at->gte(now()->subDays(30))) {
-                return true;
-            }
+        // Shared first-30-days trial from tenant creation (same clock for all listed features).
+        if (in_array($featureKey, self::SHARED_FREE_TRIAL_FEATURES, true) && $this->isInSharedFreeTrial($tenantId)) {
+            return true;
         }
 
         $subscription = $this->getActiveSubscription($tenantId);
@@ -129,6 +140,79 @@ class FeatureAccessService
         $featureKey = self::MODULE_TO_FEATURE[$module] ?? $module;
 
         return $this->canAccess($featureKey, $tenantId, $user);
+    }
+
+    public function isInSharedFreeTrial(?string $tenantId = null): bool
+    {
+        $tenantId = $tenantId ?? $this->tenantContext->id();
+        if (! $tenantId) {
+            return false;
+        }
+
+        $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
+        if (! $tenant?->created_at) {
+            return false;
+        }
+
+        return $tenant->created_at->gte(now()->subDays(self::FREE_TRIAL_DAYS));
+    }
+
+    public function sharedFreeTrialEndsAt(?string $tenantId = null): ?\Carbon\Carbon
+    {
+        $tenantId = $tenantId ?? $this->tenantContext->id();
+        if (! $tenantId) {
+            return null;
+        }
+
+        $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
+        if (! $tenant?->created_at) {
+            return null;
+        }
+
+        return $tenant->created_at->copy()->addDays(self::FREE_TRIAL_DAYS);
+    }
+
+    /**
+     * Features that are only accessible via the shared trial (not on the active plan).
+     *
+     * @return list<string>
+     */
+    public function trialOnlyFeatures(?string $tenantId = null): array
+    {
+        $tenantId = $tenantId ?? $this->tenantContext->id();
+        if (! $tenantId || ! $this->isInSharedFreeTrial($tenantId)) {
+            return [];
+        }
+
+        $trialOnly = [];
+        foreach (self::SHARED_FREE_TRIAL_FEATURES as $featureKey) {
+            if ($this->planIncludesFeature($featureKey, $tenantId)) {
+                continue;
+            }
+            $trialOnly[] = $featureKey;
+        }
+
+        return $trialOnly;
+    }
+
+    public function planIncludesFeature(string $featureKey, ?string $tenantId = null): bool
+    {
+        $tenantId = $tenantId ?? $this->tenantContext->id();
+        if (! $tenantId) {
+            return false;
+        }
+
+        $override = $this->overrideService->getActiveFeatureOverride($tenantId, $featureKey);
+        if ($override === true) {
+            return true;
+        }
+
+        $subscription = $this->getActiveSubscription($tenantId);
+        if (! $subscription || $subscription->status === 'suspended') {
+            return $this->legacyFlagEnabled($tenantId, $featureKey);
+        }
+
+        return $this->planHasFeature($subscription->plan_id, $featureKey);
     }
 
     public function assertAccess(string $featureKey, ?string $tenantId = null, ?User $user = null): void

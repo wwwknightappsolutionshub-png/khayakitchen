@@ -16,7 +16,10 @@ export default function ReviewsPage() {
   const moderate = useMutation({
     mutationFn: ({ id, status }: { id: string; status: "approved" | "rejected" }) =>
       engagementService.moderateReview(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["engagement", "reviews"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["engagement", "reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
+    },
   });
 
   return (

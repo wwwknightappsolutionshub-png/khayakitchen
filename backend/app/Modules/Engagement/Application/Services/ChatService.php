@@ -174,9 +174,40 @@ class ChatService
         } else {
             $this->permissionService->authorize($permissions, 'crm.view');
             $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
+            $this->markInboundMessagesRead($thread);
         }
 
-        return $thread;
+        return $thread->fresh(['messages']);
+    }
+
+    /**
+     * @return array{unread_customer_messages: int, unread_threads: int}
+     */
+    public function customerChatBadgeCounts(array $permissions): array
+    {
+        $this->permissionService->authorize($permissions, 'crm.view');
+        if (! $this->featureAccessService->canAccess(self::FEATURE_TENANT_CUSTOMER)) {
+            return ['unread_customer_messages' => 0, 'unread_threads' => 0];
+        }
+
+        $threadIds = ChatThread::where('type', 'tenant_customer')->pluck('id');
+        $unread = ChatMessage::whereIn('thread_id', $threadIds)
+            ->where('sender_type', 'customer')
+            ->whereNull('read_at')
+            ->get(['id', 'thread_id']);
+
+        return [
+            'unread_customer_messages' => $unread->count(),
+            'unread_threads' => $unread->pluck('thread_id')->unique()->count(),
+        ];
+    }
+
+    private function markInboundMessagesRead(ChatThread $thread): void
+    {
+        ChatMessage::where('thread_id', $thread->id)
+            ->where('sender_type', 'customer')
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
     }
 
     public function messagesForCustomer(string $threadId, ?string $phone, ?string $guestKey = null): ChatThread

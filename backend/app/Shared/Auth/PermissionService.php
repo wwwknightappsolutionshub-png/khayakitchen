@@ -60,6 +60,7 @@ class PermissionService
             'notifications.view',
             'campaigns.view',
             'revenue_recovery.view',
+            'branding.manage',
             'branding.view',
         ],
         'kitchen' => [

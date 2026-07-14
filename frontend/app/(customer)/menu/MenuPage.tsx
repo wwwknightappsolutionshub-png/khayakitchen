@@ -48,6 +48,16 @@ function getOrCreateGuestKey(): string {
 export default function MenuPage() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("meal");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash.startsWith("meal-")) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [highlightId]);
   const highlightCampaign = searchParams.get("campaign");
   const queryClient = useQueryClient();
   const [customizingMeal, setCustomizingMeal] = useState<Meal | null>(null);

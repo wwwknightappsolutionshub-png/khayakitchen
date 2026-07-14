@@ -4,13 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Order } from "@/lib/types";
 import { fireUrgencyAlert } from "@/lib/urgency-alert";
 
-const MUTE_STORAGE_KEY = "khayaos-order-alert-muted";
+const MUTE_STORAGE_KEY = "khayaos-urgency-alert-muted";
 const SEEN_STORAGE_KEY = "khayaos-order-alert-seen-ids";
 
 export function useNewOrderAlerts(liveOrders: Order[] | undefined) {
   const [newCount, setNewCount] = useState(0);
   const [muted, setMutedState] = useState(() => {
     if (typeof window === "undefined") return false;
+    // Default alarm ON. Migrate legacy order-only mute key if present.
+    const legacy = localStorage.getItem("khayaos-order-alert-muted");
+    if (legacy !== null && localStorage.getItem(MUTE_STORAGE_KEY) === null) {
+      localStorage.setItem(MUTE_STORAGE_KEY, legacy);
+    }
     return localStorage.getItem(MUTE_STORAGE_KEY) === "1";
   });
   const seededRef = useRef(false);

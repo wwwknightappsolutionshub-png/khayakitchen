@@ -623,11 +623,23 @@ export interface StorefrontWorkspace {
   ordering_path: string;
 }
 
+export interface SeasonalPromoSplash {
+  id: string;
+  image_url?: string | null;
+  headline: string;
+  subheadline?: string | null;
+  details?: string | null;
+  cta_label?: string | null;
+  meal_id: string;
+  menu_hash: string;
+}
+
 export interface Storefront {
   branding: TenantBranding;
   status: RestaurantStatus;
   workspace?: StorefrontWorkspace;
   review_ticker?: { customer_name: string; summary: string }[];
+  seasonal_promo?: SeasonalPromoSplash | null;
   pwa?: {
     manifest_path: string;
     start_url: string;

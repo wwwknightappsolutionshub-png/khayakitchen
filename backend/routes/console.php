@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('revenue-recovery:process-schedule')->everyMinute();
 Schedule::command('revenue-recovery:process-proximity')->everyFiveMinutes();
 Schedule::command('orders:mark-undone')->dailyAt('00:05');
+Schedule::command('trials:send-reminders')->dailyAt('09:00');

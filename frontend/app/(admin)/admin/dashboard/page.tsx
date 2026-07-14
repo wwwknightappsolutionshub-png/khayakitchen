@@ -11,10 +11,12 @@ import { InsightChart } from "@/components/admin/InsightChart";
 import { NewOrderAlertBadge } from "@/components/admin/NewOrderAlertBadge";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useNewOrderAlerts } from "@/hooks/useNewOrderAlerts";
+import { useEngagementBadges } from "@/hooks/useEngagementBadges";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function LiveRestaurantDashboardPage() {
   const { summary, status } = useLiveDashboard();
@@ -23,6 +25,7 @@ export default function LiveRestaurantDashboardPage() {
   const data = summary.data;
   const restaurantStatus = status.data?.status;
   const { newCount, muted, setMuted, clearAlerts } = useNewOrderAlerts(data?.liveOrders);
+  const { unreadChat } = useEngagementBadges();
 
   return (
     <BackendPage>
@@ -41,6 +44,22 @@ export default function LiveRestaurantDashboardPage() {
             onToggleMute={() => setMuted(!muted)}
             onClear={clearAlerts}
           />
+          <Link
+            href="/inbox"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+              unreadChat > 0
+                ? "animate-pulse bg-danger/15 text-danger"
+                : "bg-surface-elevated text-muted",
+            )}
+          >
+            <span
+              className={cn("h-2 w-2 rounded-full", unreadChat > 0 ? "bg-danger" : "bg-muted")}
+            />
+            {unreadChat > 0
+              ? `${unreadChat} new chat${unreadChat === 1 ? "" : "s"}`
+              : "No new chats"}
+          </Link>
           <ReconnectingIndicator />
         </div>
       </header>

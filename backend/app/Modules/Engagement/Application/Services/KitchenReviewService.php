@@ -72,6 +72,15 @@ class KitchenReviewService
         return $query->get();
     }
 
+    public function pendingCount(): int
+    {
+        if (! $this->featureAccessService->canAccess(self::FEATURE_KEY)) {
+            return 0;
+        }
+
+        return KitchenReview::where('status', 'pending')->count();
+    }
+
     public function moderate(string $id, string $status, array $permissions): KitchenReview
     {
         $this->permissionService->authorize($permissions, 'settings.manage');

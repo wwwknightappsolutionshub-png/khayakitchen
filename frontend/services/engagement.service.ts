@@ -151,6 +151,14 @@ export const engagementService = {
     });
   },
 
+  getNotificationBadges() {
+    return api.get<{
+      unread_customer_messages: number;
+      unread_chat_threads: number;
+      pending_reviews: number;
+    }>("/engagement/notification-badges");
+  },
+
   setCustomerChatTyping(
     threadId: string,
     identity: { phone?: string; guest_key?: string },
