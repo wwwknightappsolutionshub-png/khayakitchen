@@ -73,17 +73,30 @@ class SaasCommercializationTest extends TestCase
             'name' => 'Custom Feature',
             'category' => 'platform',
             'description' => 'Test feature',
+            'implemented_at' => '2026-07-14',
         ], ['Authorization' => "Bearer {$token}"]);
 
         $create->assertCreated();
         $featureId = $create->json('feature.id');
+        $this->assertStringStartsWith('2026-07-14', (string) $create->json('feature.implemented_at'));
 
         $update = $this->putJson("/api/v1/platform/pricing/features/{$featureId}", [
             'status' => 'active',
             'module' => 'custom',
+            'implemented_at' => '2026-07-15',
         ], ['Authorization' => "Bearer {$token}"]);
 
         $update->assertOk();
+        $this->assertStringStartsWith('2026-07-15', (string) $update->json('feature.implemented_at'));
+
+        $catalog = $this->getJson('/api/v1/platform/pricing/features?grouped=0', [
+            'Authorization' => "Bearer {$token}",
+        ]);
+        $catalog->assertOk();
+        $staffPerf = collect($catalog->json('features'))->firstWhere('key', 'staff_performance');
+        $this->assertNotNull($staffPerf);
+        $this->assertSame('staff_performance', $staffPerf['module']);
+        $this->assertStringStartsWith('2026-07-14', (string) $staffPerf['implemented_at']);
 
         $delete = $this->deleteJson("/api/v1/platform/pricing/features/{$featureId}", [], [
             'Authorization' => "Bearer {$token}",

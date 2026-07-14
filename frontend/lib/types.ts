@@ -333,6 +333,8 @@ export interface PricingFeature {
   module?: string | null;
   status?: string;
   internal_notes?: string | null;
+  /** ISO date (YYYY-MM-DD) when the feature/module shipped for catalog records */
+  implemented_at?: string | null;
   deleted_at?: string | null;
   pivot?: { enabled: boolean };
 }

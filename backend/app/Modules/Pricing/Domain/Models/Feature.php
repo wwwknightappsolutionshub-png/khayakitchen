@@ -20,7 +20,15 @@ class Feature extends Model
         'module',
         'status',
         'internal_notes',
+        'implemented_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'implemented_at' => 'date',
+        ];
+    }
 
     public function plans(): BelongsToMany
     {

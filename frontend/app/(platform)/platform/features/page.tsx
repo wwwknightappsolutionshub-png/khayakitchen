@@ -26,6 +26,7 @@ function emptyFeature(): Omit<PricingFeature, "id"> {
     module: "",
     status: "active",
     internal_notes: "",
+    implemented_at: new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -89,6 +90,7 @@ export default function PlatformFeaturesPage() {
       module: feature.module ?? "",
       status: feature.status ?? "active",
       internal_notes: feature.internal_notes ?? "",
+      implemented_at: feature.implemented_at?.slice(0, 10) ?? "",
     });
     setError(null);
     setShowModal(true);
@@ -129,6 +131,7 @@ export default function PlatformFeaturesPage() {
                       <th className="px-4 py-3 font-medium">Name</th>
                       <th className="px-4 py-3 font-medium">Key</th>
                       <th className="px-4 py-3 font-medium">Module</th>
+                      <th className="px-4 py-3 font-medium">Implemented</th>
                       <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
@@ -140,6 +143,9 @@ export default function PlatformFeaturesPage() {
                           <td className="px-4 py-3 font-medium">{feature.name}</td>
                           <td className="px-4 py-3 font-mono text-muted">{feature.key}</td>
                           <td className="px-4 py-3 text-muted">{feature.module ?? "—"}</td>
+                          <td className="px-4 py-3 font-mono text-muted">
+                            {feature.implemented_at?.slice(0, 10) ?? "—"}
+                          </td>
                           <td className="px-4 py-3">
                             <Badge variant={feature.status === "active" ? "secondary" : "outline"}>
                               {feature.status ?? "active"}
@@ -251,7 +257,14 @@ export default function PlatformFeaturesPage() {
                   onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
                   placeholder="utensils"
                 />
-                <div>
+                <Input
+                  label="Implemented on"
+                  type="date"
+                  value={form.implemented_at?.slice(0, 10) ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, implemented_at: e.target.value }))}
+                />
+              </div>
+              <div>
                   <label className="mb-1.5 block text-sm font-medium">Status</label>
                   <select
                     className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm"
@@ -262,7 +275,6 @@ export default function PlatformFeaturesPage() {
                     <option value="beta">Beta</option>
                     <option value="deprecated">Deprecated</option>
                   </select>
-                </div>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium">Internal notes</label>

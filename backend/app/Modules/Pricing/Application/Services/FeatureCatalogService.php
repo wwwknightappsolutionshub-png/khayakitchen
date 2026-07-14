@@ -24,6 +24,10 @@ class FeatureCatalogService
 
     public function createFeature(array $data, ?string $userId): Feature
     {
+        if (empty($data['implemented_at'])) {
+            $data['implemented_at'] = now()->toDateString();
+        }
+
         $feature = Feature::create($data);
         app(AuditLogService::class)->log('feature.created', null, $userId, 'feature', $feature->id, $data);
 

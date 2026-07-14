@@ -36,6 +36,7 @@ class PlatformFeatureController extends Controller
             'module' => ['nullable', 'string', 'max:64'],
             'status' => ['nullable', 'string', 'max:32'],
             'internal_notes' => ['nullable', 'string'],
+            'implemented_at' => ['nullable', 'date'],
         ]);
 
         $feature = $this->featureCatalogService->createFeature($data, $request->user()?->id);
@@ -53,6 +54,7 @@ class PlatformFeatureController extends Controller
             'module' => ['nullable', 'string', 'max:64'],
             'status' => ['nullable', 'string', 'max:32'],
             'internal_notes' => ['nullable', 'string'],
+            'implemented_at' => ['nullable', 'date'],
         ]);
 
         $feature = $this->featureCatalogService->updateFeature($id, $data, $request->user()?->id);
