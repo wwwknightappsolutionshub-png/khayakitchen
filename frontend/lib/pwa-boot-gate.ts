@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "9";
+export const PWA_CACHE_EPOCH = "10";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -90,7 +90,30 @@ export function getPwaBootGateScript(pageBuild: string): string {
     });
   }
 
+  function isAuthSurface(){
+    try{
+      var p=window.location.pathname||"";
+      return p==="/login"
+        ||p==="/reset-app"
+        ||p==="/forgot-password"
+        ||p==="/reset-password"
+        ||p.indexOf("/verify-email")===0;
+    }catch(e){
+      return false;
+    }
+  }
+
   function evaluate(serverBuild){
+    // Never hard-reload auth/login mid-session — it looks like Sign In "just refreshes"
+    // and wipes form/navigation. Pin the serving build and continue.
+    if(isAuthSurface()){
+      try{
+        if(serverBuild){localStorage.setItem(BUILD_KEY,serverBuild);}
+        localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);
+      }catch(e){}
+      pinCurrentBuild();
+      return;
+    }
     if(!serverBuild){
       pinCurrentBuild();
       return;

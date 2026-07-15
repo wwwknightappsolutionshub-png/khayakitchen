@@ -34,8 +34,19 @@ export function ChunkLoadRecovery() {
       } catch {
         // still attempt recovery
       }
-      const path = window.location.pathname + window.location.search;
-      void hardResetPwa(undefined, path || "/login");
+      const pathname = window.location.pathname || "/login";
+      // Avoid bouncing auth forms with ?_v=… mid-login.
+      if (
+        pathname === "/login" ||
+        pathname === "/reset-app" ||
+        pathname === "/forgot-password" ||
+        pathname === "/reset-password" ||
+        pathname.startsWith("/verify-email")
+      ) {
+        void hardResetPwa(undefined, "/login");
+        return;
+      }
+      void hardResetPwa(undefined, pathname);
     };
 
     const onRejection = (event: PromiseRejectionEvent) => {

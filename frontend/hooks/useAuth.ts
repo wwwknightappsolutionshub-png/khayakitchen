@@ -31,18 +31,26 @@ export function useAuth() {
     onSuccess: (data) => {
       setAuth(data.user, data.token);
       queryClient.invalidateQueries({ queryKey: ["auth"] });
+
+      // Hard navigate so admin guard always reads persisted token/localStorage.
+      // Soft router.push after login raced with boot-gate / chunk recovery reloads.
+      let destination = "/";
       if (data.user.role === "super_admin") {
-        router.push("/platform/dashboard");
+        destination = "/platform/dashboard";
       } else if (
         data.user.role === "platform_admin" ||
         data.user.role === "platform_support"
       ) {
-        router.push("/platform/inbox");
+        destination = "/platform/inbox";
       } else if (["owner", "manager", "kitchen", "staff"].includes(data.user.role)) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/");
+        destination = "/admin/dashboard";
       }
+
+      if (typeof window !== "undefined") {
+        window.location.assign(destination);
+        return;
+      }
+      router.push(destination);
     },
   });
 
