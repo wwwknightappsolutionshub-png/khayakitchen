@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "8";
+export const PWA_CACHE_EPOCH = "9";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -78,9 +78,15 @@ export function getPwaBootGateScript(pageBuild: string): string {
       );
     }
     Promise.all(tasks).finally(function(){
-      var target=window.location.pathname+window.location.search;
-      var sep=target.indexOf("?")>=0?"&":"?";
-      window.location.replace(target+sep+"_v="+Date.now());
+      try{
+        var url=new URL(window.location.href);
+        // Never keep stacking cache-bust params (was: ?_v=a&_v=b).
+        url.searchParams.delete("_v");
+        url.searchParams.set("_v",String(Date.now()));
+        window.location.replace(url.pathname+url.search+url.hash);
+      }catch(e){
+        window.location.replace(window.location.pathname+"?_v="+Date.now());
+      }
     });
   }
 
@@ -139,9 +145,14 @@ export function getPwaBootGateScript(pageBuild: string): string {
       }));
     }
     Promise.all(tasks).finally(function(){
-      var targetPath=window.location.pathname+window.location.search;
-      var sep=targetPath.indexOf("?")>=0?"&":"?";
-      window.location.replace(targetPath+sep+"_v="+Date.now());
+      try{
+        var url=new URL(window.location.href);
+        url.searchParams.delete("_v");
+        url.searchParams.set("_v",String(Date.now()));
+        window.location.replace(url.pathname+url.search+url.hash);
+      }catch(e){
+        window.location.replace(window.location.pathname+"?_v="+Date.now());
+      }
     });
   },true);
 })(${JSON.stringify(pageBuild)});

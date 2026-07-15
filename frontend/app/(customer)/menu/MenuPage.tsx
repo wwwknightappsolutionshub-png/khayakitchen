@@ -35,6 +35,7 @@ function MenuCardSkeleton() {
 }
 
 function getOrCreateGuestKey(): string {
+  if (typeof window === "undefined") return "ssr-guest";
   const existing = localStorage.getItem(GUEST_KEY_STORAGE);
   if (existing) return existing;
   const key =

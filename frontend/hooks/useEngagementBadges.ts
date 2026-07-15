@@ -19,6 +19,7 @@ export function isUrgencyMuted(): boolean {
 }
 
 export function setUrgencyMuted(muted: boolean): void {
+  if (typeof window === "undefined") return;
   localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
 }
 

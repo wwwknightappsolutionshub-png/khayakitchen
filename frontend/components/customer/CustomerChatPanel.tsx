@@ -16,6 +16,7 @@ const THREAD_STORAGE_KEY = "khayaos-customer-chat-thread";
 const GUEST_KEY_STORAGE = "khayaos-guest-key";
 
 function getOrCreateGuestKey(): string {
+  if (typeof window === "undefined") return "ssr-guest";
   const existing = localStorage.getItem(GUEST_KEY_STORAGE);
   if (existing) return existing;
   const key =
@@ -28,6 +29,11 @@ function getOrCreateGuestKey(): string {
 
 /** Always keep guest_key so checkout phone does not orphan the guest thread. */
 function chatIdentity(phone: string): { phone?: string; guest_key: string } {
+  // SSR must not touch localStorage — CustomerChatPanel mounts from customer layout.
+  if (typeof window === "undefined") {
+    const trimmed = phone.trim();
+    return trimmed ? { phone: trimmed, guest_key: "ssr-guest" } : { guest_key: "ssr-guest" };
+  }
   const guest_key = getOrCreateGuestKey();
   const trimmed = phone.trim();
   if (trimmed) return { phone: trimmed, guest_key };
@@ -60,7 +66,7 @@ export function CustomerChatPanel() {
     setName(localStorage.getItem(NAME_STORAGE_KEY) ?? "");
   }, [open]);
 
-  const identity = chatIdentity(phone);
+  const identity = useMemo(() => chatIdentity(phone), [phone]);
   const remoteTyping = useChatTyping(open ? threadId : null, ["customer"]);
 
   const publishTyping = useCallback(
