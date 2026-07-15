@@ -32,7 +32,7 @@ export function useAuth() {
       setAuth(data.user, data.token);
       queryClient.invalidateQueries({ queryKey: ["auth"] });
 
-      // Hard navigate so admin guard always reads persisted token/localStorage.
+      // Hard navigate so admin/platform guards always read persisted token/localStorage.
       // Soft router.push after login raced with boot-gate / chunk recovery reloads.
       let destination = "/";
       if (data.user.role === "super_admin") {
@@ -47,6 +47,23 @@ export function useAuth() {
       }
 
       if (typeof window !== "undefined") {
+        // Ensure persist blob is readable before full page load of the destination.
+        try {
+          const snap = useAuthStore.getState();
+          localStorage.setItem(
+            "khayaos-auth",
+            JSON.stringify({
+              state: {
+                user: snap.user,
+                token: snap.token,
+                isAuthenticated: true,
+              },
+              version: 3,
+            }),
+          );
+        } catch {
+          // persist middleware still wrote when possible
+        }
         window.location.assign(destination);
         return;
       }

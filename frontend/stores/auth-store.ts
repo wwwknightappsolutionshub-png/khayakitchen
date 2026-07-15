@@ -20,13 +20,25 @@ type PersistedAuth = {
   isAuthenticated: boolean;
 };
 
+function normalizePersisted(persisted: unknown): PersistedAuth {
+  const state = (persisted ?? {}) as Record<string, unknown>;
+  const user = (state.user as User | null) ?? null;
+  const token = (state.token as string | null) ?? null;
+  return {
+    user,
+    token,
+    // Token is the source of truth — older blobs sometimes omitted isAuthenticated.
+    isAuthenticated: Boolean(token),
+  };
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
-      // false until persist rehydrates. Login UI does not gate on this; admin/platform guards do.
+      // false until client rehydrate finishes (see AuthHydration + skipHydration).
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
       setAuth: (user, token) => {
@@ -45,29 +57,24 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "khayaos-auth",
-      version: 2,
+      version: 3,
+      // Critical for Next.js: do not rehydrate during SSR (marks hydrated with empty auth
+      // and then skips client restore — which caused endless admin/platform spinners).
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedAuth => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
-      migrate: (persisted): PersistedAuth => {
-        const state = (persisted ?? {}) as Record<string, unknown>;
-        return {
-          user: (state.user as User | null) ?? null,
-          token: (state.token as string | null) ?? null,
-          isAuthenticated: Boolean(state.isAuthenticated),
-        };
-      },
+      migrate: (persisted): PersistedAuth => normalizePersisted(persisted),
       merge: (persisted, current) => {
-        const incoming = (persisted ?? {}) as Partial<PersistedAuth>;
+        const incoming = normalizePersisted(persisted);
         return {
           ...current,
           user: incoming.user ?? current.user,
           token: incoming.token ?? current.token,
-          isAuthenticated: incoming.isAuthenticated ?? current.isAuthenticated,
-          // Never restore hasHydrated from storage (stale false caused endless spinners).
+          isAuthenticated: Boolean(incoming.token ?? incoming.isAuthenticated),
           hasHydrated: current.hasHydrated,
         };
       },
@@ -76,8 +83,12 @@ export const useAuthStore = create<AuthState>()(
           useAuthStore.setState({ hasHydrated: true });
           return;
         }
-        if (state?.token) setAuthToken(state.token);
-        // Only restore staff workspace. Never clear/overwrite shared /r/{slug} ordering bind.
+        if (state?.token) {
+          setAuthToken(state.token);
+          if (!state.isAuthenticated) {
+            useAuthStore.setState({ isAuthenticated: true });
+          }
+        }
         if (state?.user) {
           setTenantId(state.user.tenant_id ?? null);
           setTenantSlug(state.user.tenant_slug ?? null);

@@ -2,7 +2,11 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
-import { hasStaffAuthToken, useAuthPersistReady } from "@/hooks/useAuthPersistReady";
+import {
+  hasStaffAuthToken,
+  useAuthPersistReady,
+  useAuthSessionRecovery,
+} from "@/hooks/useAuthPersistReady";
 
 function redirectToLogin() {
   window.location.replace(`/login?from=admin&_t=${Date.now()}`);
@@ -17,14 +21,12 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const [showManualLink, setShowManualLink] = useState(false);
-  const [tokenHint, setTokenHint] = useState(false);
+  // Sync on first client paint — do not wait for useEffect (that raced redirects).
+  const [tokenHint] = useState(() => hasStaffAuthToken());
+  const recovering = useAuthSessionRecovery(ready && tokenHint && !isAuthenticated);
 
-  useEffect(() => {
-    setTokenHint(hasStaffAuthToken());
-  }, [ready, isAuthenticated]);
-
-  const waitingOnRehydrate = tokenHint && !isAuthenticated;
-  const canDecide = ready && !waitingOnRehydrate;
+  const waitingOnSession = (tokenHint && !isAuthenticated) || recovering;
+  const canDecide = ready && !waitingOnSession;
 
   useLayoutEffect(() => {
     if (!canDecide) return;
@@ -34,10 +36,11 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   }, [canDecide, isAuthenticated]);
 
   useEffect(() => {
-    if (!canDecide || isAuthenticated) return;
-    const timer = window.setTimeout(() => setShowManualLink(true), 1500);
+    if (canDecide && isAuthenticated) return;
+    if (!ready) return;
+    const timer = window.setTimeout(() => setShowManualLink(true), 2500);
     return () => window.clearTimeout(timer);
-  }, [canDecide, isAuthenticated]);
+  }, [canDecide, isAuthenticated, ready]);
 
   useEffect(() => {
     if (!canDecide || !isAuthenticated) return;
@@ -54,8 +57,13 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!canDecide) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background px-6 text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        {showManualLink ? (
+          <a href={`/login?from=admin&_t=${Date.now()}`} className="text-sm font-medium text-primary underline">
+            Continue to sign in
+          </a>
+        ) : null}
       </div>
     );
   }

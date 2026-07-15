@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 
 /**
- * Boots zustand auth persist in the background.
- * Never blocks rendering — /login must paint the form immediately.
+ * Client-only auth persist rehydrate. skipHydration is set on the store so SSR
+ * never marks the session empty-and-hydrated (that caused endless dashboard spinners).
  */
 export function AuthHydration({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -17,15 +17,12 @@ export function AuthHydration({ children }: { children: React.ReactNode }) {
     };
 
     let unsubscribe: (() => void) | undefined;
-    const safetyTimeout = window.setTimeout(finish, 300);
+    const safetyTimeout = window.setTimeout(finish, 2000);
 
     try {
       const persistApi = useAuthStore.persist;
-      if (persistApi?.hasHydrated?.()) {
-        finish();
-      } else {
-        unsubscribe = persistApi?.onFinishHydration?.(finish);
-      }
+      unsubscribe = persistApi?.onFinishHydration?.(finish);
+      void Promise.resolve(persistApi?.rehydrate?.()).then(finish).catch(finish);
     } catch {
       finish();
     }
