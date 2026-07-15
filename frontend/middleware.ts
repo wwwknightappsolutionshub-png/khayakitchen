@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const CUSTOMER_PATHS = /^\/($|menu|cart|account|checkout|tracking|reset-app|home)/;
+const NO_STORE_PATHS = /^\/($|menu|cart|account|checkout|tracking|reset-app|home|login|forgot-password|reset-password|verify-email|admin|orders|kitchen|inventory|crm|loyalty|inbox|reviews|seasonal-promo|marketing|revenue-recovery|branding|reports|staff-performance|settings|platform)/;
 
 export function middleware(request: NextRequest) {
-  if (!CUSTOMER_PATHS.test(request.nextUrl.pathname)) {
+  if (!NO_STORE_PATHS.test(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
@@ -16,5 +16,34 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/menu", "/cart", "/account", "/checkout", "/tracking", "/reset-app", "/home"],
+  matcher: [
+    "/",
+    "/menu",
+    "/cart",
+    "/account",
+    "/checkout",
+    "/tracking",
+    "/reset-app",
+    "/home",
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+    "/admin/:path*",
+    "/orders",
+    "/kitchen",
+    "/inventory",
+    "/crm",
+    "/loyalty",
+    "/inbox",
+    "/reviews",
+    "/seasonal-promo",
+    "/marketing",
+    "/revenue-recovery",
+    "/branding",
+    "/reports",
+    "/staff-performance",
+    "/settings",
+    "/platform/:path*",
+  ],
 };

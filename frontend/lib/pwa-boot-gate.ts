@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "13";
+export const PWA_CACHE_EPOCH = "14";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -153,14 +153,20 @@ export function getPwaBootGateScript(pageBuild: string): string {
 
   // Catch deleted /_next/static chunks from a previous deploy (before React boots).
   var chunkReloadKey=${JSON.stringify(CHUNK_RELOAD_KEY)};
+  function canRecoverChunk(){
+    var now=Date.now();
+    try{
+      var last=parseInt(sessionStorage.getItem(chunkReloadKey)||"0",10)||0;
+      if(last&&now-last<10000)return false;
+      sessionStorage.setItem(chunkReloadKey,String(now));
+    }catch(e){}
+    return true;
+  }
   window.addEventListener("error",function(event){
     var target=event&&event.target;
     var src=target&&target.src?String(target.src):"";
     if(!src||src.indexOf("/_next/static/")<0)return;
-    try{
-      if(sessionStorage.getItem(chunkReloadKey)==="1")return;
-      sessionStorage.setItem(chunkReloadKey,"1");
-    }catch(e){}
+    if(!canRecoverChunk())return;
     var tasks=[];
     if("serviceWorker" in navigator){
       tasks.push(navigator.serviceWorker.getRegistrations().then(function(regs){
