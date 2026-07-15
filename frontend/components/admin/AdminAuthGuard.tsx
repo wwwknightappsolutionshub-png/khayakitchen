@@ -1,61 +1,58 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { hasStaffAuthToken, useAuthPersistReady } from "@/hooks/useAuthPersistReady";
 
 function redirectToLogin() {
-  const url = `/login?from=admin&_t=${Date.now()}`;
-  window.location.replace(url);
+  window.location.replace(`/login?from=admin&_t=${Date.now()}`);
+}
+
+function redirectPlatform(path: string) {
+  window.location.replace(path);
 }
 
 export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const ready = useAuthPersistReady();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
-  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
   const [showManualLink, setShowManualLink] = useState(false);
+  const [tokenHint, setTokenHint] = useState(false);
 
   useEffect(() => {
-    if (hasHydrated) return;
-    const timer = window.setTimeout(() => {
-      useAuthStore.setState({ hasHydrated: true });
-      setHydrationTimedOut(true);
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [hasHydrated]);
+    setTokenHint(hasStaffAuthToken());
+  }, [ready, isAuthenticated]);
 
-  const ready = hasHydrated || hydrationTimedOut;
+  const waitingOnRehydrate = tokenHint && !isAuthenticated;
+  const canDecide = ready && !waitingOnRehydrate;
 
   useLayoutEffect(() => {
-    if (!ready) return;
-    if (!isAuthenticated) {
+    if (!canDecide) return;
+    if (!isAuthenticated && !hasStaffAuthToken()) {
       redirectToLogin();
     }
-  }, [ready, isAuthenticated]);
+  }, [canDecide, isAuthenticated]);
 
   useEffect(() => {
-    if (!ready || isAuthenticated) return;
+    if (!canDecide || isAuthenticated) return;
     const timer = window.setTimeout(() => setShowManualLink(true), 1500);
     return () => window.clearTimeout(timer);
-  }, [ready, isAuthenticated]);
+  }, [canDecide, isAuthenticated]);
 
   useEffect(() => {
-    if (!ready) return;
-    if (!isAuthenticated) return;
+    if (!canDecide || !isAuthenticated) return;
 
     if (user?.role === "super_admin") {
-      router.replace("/platform/dashboard");
+      redirectPlatform("/platform/dashboard");
       return;
     }
 
     if (user?.role === "platform_admin" || user?.role === "platform_support") {
-      router.replace("/platform/inbox");
+      redirectPlatform("/platform/inbox");
     }
-  }, [ready, isAuthenticated, user?.role, router]);
+  }, [canDecide, isAuthenticated, user?.role]);
 
-  if (!ready) {
+  if (!canDecide) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

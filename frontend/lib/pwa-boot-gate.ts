@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "10";
+export const PWA_CACHE_EPOCH = "11";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -21,8 +21,8 @@ export function getPwaBootGateScript(pageBuild: string): string {
     try{root.style.visibility="";}catch(e){}
   }
 
-  function pinCurrentBuild(){
-    try{localStorage.setItem(BUILD_KEY,pageBuild);}catch(e){}
+  function pinCurrentBuild(preferredBuild){
+    try{localStorage.setItem(BUILD_KEY,preferredBuild||pageBuild);}catch(e){}
     try{localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);}catch(e){}
     try{sessionStorage.removeItem(RESET_COUNT_KEY);}catch(e){}
     showPage();
@@ -49,7 +49,7 @@ export function getPwaBootGateScript(pageBuild: string): string {
       return;
     }
     if(count>=MAX_RESETS){
-      pinCurrentBuild();
+      pinCurrentBuild(serverBuild);
       return;
     }
     try{sessionStorage.setItem(RESET_COUNT_KEY,String(count+1));}catch(e){
@@ -111,17 +111,22 @@ export function getPwaBootGateScript(pageBuild: string): string {
         if(serverBuild){localStorage.setItem(BUILD_KEY,serverBuild);}
         localStorage.setItem(EPOCH_KEY,CACHE_EPOCH);
       }catch(e){}
-      pinCurrentBuild();
+      pinCurrentBuild(serverBuild);
       return;
     }
     if(!serverBuild){
-      pinCurrentBuild();
+      pinCurrentBuild(null);
       return;
     }
     var storedBuild=null;
     var storedEpoch=null;
     try{storedBuild=localStorage.getItem(BUILD_KEY);}catch(e){}
     try{storedEpoch=localStorage.getItem(EPOCH_KEY);}catch(e){}
+    // Fresh storage (e.g. after /reset-app): pin server build — do not hard-reset loops.
+    if(!storedBuild&&!storedEpoch){
+      pinCurrentBuild(serverBuild);
+      return;
+    }
     var stalePage=pageBuild!==serverBuild;
     var staleStorage=Boolean(storedBuild&&storedBuild!==serverBuild);
     var staleEpoch=Boolean(storedEpoch)&&storedEpoch!==CACHE_EPOCH;
@@ -129,7 +134,7 @@ export function getPwaBootGateScript(pageBuild: string): string {
       hardReset(serverBuild);
       return;
     }
-    pinCurrentBuild();
+    pinCurrentBuild(serverBuild);
   }
 
   var finished=false;

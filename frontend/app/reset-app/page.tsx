@@ -10,7 +10,7 @@ export default function ResetAppPage() {
   const inline = `
 (function(){
   function go(){
-    try{location.replace("/login?reset=1&_v="+Date.now());}catch(e){location.href="/login";}
+    try{location.replace("/login?reset=1");}catch(e){location.href="/login";}
   }
   var tasks=[];
   try{localStorage.clear();}catch(e){}
@@ -41,7 +41,7 @@ export default function ResetAppPage() {
           Clearing service workers and cached bundles. You will be sent to sign in.
         </p>
         <p className="mt-6 text-sm">
-          <a className="text-[#E07A5F] underline" href="/login?_v=1">
+          <a className="text-[#E07A5F] underline" href="/login?reset=1">
             Continue to sign in
           </a>
         </p>
