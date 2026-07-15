@@ -47,6 +47,22 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [canDecide, isAuthenticated, ready]);
 
+  // Absolute failsafe: nothing may spin forever. If we cannot establish a session
+  // in time (hung /auth/me, stale bundle, corrupt token), clear and go to login.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    const timer = window.setTimeout(() => {
+      if (useAuthStore.getState().isAuthenticated) return;
+      try {
+        localStorage.removeItem("khayaos_token");
+      } catch {
+        // ignore
+      }
+      window.location.replace(`/login?from=admin&stuck=1&_t=${Date.now()}`);
+    }, 7000);
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!canDecide || !isAuthenticated) return;
 

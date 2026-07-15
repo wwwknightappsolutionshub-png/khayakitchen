@@ -48,6 +48,21 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [canDecide, isAuthenticated, ready]);
 
+  // Absolute failsafe: never spin forever.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    const timer = window.setTimeout(() => {
+      if (useAuthStore.getState().isAuthenticated) return;
+      try {
+        localStorage.removeItem("khayaos_token");
+      } catch {
+        // ignore
+      }
+      window.location.replace(`/login?from=platform&stuck=1&_t=${Date.now()}`);
+    }, 7000);
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!canDecide || !isAuthenticated) return;
 
