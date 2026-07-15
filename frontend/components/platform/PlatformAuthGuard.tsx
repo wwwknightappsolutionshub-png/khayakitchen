@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   hasStaffAuthToken,
@@ -19,11 +19,19 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const [showManualLink, setShowManualLink] = useState(false);
-  const [tokenHint] = useState(() => hasStaffAuthToken());
-  const recovering = useAuthSessionRecovery(ready && tokenHint && !isAuthenticated);
+  const [tokenHint, setTokenHint] = useState(() => hasStaffAuthToken());
+  const markTokenInvalid = useCallback(() => setTokenHint(false), []);
+  const recovering = useAuthSessionRecovery(
+    ready && tokenHint && !isAuthenticated,
+    markTokenInvalid,
+  );
   const isPlatformStaff = isAuthenticated && !!user?.role && PLATFORM_ROLES.has(user.role);
 
-  const waitingOnSession = (tokenHint && !isAuthenticated) || recovering;
+  useEffect(() => {
+    setTokenHint(hasStaffAuthToken());
+  }, [ready, isAuthenticated]);
+
+  const waitingOnSession = tokenHint && !isAuthenticated && recovering;
   const canDecide = ready && !waitingOnSession;
 
   useLayoutEffect(() => {

@@ -60,7 +60,7 @@ export function useAuthPersistReady(timeoutMs = 2500): boolean {
  * If localStorage has a token but the store has no session (SSR persist skip / corrupt blob),
  * restore via /auth/me. Returns true while recovery is in flight.
  */
-export function useAuthSessionRecovery(enabled: boolean): boolean {
+export function useAuthSessionRecovery(enabled: boolean, onInvalidToken?: () => void): boolean {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -81,6 +81,7 @@ export function useAuthSessionRecovery(enabled: boolean): boolean {
         const token = localStorage.getItem("khayaos_token");
         if (!token) {
           clearAuth();
+          onInvalidToken?.();
           return;
         }
         setAuth(
@@ -98,6 +99,7 @@ export function useAuthSessionRecovery(enabled: boolean): boolean {
       .catch(() => {
         if (cancelled) return;
         clearAuth();
+        onInvalidToken?.();
       })
       .finally(() => {
         if (!cancelled) setRecovering(false);
@@ -106,7 +108,7 @@ export function useAuthSessionRecovery(enabled: boolean): boolean {
     return () => {
       cancelled = true;
     };
-  }, [enabled, isAuthenticated, user?.id, setAuth, clearAuth]);
+  }, [enabled, isAuthenticated, user?.id, setAuth, clearAuth, onInvalidToken]);
 
-  return recovering;
+  return enabled || recovering;
 }
