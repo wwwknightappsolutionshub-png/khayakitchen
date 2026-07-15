@@ -38,13 +38,17 @@ cd backend && composer install --no-dev --optimize-autoloader
 /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
 /www/server/php/83/bin/php artisan config:clear
+pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build
-pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
+pm2 start khayaos-frontend
+pm2 restart khayaos-queue khayaos-reverb
 ```
 
 > **Dependencies (required):** `node_modules/` and `vendor/` are git-ignored, so **every deploy must run `npm install`** (frontend) **and `composer install`** (backend) after `git pull`. Skipping `npm install` causes `Module not found` build failures whenever a new package was added (e.g. `country-state-city`). `config:clear` is required so `.env` changes like `FRONTEND_URL` take effect.
 
 > **Feature catalog (required):** Always run `PricingSeeder` after migrate. It `updateOrCreate`s billable features and re-syncs Starter/Growth/Professional/Enterprise plan feature matrices so Feature Library and entitlements stay aligned with the codebase. Safe to re-run; it does not wipe tenant subscriptions or per-tenant overrides.
+
+Why the frontend is stopped before `rm -rf .next`: `next start` serves route HTML from the running process while chunks are loaded from `.next/static`. If `.next` is deleted while the old process is still serving traffic, users can receive old HTML that references deleted chunks, producing permanent `/_next/static/... 404` spinners.
 
 After deploy:
 
@@ -52,7 +56,7 @@ After deploy:
 2. If styles are still stale: DevTools → Application → **Clear site data** for `khayaos.prohost.cloud`, then reload.
 3. Confirm the deploy commit with `git log -1` on the VPS matches the expected hash below.
 4. **PWA auto-update:** clients poll `/app-version` on load (not `/api/*` — that path is proxied to Laravel). A new Next.js `BUILD_ID` triggers an automatic SW/cache reset. Users may also tap **Update now** on the in-app banner.
-5. **Nginx / BT Panel:** disable HTML proxy cache for this site, or purge panel cache after deploy. Stale Nginx responses can repopulate client caches even after a phone reset.
+5. **Nginx / BT Panel:** disable HTML proxy cache for this site, or purge panel cache after deploy. Stale Nginx responses can repopulate client caches even after `/reset-app` or a private-window test.
 
 ---
 
@@ -123,6 +127,19 @@ location /app-version.json {
 location /app-version {
     proxy_pass http://127.0.0.1:3004;
     add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
+
+location ~ ^/(login|admin|platform|orders|kitchen|inventory|crm|loyalty|inbox|reviews|seasonal-promo|marketing|revenue-recovery|branding|reports|staff-performance|settings)(/.*)?$ {
+    proxy_pass http://127.0.0.1:3004;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_no_cache 1;
+    proxy_cache_bypass 1;
+    proxy_hide_header Cache-Control;
+    add_header Cache-Control "no-cache, no-store, must-revalidate" always;
 }
 
 location /_next/static/ {

@@ -56,13 +56,15 @@ cd backend && composer install --no-dev --optimize-autoloader
 /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
 /www/server/php/83/bin/php artisan config:clear
+pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build
-pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
+pm2 start khayaos-frontend
+pm2 restart khayaos-queue khayaos-reverb
 ```
 
 > `node_modules/`/`vendor/` are git-ignored — always run `npm install` + `composer install` after pull, or builds fail with `Module not found` when a dependency was added. Always run `PricingSeeder` so Feature Library keys and plan entitlements stay in sync with the codebase (`updateOrCreate`).
 
-Verify: `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline` → latest commit on `main`. Hard-refresh browser after deploy.
+Verify: `git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline` → latest commit on `main`. Stop frontend before deleting `.next`; otherwise `next start` can serve old HTML while chunks are removed, causing permanent `/_next/static/... 404` spinners. Purge aaPanel/Nginx proxy cache after deploy if configured, then hard-refresh browser.
 
 ---
 
