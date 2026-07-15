@@ -57,6 +57,7 @@ class PermissionService
             'menu.manage',
             'kitchen.view',
             'delivery.manage',
+            'loyalty.manage',
             'notifications.view',
             'campaigns.view',
             'revenue_recovery.view',

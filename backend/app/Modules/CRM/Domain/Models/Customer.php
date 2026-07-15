@@ -43,4 +43,9 @@ class Customer extends Model
     {
         return $this->hasOne(CustomerNotificationPreference::class, 'customer_id');
     }
+
+    public function loyaltyAccount(): HasOne
+    {
+        return $this->hasOne(\App\Modules\Loyalty\Domain\Models\LoyaltyAccount::class, 'customer_id');
+    }
 }

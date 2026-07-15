@@ -208,6 +208,7 @@ export function RevenueRecoveryCampaignForm({
                 }
               >
                 <option value="all">All opted-in</option>
+                <option value="loyalty_members">Loyalty members (priority)</option>
                 <option value="repeat_customers">Returning customers</option>
                 <option value="active_customers">Active (30 days)</option>
               </select>

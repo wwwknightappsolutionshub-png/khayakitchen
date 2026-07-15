@@ -17,12 +17,25 @@ class LoyaltyAccount extends Model
         'tenant_id',
         'customer_id',
         'points_balance',
+        'stamps_balance',
         'tier',
+        'membership_status',
+        'enrolled_at',
+        'opted_in_at',
+        'welcome_notified_at',
+        'enrollment_source',
         'created_at',
     ];
 
     protected function casts(): array
     {
-        return ['created_at' => 'datetime'];
+        return [
+            'created_at' => 'datetime',
+            'enrolled_at' => 'datetime',
+            'opted_in_at' => 'datetime',
+            'welcome_notified_at' => 'datetime',
+            'points_balance' => 'integer',
+            'stamps_balance' => 'integer',
+        ];
     }
 }

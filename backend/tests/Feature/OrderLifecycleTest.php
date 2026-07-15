@@ -55,6 +55,23 @@ class OrderLifecycleTest extends TestCase
             ])->assertOk();
         }
 
+        // Loyalty auto-enrols after 2 completed orders; earn starts once active.
+        $create2 = $this->postJson('/api/v1/customer/orders', [
+            'name' => 'Lifecycle Test',
+            'phone' => '+2348099990001',
+            'order_type' => 'pickup',
+            'payment_method' => 'cash',
+            'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
+        ], ['X-Tenant-Slug' => 'pilot']);
+        $create2->assertCreated();
+        $orderId2 = $create2->json('order_id');
+        foreach (['accepted', 'preparing', 'ready', 'completed'] as $status) {
+            $this->patchJson("/api/v1/orders/{$orderId2}/status", ['status' => $status], [
+                'Authorization' => "Bearer {$token}",
+                'X-Tenant-Slug' => 'pilot',
+            ])->assertOk();
+        }
+
         $this->assertDatabaseHas('orders', ['id' => $orderId, 'status' => 'completed']);
         $this->assertTrue(
             (float) InventoryItem::first()?->fresh()->current_stock < $stockBefore,
@@ -63,6 +80,7 @@ class OrderLifecycleTest extends TestCase
 
         $loyalty = LoyaltyAccount::where('customer_id', $customerId)->first();
         $this->assertNotNull($loyalty);
+        $this->assertSame('active', $loyalty->membership_status);
         $this->assertGreaterThan(0, $loyalty->points_balance);
 
         $this->assertDatabaseHas('crm_profiles', ['customer_id' => $customerId]);

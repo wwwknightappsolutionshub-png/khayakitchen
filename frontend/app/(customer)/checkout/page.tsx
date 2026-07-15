@@ -88,6 +88,11 @@ export default function CheckoutPage() {
         }).catch(() => undefined);
       }
 
+      const referralToken =
+        typeof window !== "undefined"
+          ? localStorage.getItem("khayaos-referral-token") ?? undefined
+          : undefined;
+
       const response = await placeOrder.mutateAsync({
         name: data.name,
         phone: data.phone,
@@ -95,6 +100,7 @@ export default function CheckoutPage() {
         address: data.order_type === "delivery" ? data.address : undefined,
         payment_method: data.payment_method,
         scheduled_time: data.scheduled_time || undefined,
+        referral_token: referralToken,
         items: items.map((item) => ({
           meal_id: item.mealId,
           quantity: item.quantity,
@@ -103,6 +109,9 @@ export default function CheckoutPage() {
       });
       localStorage.setItem("khayaos-customer-phone", data.phone.trim());
       localStorage.setItem("khayaos-customer-name", data.name.trim());
+      if (referralToken) {
+        localStorage.removeItem("khayaos-referral-token");
+      }
       if (response.customer_id) {
         localStorage.setItem("khayaos-customer-id", response.customer_id);
       }

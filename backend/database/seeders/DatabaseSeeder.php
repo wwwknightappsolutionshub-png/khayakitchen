@@ -233,5 +233,31 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(SeasonalPromoSeeder::class);
+
+        \App\Modules\Loyalty\Domain\Models\LoyaltyPackage::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Stamp card',
+            'description' => 'Collect meal stamps, unlock a free plate',
+            'package_type' => 'stamp',
+            'goal_value' => 10,
+            'reward_type' => 'free_meal',
+            'reward_value' => null,
+            'reward_label' => 'Free meal of your choice',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        \App\Modules\Loyalty\Domain\Models\LoyaltyPackage::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Points club',
+            'description' => 'Earn points from completed order totals',
+            'package_type' => 'points',
+            'goal_value' => 100,
+            'reward_type' => 'percent_off',
+            'reward_value' => 10,
+            'reward_label' => '10% off next order',
+            'is_active' => true,
+            'sort_order' => 2,
+        ]);
     }
 }

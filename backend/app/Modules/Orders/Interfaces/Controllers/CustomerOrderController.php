@@ -20,6 +20,8 @@ class CustomerOrderController extends Controller
             'address' => ['required_if:order_type,delivery', 'nullable', 'string', 'max:500'],
             'scheduled_time' => ['nullable', 'date'],
             'payment_method' => ['nullable', 'in:cash,card,transfer'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'referral_token' => ['nullable', 'string', 'max:80'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.meal_id' => ['required', 'uuid'],
             'items.*.quantity' => ['nullable', 'integer', 'min:1'],

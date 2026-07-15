@@ -20,6 +20,7 @@ use App\Modules\Inventory\Interfaces\Controllers\RecipeController;
 use App\Modules\Kitchen\Interfaces\Controllers\KitchenController;
 use App\Modules\Loyalty\Interfaces\Controllers\CustomerLoyaltyController;
 use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyController;
+use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyProgramController;
 use App\Modules\Menu\Interfaces\Controllers\MenuController;
 use App\Modules\Notifications\Interfaces\Controllers\NotificationController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
@@ -122,6 +123,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:loyalty'])->group(function () {
         Route::get('/customer/loyalty/{customerId}', [CustomerLoyaltyController::class, 'show']);
+        Route::post('/customer/loyalty/opt-in', [CustomerLoyaltyController::class, 'optIn']);
     });
 
     Route::middleware(['auth:sanctum', 'tenant.resolve', 'tenant.access', 'permissions.load', 'throttle:api'])->group(function () {
@@ -169,6 +171,12 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::middleware('feature:loyalty')->group(function () {
+            Route::get('/loyalty/program', [LoyaltyProgramController::class, 'dashboard']);
+            Route::patch('/loyalty/settings', [LoyaltyProgramController::class, 'updateSettings']);
+            Route::post('/loyalty/packages', [LoyaltyProgramController::class, 'storePackage']);
+            Route::patch('/loyalty/packages/{id}', [LoyaltyProgramController::class, 'updatePackage']);
+            Route::delete('/loyalty/packages/{id}', [LoyaltyProgramController::class, 'destroyPackage']);
+            Route::post('/loyalty/notify-qualified', [LoyaltyProgramController::class, 'notifyQualified']);
             Route::get('/loyalty/{customer_id}', [LoyaltyController::class, 'show']);
             Route::post('/loyalty/earn', [LoyaltyController::class, 'earn']);
             Route::post('/loyalty/redeem', [LoyaltyController::class, 'redeem']);

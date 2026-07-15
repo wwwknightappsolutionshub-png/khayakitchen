@@ -3,6 +3,7 @@
 namespace App\Modules\Loyalty\Interfaces\Controllers;
 
 use App\Modules\CRM\Domain\Models\Customer;
+use App\Modules\Loyalty\Application\Services\LoyaltyProgramService;
 use App\Modules\Loyalty\Application\Services\LoyaltyService;
 use App\Shared\Utils\ApiResponse;
 use Illuminate\Http\Request;
@@ -10,7 +11,10 @@ use Illuminate\Routing\Controller;
 
 class CustomerLoyaltyController extends Controller
 {
-    public function __construct(private LoyaltyService $loyaltyService) {}
+    public function __construct(
+        private LoyaltyService $loyaltyService,
+        private LoyaltyProgramService $loyaltyProgramService,
+    ) {}
 
     public function show(Request $request, string $customerId)
     {
@@ -18,10 +22,20 @@ class CustomerLoyaltyController extends Controller
             'phone' => ['required', 'string', 'max:50'],
         ]);
 
-        $customer = Customer::where('id', $customerId)->where('phone', $data['phone'])->firstOrFail();
+        return ApiResponse::success(
+            $this->loyaltyProgramService->customerSnapshot($customerId, $data['phone']),
+        );
+    }
+
+    public function optIn(Request $request)
+    {
+        $data = $request->validate([
+            'customer_id' => ['required', 'uuid'],
+            'phone' => ['required', 'string', 'max:50'],
+        ]);
 
         return ApiResponse::success([
-            'loyalty' => $this->loyaltyService->getAccountPublic($customer->id),
+            'loyalty' => $this->loyaltyProgramService->optIn($data['customer_id'], $data['phone']),
         ]);
     }
 }

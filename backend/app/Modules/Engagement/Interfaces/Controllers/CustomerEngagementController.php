@@ -104,10 +104,14 @@ class CustomerEngagementController extends Controller
         );
     }
 
-    public function referMeal(string $mealId)
+    public function referMeal(Request $request, string $mealId)
     {
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'max:50'],
+        ]);
+
         return ApiResponse::success([
-            'refer' => $this->mealLikeService->referPayload($mealId),
+            'refer' => $this->mealLikeService->referPayload($mealId, $data['phone'] ?? null),
         ]);
     }
 

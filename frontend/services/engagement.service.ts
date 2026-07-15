@@ -113,8 +113,11 @@ export const engagementService = {
     );
   },
 
-  getMealRefer(mealId: string) {
-    return api.get<{ refer: MealReferPayload }>(`/customer/meals/${mealId}/refer`);
+  getMealRefer(mealId: string, phone?: string) {
+    return api.get<{ refer: MealReferPayload }>(`/customer/meals/${mealId}/refer`, {
+      skipAuth: true,
+      params: phone ? { phone } : undefined,
+    });
   },
 
   submitReview(payload: { name: string; phone: string; body: string }) {

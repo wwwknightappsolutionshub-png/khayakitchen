@@ -178,9 +178,41 @@ export interface DashboardKpis {
 }
 
 export interface LoyaltyAccount {
+  id?: string;
   customer_id: string;
   points_balance: number;
+  stamps_balance?: number;
   tier?: string;
+  membership_status?: "prospect" | "eligible" | "active";
+  enrolled_at?: string | null;
+}
+
+export interface LoyaltyPackage {
+  id: string;
+  name: string;
+  description?: string | null;
+  package_type: "stamp" | "points";
+  goal_value: number;
+  reward_type: string;
+  reward_value?: number | null;
+  reward_label: string;
+  is_active: boolean;
+  sort_order?: number;
+}
+
+export interface LoyaltySettings {
+  enrollments_paused: boolean;
+  referral_stamp_credit: number;
+  referral_points_credit: number;
+  near_goal_threshold_percent: number;
+}
+
+export interface LoyaltyPackageProgress {
+  id: string;
+  loyalty_package_id: string;
+  current_progress: number;
+  times_completed: number;
+  package?: LoyaltyPackage;
 }
 
 export interface Notification {
@@ -473,7 +505,7 @@ export interface RevenueRecoveryCampaign {
   notifications_enabled: boolean;
   notification_title?: string | null;
   notification_message?: string | null;
-  target_audience: "all" | "repeat_customers" | "active_customers";
+  target_audience: "all" | "repeat_customers" | "active_customers" | "loyalty_members";
   proximity_bait_tiers?: ProximityBaitTier[] | null;
   redemption_limit?: number | null;
   redemption_count: number;
@@ -705,6 +737,7 @@ export interface MealReferPayload {
   restaurant_name: string;
   message: string;
   whatsapp_text: string;
+  menu_url?: string;
 }
 
 export interface CartItem {
@@ -724,7 +757,7 @@ export interface NotificationCampaign {
   type: "promo" | "announcement" | "info";
   channel: "pwa" | "whatsapp" | "both";
   status: "draft" | "scheduled" | "sent";
-  target_audience: "all" | "repeat_customers" | "active_customers";
+  target_audience: "all" | "repeat_customers" | "active_customers" | "loyalty_members";
   sent_count: number;
   delivered_count: number;
   failed_count: number;

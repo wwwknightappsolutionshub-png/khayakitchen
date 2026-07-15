@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { bindOrderingTenant, getOrderingTenantSlug } from "@/lib/api-client";
 import { useCartStore } from "@/stores/cart-store";
 
+const REF_KEY = "khayaos-referral-token";
+
 export default function OrderingEntryPage() {
   const params = useParams<{ slug: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
   const clearCart = useCartStore((s) => s.clearCart);
@@ -20,11 +23,22 @@ export default function OrderingEntryPage() {
     if (previous && previous !== slug) {
       clearCart();
     }
-    // Drop any cached storefront/menu from a previous kitchen (e.g. pilot).
+
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem(REF_KEY, ref);
+    }
+
+    const meal = searchParams.get("meal");
     void queryClient.removeQueries({ queryKey: ["storefront"] });
     void queryClient.removeQueries({ queryKey: ["menu"] });
-    router.replace("/");
-  }, [slug, router, queryClient, clearCart]);
+
+    if (meal) {
+      router.replace(`/menu?meal=${encodeURIComponent(meal)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`);
+    } else {
+      router.replace(ref ? `/?ref=${encodeURIComponent(ref)}` : "/");
+    }
+  }, [slug, router, queryClient, clearCart, searchParams]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

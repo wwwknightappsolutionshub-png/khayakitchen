@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package, Gift } from "lucide-react";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { CustomerInput } from "@/components/customer/CustomerInput";
@@ -25,6 +25,7 @@ function readStoredPhone(): string {
 export default function AccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const isSignup = searchParams.get("signup") === "1";
   const activeOrderId = useCartStore((s) => s.activeOrderId);
   const loadOrderIntoCart = useCartStore((s) => s.loadOrderIntoCart);
@@ -57,8 +58,18 @@ export default function AccountPage() {
 
   const orders = ordersData?.orders ?? [];
   const points = loyaltyData?.loyalty?.points_balance ?? 0;
-  const tierTarget = 100;
-  const progress = Math.min((points / tierTarget) * 100, 100);
+  const stamps = loyaltyData?.loyalty?.stamps_balance ?? 0;
+  const membership = loyaltyData?.loyalty?.membership_status ?? "prospect";
+  const packages = loyaltyData?.packages ?? [];
+  const progressRows = loyaltyData?.progress ?? [];
+  const canOptIn = loyaltyData?.can_opt_in === true;
+
+  const optInMutation = useMutation({
+    mutationFn: () => loyaltyService.optIn(customerId!, submittedPhone!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loyalty", customerId, submittedPhone] });
+    },
+  });
 
   const loadHistory = () => {
     const trimmed = phone.trim();
@@ -171,20 +182,49 @@ export default function AccountPage() {
             <Gift className="h-5 w-5 text-[var(--secondary)]" />
             <h2 className="font-semibold">Loyalty rewards</h2>
           </div>
-          <div className="mb-2 flex justify-between text-sm">
-            <span className="text-[var(--muted)]">{points} points</span>
-            <span className="text-[var(--muted)]">{tierTarget} for next reward</span>
+          <p className="mb-2 text-xs capitalize text-[var(--muted)]">
+            Status: {membership}
+            {loyaltyData?.loyalty?.tier ? ` · Tier ${loyaltyData.loyalty.tier}` : ""}
+          </p>
+          <div className="mb-3 flex gap-4 text-sm">
+            <span>{points} points</span>
+            <span>{stamps} stamps</span>
+            <span>{loyaltyData?.completed_orders ?? 0} completed orders</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-elevated)]">
-            <div
-              className="h-full rounded-full bg-[var(--secondary)] transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          {loyaltyData?.loyalty?.tier && (
-            <p className="mt-2 text-xs capitalize text-[var(--muted)]">
-              Tier: {loyaltyData.loyalty.tier}
-            </p>
+          {canOptIn && (
+            <CustomerButton
+              className="mb-3"
+              onClick={() => optInMutation.mutate()}
+              disabled={optInMutation.isPending}
+            >
+              Join loyalty program
+            </CustomerButton>
+          )}
+          {packages.length > 0 && (
+            <div className="space-y-3">
+              {packages.map((pkg) => {
+                const row = progressRows.find((p) => p.loyalty_package_id === pkg.id);
+                const current = row?.current_progress ?? 0;
+                const goal = pkg.goal_value || 1;
+                const pct = Math.min((current / goal) * 100, 100);
+                return (
+                  <div key={pkg.id}>
+                    <div className="mb-1 flex justify-between text-xs">
+                      <span>{pkg.name}</span>
+                      <span>
+                        {current}/{goal} → {pkg.reward_label}
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-elevated)]">
+                      <div
+                        className="h-full rounded-full bg-[var(--secondary)] transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

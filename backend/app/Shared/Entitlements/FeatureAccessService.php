@@ -90,6 +90,7 @@ class FeatureAccessService
     public const SHARED_FREE_TRIAL_FEATURES = [
         'staff_performance',
         'seasonal_promo',
+        'loyalty_system',
     ];
 
     public const FREE_TRIAL_DAYS = 30;

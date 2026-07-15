@@ -2,8 +2,10 @@
 
 namespace App\Modules\Engagement\Application\Services;
 
+use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Engagement\Domain\Models\MealLike;
+use App\Modules\Loyalty\Application\Services\LoyaltyProgramService;
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Shared\Entitlements\FeatureAccessService;
 use App\Shared\Tenancy\TenantContext;
@@ -17,6 +19,7 @@ class MealLikeService
     public function __construct(
         private FeatureAccessService $featureAccessService,
         private TenantContext $tenantContext,
+        private LoyaltyProgramService $loyaltyProgramService,
     ) {}
 
     public function assertEnabled(): void
@@ -89,12 +92,26 @@ class MealLikeService
         ];
     }
 
-    public function referPayload(string $mealId): array
+    public function referPayload(string $mealId, ?string $phone = null): array
     {
         $this->assertEnabled();
         $meal = Meal::findOrFail($mealId);
-        $tenant = $this->tenantContext->tenant();
+        $tenant = $this->tenantContext->tenant() ?? Tenant::withoutGlobalScopes()->find($this->tenantContext->id());
         $restaurantName = $tenant?->name ?? 'our restaurant';
+        $slug = $tenant?->slug ?? 'pilot';
+        $frontend = rtrim((string) config('app.frontend_url', 'http://localhost:3000'), '/');
+
+        $refQuery = '';
+        if ($phone && $this->featureAccessService->canAccess('loyalty_system', $this->tenantContext->id())) {
+            $customer = Customer::where('phone', $phone)->first();
+            if ($customer) {
+                $referral = $this->loyaltyProgramService->ensureReferralToken($customer->id);
+                $refQuery = '&ref='.urlencode($referral->token);
+            }
+        }
+
+        $menuUrl = $frontend.'/r/'.$slug.'?meal='.urlencode($meal->id).$refQuery;
+
         $message = 'I will suggest you try this menu from "'.$restaurantName.'", I think you will love it';
 
         return [
@@ -105,9 +122,11 @@ class MealLikeService
             'image_url' => $meal->image_url,
             'restaurant_name' => $restaurantName,
             'message' => $message,
+            'menu_url' => $menuUrl,
             'whatsapp_text' => $message."\n\n".$meal->name
                 .($meal->description ? "\n".$meal->description : '')
                 ."\nPrice: ".$meal->base_price
+                ."\nOrder here: ".$menuUrl
                 .($meal->image_url ? "\n".$meal->image_url : ''),
         ];
     }

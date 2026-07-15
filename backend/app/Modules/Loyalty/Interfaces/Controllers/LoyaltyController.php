@@ -14,7 +14,7 @@ class LoyaltyController extends Controller
     public function show(Request $request, string $customerId)
     {
         return ApiResponse::success([
-            'account' => $this->loyaltyService->getAccount($customerId, $request->get('permissions', [])),
+            'loyalty' => $this->loyaltyService->getAccount($customerId, $request->get('permissions', [])),
         ]);
     }
 
@@ -27,7 +27,7 @@ class LoyaltyController extends Controller
         ]);
 
         return ApiResponse::success([
-            'account' => $this->loyaltyService->earn($data, $request->get('permissions', [])),
+            'loyalty' => $this->loyaltyService->earn($data, $request->get('permissions', [])),
         ]);
     }
 
@@ -40,7 +40,7 @@ class LoyaltyController extends Controller
         ]);
 
         return ApiResponse::success([
-            'account' => $this->loyaltyService->redeem($data, $request->get('permissions', [])),
+            'loyalty' => $this->loyaltyService->redeem($data, $request->get('permissions', [])),
         ]);
     }
 }

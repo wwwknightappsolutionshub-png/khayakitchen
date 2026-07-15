@@ -50,6 +50,13 @@ export default function MenuPage() {
   const highlightId = searchParams.get("meal");
 
   useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("khayaos-referral-token", ref);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
     if (!hash.startsWith("meal-")) return;
@@ -125,7 +132,13 @@ export default function MenuPage() {
   });
 
   const referMutation = useMutation({
-    mutationFn: (meal: Meal) => engagementService.getMealRefer(meal.id),
+    mutationFn: (meal: Meal) => {
+      const phone =
+        typeof window !== "undefined"
+          ? localStorage.getItem("khayaos-customer-phone") ?? undefined
+          : undefined;
+      return engagementService.getMealRefer(meal.id, phone);
+    },
     onSuccess: (res) => {
       setReferPayload(res.refer);
       setReferOpen(true);

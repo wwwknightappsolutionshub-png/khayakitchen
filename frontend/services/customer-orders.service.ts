@@ -5,6 +5,8 @@ export type CustomerOrderPayload = CreateOrderPayload & {
   name: string;
   phone: string;
   payment_method?: "cash" | "card" | "transfer";
+  email?: string;
+  referral_token?: string;
 };
 
 export const customerOrdersService = {

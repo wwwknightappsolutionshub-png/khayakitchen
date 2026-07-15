@@ -207,7 +207,10 @@ class PlanLimitService
                 ->count(),
             'max_customers' => Customer::withoutGlobalScopes()->where('tenant_id', $tenantId)->count(),
             'max_loyalty_members' => class_exists(LoyaltyAccount::class)
-                ? LoyaltyAccount::withoutGlobalScopes()->where('tenant_id', $tenantId)->count()
+                ? LoyaltyAccount::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->where('membership_status', 'active')
+                    ->count()
                 : Customer::withoutGlobalScopes()->where('tenant_id', $tenantId)->count(),
             'max_active_promotions' => RestaurantStatus::withoutGlobalScopes()
                 ->where('tenant_id', $tenantId)

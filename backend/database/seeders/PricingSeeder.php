@@ -18,7 +18,7 @@ class PricingSeeder extends Seeder
             ['key' => 'menu_management', 'name' => 'Menu Management', 'category' => 'orders', 'module' => 'menu', 'description' => 'Menu CRUD', 'implemented_at' => '2026-07-03'],
             ['key' => 'inventory_tracking', 'name' => 'Inventory', 'category' => 'inventory', 'module' => 'inventory', 'description' => 'Stock and recipes', 'implemented_at' => '2026-07-03'],
             ['key' => 'crm_basic', 'name' => 'CRM', 'category' => 'crm', 'module' => 'crm', 'description' => 'Customer profiles', 'implemented_at' => '2026-07-03'],
-            ['key' => 'loyalty_system', 'name' => 'Loyalty', 'category' => 'crm', 'module' => 'loyalty', 'description' => 'Points and rewards', 'implemented_at' => '2026-07-03'],
+            ['key' => 'loyalty_system', 'name' => 'Loyalty', 'category' => 'crm', 'module' => 'loyalty', 'description' => 'Packages (stamps + points), auto-enroll, referrals, multi-channel loyalty alerts (free first 30 days)', 'implemented_at' => '2026-07-14'],
             ['key' => 'whatsapp_notifications', 'name' => 'WhatsApp', 'category' => 'marketing', 'module' => 'notifications.whatsapp', 'description' => 'WhatsApp order updates', 'implemented_at' => '2026-07-03'],
             ['key' => 'pwa_push_notifications', 'name' => 'Push Notifications', 'category' => 'marketing', 'module' => 'notifications', 'description' => 'Web push notifications', 'implemented_at' => '2026-07-03'],
             ['key' => 'notification_campaigns', 'name' => 'Campaigns', 'category' => 'marketing', 'module' => 'notifications.campaigns', 'description' => 'Marketing campaigns', 'implemented_at' => '2026-07-03'],

@@ -4,6 +4,7 @@ namespace App\Modules\NotificationsCampaign\Application\Services;
 
 use App\Modules\CRM\Domain\Models\CrmProfile;
 use App\Modules\CRM\Domain\Models\Customer;
+use App\Modules\Loyalty\Domain\Models\LoyaltyAccount;
 use App\Modules\NotificationsCampaign\Domain\Models\CustomerNotificationPreference;
 use Illuminate\Support\Collection;
 
@@ -28,15 +29,26 @@ class AudienceResolverService
                     });
                 }
             })
-            ->with(['notificationPreference', 'profile']);
+            ->with(['notificationPreference', 'profile', 'loyaltyAccount']);
 
         if ($targetAudience === 'repeat_customers') {
             $query->whereHas('profile', fn ($q) => $q->whereBetween('order_count', [2, 5]));
         } elseif ($targetAudience === 'active_customers') {
             $query->whereHas('profile', fn ($q) => $q->where('last_order_at', '>=', now()->subDays(30)));
+        } elseif ($targetAudience === 'loyalty_members') {
+            $query->whereHas('loyaltyAccount', fn ($q) => $q->where('membership_status', 'active'));
         }
 
-        return $query->get();
+        $customers = $query->get();
+
+        // Loyalty members first within any audience that includes them.
+        return $customers->sortByDesc(function (Customer $customer) {
+            $account = $customer->loyaltyAccount;
+
+            return $account && $account->membership_status === 'active'
+                ? (100000 + (int) $account->points_balance)
+                : (int) ($customer->profile?->order_count ?? 0);
+        })->values();
     }
 
     public function segmentForProfile(?CrmProfile $profile): string

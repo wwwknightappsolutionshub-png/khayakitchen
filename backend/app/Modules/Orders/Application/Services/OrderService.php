@@ -67,6 +67,16 @@ class OrderService
 
         $customer = $this->crmService->findOrCreateByPhone($data['phone'], $data['name']);
 
+        if (! empty($data['email']) && ! $customer->email) {
+            $customer->update(['email' => $data['email']]);
+            $customer = $customer->fresh();
+        }
+
+        if (! empty($data['referral_token'])) {
+            app(\App\Modules\Loyalty\Application\Services\LoyaltyProgramService::class)
+                ->attributeReferral($data['referral_token'], $customer);
+        }
+
         return $this->persistNewOrder(
             $data,
             $customer->id,
