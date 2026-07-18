@@ -49,6 +49,9 @@ The most recent production work is **Engagement Messaging, Likes & Reviews** (pl
 > **CRITICAL — Git on VPS:** The repo at `/www/wwwroot/khayaos.prohost.cloud` triggers `fatal: detected dubious ownership` when running as root. **Always prefix git commands** with `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. Never give deploy snippets with bare `git pull` or `git log`. Full reference: `docs/VPS_DEPLOY.md`.
 
 ```bash
+# Preferred permanent path on VPS:
+# bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh
+
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
@@ -60,6 +63,7 @@ pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 start khayaos-frontend
 pm2 restart khayaos-queue khayaos-reverb
+bash ../scripts/verify-frontend-chunks.sh
 ```
 
 > `node_modules/`/`vendor/` are git-ignored — always run `npm install` + `composer install` after pull, or builds fail with `Module not found` when a dependency was added. Always run `PricingSeeder` so Feature Library keys and plan entitlements stay in sync with the codebase (`updateOrCreate`).

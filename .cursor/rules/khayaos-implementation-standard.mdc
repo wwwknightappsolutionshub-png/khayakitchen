@@ -25,11 +25,14 @@ Reference implementation: Phase 1.0.2 SaaS Commercialization (`ffa9d2f`). Follow
 When providing production deploy commands, **always** include the safe.directory prefix on git commands. Never output bare `git pull` for this server.
 
 ```bash
+# Preferred: bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
-cd ../frontend && npm run build
-pm2 restart khayaos-frontend khayaos-queue khayaos-reverb
+pm2 stop khayaos-frontend
+cd ../frontend && npm install && rm -rf .next && npm run build
+pm2 start khayaos-frontend
+pm2 restart khayaos-queue khayaos-reverb
 ```

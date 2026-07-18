@@ -26,15 +26,56 @@ Do **not** tell the user to run `git config --global --add safe.directory` unles
 
 ---
 
+## Permanent VPS fix (do this once)
+
+These three server steps permanently stop the admin spinner class of bugs (stale HTML → missing `/_next/static` chunks).
+
+### 1) Always deploy with the safe script (never rebuild `.next` while Next is online)
+
+```bash
+bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh
+```
+
+Or the manual block below. **Never** run `rm -rf .next && npm run build` while `khayaos-frontend` is online.
+
+### 2) Disable / purge aaPanel site cache for this domain
+
+In aaPanel → Website → `khayaos.prohost.cloud` → **Config** / **Cache**:
+- Turn **off** proxy/page cache for HTML if enabled.
+- After each deploy, purge the site cache once if the panel has a Purge button.
+
+### 3) Lock Nginx so admin/login HTML is never cached
+
+In aaPanel → Website → `khayaos.prohost.cloud` → Config, place the block in **Nginx cache guidance** below **before** the Laravel `/api` location, then:
+
+```bash
+nginx -t && nginx -s reload
+```
+
+Verify a bad shell cannot return after deploy:
+
+```bash
+bash /www/wwwroot/khayaos.prohost.cloud/scripts/verify-frontend-chunks.sh
+```
+
+---
+
 ## Standard deploy snippet
 
-Copy-paste block for production (use as-is when asked for VPS deployment commands):
+**Preferred (permanent):**
+
+```bash
+bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh
+```
+
+Manual copy-paste (same safe order):
 
 ```bash
 cd /www/wwwroot/khayaos.prohost.cloud
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud pull origin main
 git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
-cd backend && composer install --no-dev --optimize-autoloader
+cd backend
+/www/server/php/83/bin/php "$(command -v composer)" install --no-dev --optimize-autoloader --no-interaction || true
 /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
 /www/server/php/83/bin/php artisan config:clear
@@ -42,6 +83,7 @@ pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 start khayaos-frontend
 pm2 restart khayaos-queue khayaos-reverb
+bash ../scripts/verify-frontend-chunks.sh
 ```
 
 > **Dependencies (required):** `node_modules/` and `vendor/` are git-ignored, so **every deploy must run `npm install`** (frontend) **and `composer install`** (backend) after `git pull`. Skipping `npm install` causes `Module not found` build failures whenever a new package was added (e.g. `country-state-city`). `config:clear` is required so `.env` changes like `FRONTEND_URL` take effect.
