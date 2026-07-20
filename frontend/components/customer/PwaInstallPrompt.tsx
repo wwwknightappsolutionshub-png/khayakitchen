@@ -12,14 +12,13 @@ import {
   getDeferredInstallPrompt,
   isIosDevice,
   isStandaloneDisplay,
+  requestGuestWebPushAfterInstall,
+  setPwaInstallUiOpen,
   subscribeInstallPrompt,
 } from "@/lib/pwa-install";
 
 const PROMPT_DELAY_MS = 8_000;
-
-function dismissStorageKey(slug: string): string {
-  return `khayaos-pwa-install-dismissed:${slug}`;
-}
+const REPROMPT_DELAY_MS = 60_000;
 
 export function PwaInstallPrompt() {
   const { data } = useStorefront();
@@ -31,28 +30,51 @@ export function PwaInstallPrompt() {
   const [iosMode, setIosMode] = useState(false);
   const [installing, setInstalling] = useState(false);
   const readyToPromptRef = useRef(false);
-  const scheduledRef = useRef(false);
-  const openedRef = useRef(false);
+  const scheduledInitialRef = useRef(false);
+  const openRef = useRef(false);
+  const repromptTimerRef = useRef<number | undefined>(undefined);
 
-  const canShowForSlug = (tenantSlug: string) => {
-    if (!tenantSlug) return false;
+  const canShow = () => {
+    if (!slug) return false;
     if (isStandaloneDisplay()) return false;
-    if (localStorage.getItem(dismissStorageKey(tenantSlug))) return false;
     return true;
   };
 
+  const closeUi = () => {
+    openRef.current = false;
+    setOpen(false);
+    setPwaInstallUiOpen(false);
+  };
+
   const openInstallUi = (promptEvent: BeforeInstallPromptEvent | null, asIos: boolean) => {
-    if (!slug || !canShowForSlug(slug) || openedRef.current) return;
-    openedRef.current = true;
+    if (!canShow() || openRef.current) return;
+    openRef.current = true;
     setDeferredPrompt(promptEvent);
     setIosMode(asIos);
     setOpen(true);
+    setPwaInstallUiOpen(true);
+  };
+
+  const scheduleReprompt = () => {
+    if (typeof window === "undefined") return;
+    window.clearTimeout(repromptTimerRef.current);
+    repromptTimerRef.current = window.setTimeout(() => {
+      if (!canShow() || openRef.current) return;
+      const promptEvent = getDeferredInstallPrompt();
+      if (promptEvent) {
+        openInstallUi(promptEvent, false);
+        return;
+      }
+      if (isIosDevice()) {
+        openInstallUi(null, true);
+      }
+    }, REPROMPT_DELAY_MS);
   };
 
   useEffect(() => {
     return subscribeInstallPrompt((event) => {
       setDeferredPrompt(event);
-      if (readyToPromptRef.current && event) {
+      if (readyToPromptRef.current && event && !openRef.current && canShow()) {
         openInstallUi(event, false);
       }
     });
@@ -62,13 +84,13 @@ export function PwaInstallPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!slug) return;
-    if (!canShowForSlug(slug)) return;
+    if (!canShow()) return;
 
     let timer: number | undefined;
 
     const markReadyAndMaybeOpen = () => {
       readyToPromptRef.current = true;
-      if (!canShowForSlug(slug) || openedRef.current) return;
+      if (!canShow() || openRef.current) return;
 
       const promptEvent = getDeferredInstallPrompt();
       if (promptEvent) {
@@ -82,8 +104,8 @@ export function PwaInstallPrompt() {
     };
 
     const schedulePrompt = () => {
-      if (scheduledRef.current) return;
-      scheduledRef.current = true;
+      if (scheduledInitialRef.current) return;
+      scheduledInitialRef.current = true;
       window.clearTimeout(timer);
       timer = window.setTimeout(markReadyAndMaybeOpen, PROMPT_DELAY_MS);
     };
@@ -94,15 +116,16 @@ export function PwaInstallPrompt() {
     return () => {
       window.removeEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
       window.clearTimeout(timer);
+      window.clearTimeout(repromptTimerRef.current);
+      setPwaInstallUiOpen(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const dismiss = () => {
-    if (slug) {
-      localStorage.setItem(dismissStorageKey(slug), "1");
-    }
-    setOpen(false);
+    closeUi();
+    // Soft dismiss — re-prompt after 60s; also shows again on refresh/next visit.
+    scheduleReprompt();
   };
 
   const install = async () => {
@@ -110,13 +133,21 @@ export function PwaInstallPrompt() {
     setInstalling(true);
     try {
       await deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+      const choice = await deferredPrompt.userChoice;
       clearDeferredInstallPrompt();
       setDeferredPrompt(null);
-      if (slug) {
-        localStorage.setItem(dismissStorageKey(slug), "1");
+
+      if (choice.outcome === "accepted") {
+        // Install started — request notifications next, then close immediately.
+        await requestGuestWebPushAfterInstall();
+        closeUi();
+        window.clearTimeout(repromptTimerRef.current);
+        return;
       }
-      setOpen(false);
+
+      // Dismissed native install sheet — soft re-prompt later.
+      closeUi();
+      scheduleReprompt();
     } catch {
       // Keep prompt available for retry
     } finally {

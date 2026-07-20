@@ -1,4 +1,5 @@
 import { engagementService } from "@/services/engagement.service";
+import { customerNotificationsService } from "@/services/customer-notifications.service";
 import { realtimeService } from "@/services/realtime.service";
 import { registerNetworkOnlyServiceWorker } from "@/lib/pwa";
 
@@ -8,12 +9,16 @@ export interface BeforeInstallPromptEvent extends Event {
 }
 
 type InstallPromptListener = (event: BeforeInstallPromptEvent | null) => void;
+type InstallUiListener = (open: boolean) => void;
 
 const PWA_INSTALLED_KEY = "khayaos_pwa_installed";
+export const PWA_INSTALL_UI_EVENT = "khayaos-pwa-install-ui";
 
 let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
 let captureBound = false;
+let pwaInstallUiOpen = false;
 const installPromptListeners = new Set<InstallPromptListener>();
+const installUiListeners = new Set<InstallUiListener>();
 
 function notifyInstallPromptListeners(): void {
   for (const listener of installPromptListeners) {
@@ -66,6 +71,81 @@ export function subscribeInstallPrompt(
 export function clearDeferredInstallPrompt(): void {
   deferredInstallPrompt = null;
   notifyInstallPromptListeners();
+}
+
+/** True while the customer PWA install modal is visible (blocks Stay-in-the-loop). */
+export function isPwaInstallUiOpen(): boolean {
+  return pwaInstallUiOpen;
+}
+
+export function setPwaInstallUiOpen(open: boolean): void {
+  if (pwaInstallUiOpen === open) return;
+  pwaInstallUiOpen = open;
+  for (const listener of installUiListeners) {
+    listener(open);
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(PWA_INSTALL_UI_EVENT, { detail: { open } }),
+    );
+  }
+}
+
+export function subscribePwaInstallUi(listener: InstallUiListener): () => void {
+  installUiListeners.add(listener);
+  listener(pwaInstallUiOpen);
+  return () => {
+    installUiListeners.delete(listener);
+  };
+}
+
+/**
+ * After install: request notification permission, subscribe when granted.
+ * Registers the device token when a guest customer id is already known.
+ */
+export async function requestGuestWebPushAfterInstall(): Promise<"granted" | "denied" | "unsupported"> {
+  if (typeof window === "undefined") return "unsupported";
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return "unsupported";
+
+  let permission = Notification.permission;
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
+  }
+  if (permission !== "granted") {
+    return permission === "denied" ? "denied" : "denied";
+  }
+
+  const reg =
+    (await navigator.serviceWorker.ready.catch(() => null)) ??
+    (await registerNetworkOnlyServiceWorker());
+  if (!reg) return "granted";
+
+  const publicConfig = await realtimeService.getPublicConfig().catch(() => null);
+  const vapidKey = publicConfig?.vapid_public_key;
+  const applicationServerKey = vapidKey
+    ? (urlBase64ToUint8Array(vapidKey) as BufferSource)
+    : undefined;
+
+  const existing = await reg.pushManager.getSubscription().catch(() => null);
+  const subscription =
+    existing ??
+    (await reg.pushManager
+      .subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      })
+      .catch(() => null));
+
+  if (!subscription) return "granted";
+
+  const customerId = localStorage.getItem("khayaos-customer-id");
+  if (customerId) {
+    await customerNotificationsService
+      .registerDeviceToken(customerId, JSON.stringify(subscription.toJSON()))
+      .catch(() => undefined);
+  }
+
+  return "granted";
 }
 
 export function isStandaloneDisplay(): boolean {

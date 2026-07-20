@@ -6,28 +6,31 @@ import { CustomerButton } from "@/components/customer/CustomerButton";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
 import { realtimeService } from "@/services/realtime.service";
 import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
+import {
+  isPwaInstallUiOpen,
+  subscribePwaInstallUi,
+  urlBase64ToUint8Array,
+} from "@/lib/pwa-install";
 
 const STORAGE_KEY = "khayaos-opt-in-dismissed";
-const PROMPT_DELAY_MS = 45_000;
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+/** Significant delay so Stay-in-the-loop never races the PWA install flow. */
+const PROMPT_DELAY_MS = 240_000;
 
 export function NotificationOptInPrompt() {
   const [open, setOpen] = useState(false);
   const scheduledRef = useRef(false);
+  const delayElapsedRef = useRef(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const tryOpen = () => {
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (!delayElapsedRef.current) return;
+    if (isPwaInstallUiOpen()) return;
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -35,18 +38,32 @@ export function NotificationOptInPrompt() {
 
     let timer: number | undefined;
 
+    const onDelayElapsed = () => {
+      delayElapsedRef.current = true;
+      tryOpen();
+    };
+
     const schedulePrompt = () => {
       if (scheduledRef.current) return;
       scheduledRef.current = true;
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => setOpen(true), PROMPT_DELAY_MS);
+      timer = window.setTimeout(onDelayElapsed, PROMPT_DELAY_MS);
     };
 
     window.addEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
+    // Fallback if splash never fires (e.g. already seen).
+    timer = window.setTimeout(schedulePrompt, PROMPT_DELAY_MS + 500);
+
+    const unsubscribeInstallUi = subscribePwaInstallUi((installOpen) => {
+      if (!installOpen) {
+        tryOpen();
+      }
+    });
 
     return () => {
       window.removeEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
       window.clearTimeout(timer);
+      unsubscribeInstallUi();
     };
   }, []);
 
