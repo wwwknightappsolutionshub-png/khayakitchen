@@ -33,6 +33,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { user, setUser } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
   const { flags } = useFeatureFlags();
   const [showStaffForm, setShowStaffForm] = useState(false);
   const [emailForm, setEmailForm] = useState({ email: "", currentPassword: "" });
@@ -69,6 +70,7 @@ export default function SettingsPage() {
   const { data: flagsData } = useQuery({
     queryKey: ["feature-flags"],
     queryFn: () => featureFlagsService.getFlags(),
+    enabled: isSuperAdmin,
   });
 
   const { data: workspaceData, isLoading: workspaceLoading } = useQuery({
@@ -460,26 +462,28 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Feature Flags</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {Object.entries(allFlags).map(([module, enabled]) => (
-                <div key={module} className="flex items-center justify-between text-sm">
-                  <span className="capitalize">{module.replace(/_/g, " ")}</span>
-                  <Badge variant={enabled ? "secondary" : "outline"}>
-                    {enabled ? "Enabled" : "Disabled"}
-                  </Badge>
-                </div>
-              ))}
-              {Object.keys(allFlags).length === 0 && (
-                <p className="text-sm text-muted">No feature flags configured</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {isSuperAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Feature Flags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Object.entries(allFlags).map(([module, enabled]) => (
+                  <div key={module} className="flex items-center justify-between text-sm">
+                    <span className="capitalize">{module.replace(/_/g, " ")}</span>
+                    <Badge variant={enabled ? "secondary" : "outline"}>
+                      {enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                ))}
+                {Object.keys(allFlags).length === 0 && (
+                  <p className="text-sm text-muted">No feature flags configured</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
@@ -594,23 +598,25 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>API Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted">API URL</span>
-              <span className="font-mono text-xs">
-                {process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Environment</span>
-              <Badge variant="outline">{process.env.NODE_ENV}</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        {isSuperAdmin && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>API Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted">API URL</span>
+                <span className="font-mono text-xs">
+                  {process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Environment</span>
+                <Badge variant="outline">{process.env.NODE_ENV}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </BackendPage>
   );
