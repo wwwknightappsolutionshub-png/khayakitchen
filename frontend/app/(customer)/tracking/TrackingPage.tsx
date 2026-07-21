@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { OrderStatusTracker } from "@/components/customer/OrderStatusTracker";
@@ -8,6 +8,13 @@ import { CustomerButton } from "@/components/customer/CustomerButton";
 import { CustomerInput } from "@/components/customer/CustomerInput";
 import { useOrderTracking } from "@/hooks/useOrderTracking";
 import { useCartStore } from "@/stores/cart-store";
+import { useToast } from "@/providers/ToastProvider";
+import {
+  consumeInstallClaimToast,
+  detectPwaInstalled,
+  requestPwaInstallUi,
+  tryClaimPwaInstallReward,
+} from "@/lib/pwa-install";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 
@@ -23,6 +30,7 @@ function TrackingSkeleton() {
 
 export default function TrackingPage() {
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const storedOrderId = useCartStore((s) => s.activeOrderId);
   const orderId = searchParams.get("id") ?? storedOrderId;
   const [phoneDraft, setPhoneDraft] = useState(() => {
@@ -35,6 +43,30 @@ export default function TrackingPage() {
   });
 
   const { data, isLoading, error, refetch } = useOrderTracking(phoneReady ? orderId : null);
+
+  useEffect(() => {
+    const payload = consumeInstallClaimToast();
+    if (!payload) return;
+
+    const points = payload.points || 200;
+    showToast(
+      "Thanks for your order",
+      `We have rewarded you with ${points} free tokens, install our app and claim now`,
+      {
+        actionLabel: "Install now",
+        onAction: () => requestPwaInstallUi(),
+        durationMs: 14_000,
+      },
+    );
+  }, [showToast]);
+
+  useEffect(() => {
+    void (async () => {
+      if (await detectPwaInstalled()) {
+        await tryClaimPwaInstallReward();
+      }
+    })();
+  }, []);
 
   const savePhoneAndLoad = () => {
     const trimmed = phoneDraft.trim();

@@ -35,6 +35,8 @@ class CrmService
                 $customer->profile->setAttribute('segment', $this->audienceResolver->segmentForProfile($customer->profile));
             }
 
+            $customer->setAttribute('app_installed', $customer->app_installed_at !== null);
+
             return $customer;
         });
     }
@@ -283,7 +285,10 @@ class CrmService
         ]);
     }
 
-    public function findOrCreateByPhone(string $phone, string $name): Customer
+    /**
+     * @return array{0: Customer, 1: bool} Customer and whether the row was just created.
+     */
+    public function findOrCreateByPhone(string $phone, string $name): array
     {
         $tenantId = $this->tenantContext->id();
         $customer = Customer::where('phone', $phone)->first();
@@ -293,15 +298,17 @@ class CrmService
                 $customer->update(['name' => $name]);
             }
 
-            return $customer->fresh();
+            return [$customer->fresh(), false];
         }
 
         $this->planLimitService->assertCustomerLimit($tenantId);
 
-        return Customer::create([
+        $created = Customer::create([
             'tenant_id' => $tenantId,
             'name' => $name,
             'phone' => $phone,
         ]);
+
+        return [$created, true];
     }
 }

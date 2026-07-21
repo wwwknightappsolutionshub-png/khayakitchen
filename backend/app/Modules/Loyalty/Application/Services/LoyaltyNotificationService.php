@@ -44,6 +44,7 @@ class LoyaltyNotificationService
                     $restaurant,
                     $title,
                     $body,
+                    isset($context['header']) ? (string) $context['header'] : null,
                 ));
                 $result['email'] = true;
             } catch (\Throwable $e) {

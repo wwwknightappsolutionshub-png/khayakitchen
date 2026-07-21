@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gift } from "lucide-react";
 import { BackendPage } from "@/components/shared/BackendPage";
@@ -12,7 +12,11 @@ import { loyaltyService } from "@/services/loyalty.service";
 import { ApiClientError } from "@/lib/api-client";
 import { useToast } from "@/providers/ToastProvider";
 import { cn } from "@/lib/utils";
-import type { LoyaltyPackage } from "@/lib/types";
+import type { LoyaltyPackage, LoyaltySettings } from "@/lib/types";
+
+const DEFAULT_WELCOME_SUBJECT = 'Welcome to "{{restaurant_name}}"';
+const DEFAULT_WELCOME_BODY =
+  "We are glad that you made this decision to join our family, it goes a long way to know that you are interested in what we do and we promise to keep up the good work we do here at {{restaurant_name}}. Be informed that you have been credited {{tokens}} tokens and have been enrolled into our loyalty program that comes with several rewards as you remain our ambassador. You can grow the tokens or redeem it immediately on your next visit or order.\n\nThank you so much once again for your patronage and looking forward to growing with you. With love from, {{restaurant_name}}.";
 
 export default function LoyaltyPage() {
   const queryClient = useQueryClient();
@@ -27,6 +31,10 @@ export default function LoyaltyPage() {
     reward_value: "",
     reward_label: "Free meal",
   });
+  const [welcomeSubject, setWelcomeSubject] = useState(DEFAULT_WELCOME_SUBJECT);
+  const [welcomeBody, setWelcomeBody] = useState(DEFAULT_WELCOME_BODY);
+  const [installPoints, setInstallPoints] = useState("200");
+  const [welcomeHydrated, setWelcomeHydrated] = useState(false);
 
   const program = useQuery({
     queryKey: ["loyalty", "program"],
@@ -35,15 +43,20 @@ export default function LoyaltyPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["loyalty", "program"] });
 
+  useEffect(() => {
+    if (!program.data?.settings || welcomeHydrated) return;
+    const s = program.data.settings;
+    setWelcomeSubject(s.install_welcome_subject || DEFAULT_WELCOME_SUBJECT);
+    setWelcomeBody(s.install_welcome_body || DEFAULT_WELCOME_BODY);
+    setInstallPoints(String(s.install_claim_points ?? 200));
+    setWelcomeHydrated(true);
+  }, [program.data?.settings, welcomeHydrated]);
+
   const settingsMutation = useMutation({
-    mutationFn: (enrollments_paused: boolean) =>
-      loyaltyService.updateSettings({ enrollments_paused }),
-    onSuccess: (data) => {
+    mutationFn: (payload: Partial<LoyaltySettings>) => loyaltyService.updateSettings(payload),
+    onSuccess: () => {
       invalidate();
-      showToast(
-        data.settings.enrollments_paused ? "New enrollments paused" : "New enrollments open",
-        "Existing members keep earning and redeeming.",
-      );
+      showToast("Loyalty settings saved");
     },
     onError: (err) =>
       setError(err instanceof ApiClientError ? err.message : "Failed to update settings"),
@@ -102,6 +115,14 @@ export default function LoyaltyPage() {
   const analytics = program.data?.analytics;
   const paused = !!settings?.enrollments_paused;
 
+  const saveWelcomeTemplate = () => {
+    settingsMutation.mutate({
+      install_claim_points: Number(installPoints) || 200,
+      install_welcome_subject: welcomeSubject.trim() || null,
+      install_welcome_body: welcomeBody.trim() || null,
+    });
+  };
+
   return (
     <BackendPage>
       <header className="backend-header">
@@ -126,7 +147,7 @@ export default function LoyaltyPage() {
               role="switch"
               aria-checked={!paused}
               disabled={settingsMutation.isPending}
-              onClick={() => settingsMutation.mutate(!paused)}
+              onClick={() => settingsMutation.mutate({ enrollments_paused: !paused })}
               className={cn(
                 "relative h-7 w-12 shrink-0 rounded-full transition-colors",
                 !paused ? "bg-primary" : "bg-border",
@@ -165,6 +186,44 @@ export default function LoyaltyPage() {
           Alert qualified customers
         </Button>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>PWA install claim & welcome email</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted">
+            New customers see a post-order toast. Tokens are credited only after they install the app
+            (once per customer). Placeholders: {"{{restaurant_name}}"}, {"{{tokens}}"}.
+          </p>
+          <Input
+            label="Install claim tokens"
+            type="number"
+            value={installPoints}
+            onChange={(e) => setInstallPoints(e.target.value)}
+          />
+          <Input
+            label="Welcome email subject"
+            value={welcomeSubject}
+            onChange={(e) => setWelcomeSubject(e.target.value)}
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Welcome email body</label>
+            <textarea
+              className="min-h-[160px] w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 py-2 text-sm"
+              value={welcomeBody}
+              onChange={(e) => setWelcomeBody(e.target.value)}
+            />
+          </div>
+          <Button
+            isLoading={settingsMutation.isPending}
+            onClick={saveWelcomeTemplate}
+            disabled={!welcomeHydrated}
+          >
+            Save install & email settings
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

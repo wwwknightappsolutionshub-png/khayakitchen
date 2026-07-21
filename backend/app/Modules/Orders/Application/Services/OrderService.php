@@ -65,11 +65,22 @@ class OrderService
         $this->restaurantStatusService->assertAcceptingOrders();
         $this->planLimitService->assertOrderLimit();
 
-        $customer = $this->crmService->findOrCreateByPhone($data['phone'], $data['name']);
+        [$customer, $wasCreated] = $this->crmService->findOrCreateByPhone($data['phone'], $data['name']);
 
+        $priorOrderCount = Order::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantContext->id())
+            ->where('customer_id', $customer->id)
+            ->whereNull('deleted_at')
+            ->count();
+
+        // "New customer" = CRM row just created OR first successful order for this phone in tenant.
+        $isNewCustomer = $wasCreated || $priorOrderCount === 0;
+
+        $emailJustSet = false;
         if (! empty($data['email']) && ! $customer->email) {
             $customer->update(['email' => $data['email']]);
             $customer = $customer->fresh();
+            $emailJustSet = true;
         }
 
         if (! empty($data['referral_token'])) {
@@ -77,12 +88,26 @@ class OrderService
                 ->attributeReferral($data['referral_token'], $customer);
         }
 
-        return $this->persistNewOrder(
+        $result = $this->persistNewOrder(
             $data,
             $customer->id,
             null,
             $data['payment_method'] ?? 'cash',
         );
+
+        $loyaltyProgram = app(\App\Modules\Loyalty\Application\Services\LoyaltyProgramService::class);
+        $claimMeta = $loyaltyProgram->installClaimEligibilityForCustomer($customer);
+
+        if ($emailJustSet) {
+            $loyaltyProgram->sendInstallWelcomeIfDue($customer->fresh());
+        }
+
+        return array_merge($result, [
+            'is_new_customer' => $isNewCustomer,
+            'install_claim_eligible' => $isNewCustomer && $claimMeta['eligible'],
+            'install_claim_points' => $claimMeta['points'],
+            'app_installed' => $claimMeta['app_installed'],
+        ]);
     }
 
     /**

@@ -13,6 +13,9 @@ type InstallUiListener = (open: boolean) => void;
 
 const PWA_INSTALLED_KEY = "khayaos_pwa_installed";
 export const PWA_INSTALL_UI_EVENT = "khayaos-pwa-install-ui";
+/** Ask PwaInstallPrompt to open (toast CTA / claim flow). */
+export const PWA_INSTALL_REQUEST_EVENT = "khayaos-pwa-install-request";
+export const INSTALL_CLAIM_TOAST_KEY = "khayaos-install-claim-toast";
 
 let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
 let captureBound = false;
@@ -51,6 +54,7 @@ export function bindPwaInstallPromptCapture(): void {
     markPwaInstalled();
     deferredInstallPrompt = null;
     notifyInstallPromptListeners();
+    void tryClaimPwaInstallReward();
   });
 }
 
@@ -97,6 +101,58 @@ export function subscribePwaInstallUi(listener: InstallUiListener): () => void {
   return () => {
     installUiListeners.delete(listener);
   };
+}
+
+/** Open the existing PWA install modal (Android prompt or iOS instructions). */
+export function requestPwaInstallUi(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PWA_INSTALL_REQUEST_EVENT));
+}
+
+export interface InstallClaimToastPayload {
+  customerId: string;
+  phone: string;
+  points: number;
+  email?: string;
+}
+
+export function stashInstallClaimToast(payload: InstallClaimToastPayload): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(INSTALL_CLAIM_TOAST_KEY, JSON.stringify(payload));
+}
+
+export function consumeInstallClaimToast(): InstallClaimToastPayload | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(INSTALL_CLAIM_TOAST_KEY);
+  if (!raw) return null;
+  sessionStorage.removeItem(INSTALL_CLAIM_TOAST_KEY);
+  try {
+    return JSON.parse(raw) as InstallClaimToastPayload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Report install to backend and claim one-time loyalty tokens when customer id is known.
+ * Safe to call repeatedly — server is idempotent.
+ */
+export async function tryClaimPwaInstallReward(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const customerId = localStorage.getItem("khayaos-customer-id");
+  const phone = localStorage.getItem("khayaos-customer-phone");
+  if (!customerId || !phone) return false;
+
+  const email = localStorage.getItem("khayaos-customer-email") ?? undefined;
+  markPwaInstalled();
+
+  try {
+    const { loyaltyService } = await import("@/services/loyalty.service");
+    await loyaltyService.claimInstall(customerId, phone, email || undefined);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

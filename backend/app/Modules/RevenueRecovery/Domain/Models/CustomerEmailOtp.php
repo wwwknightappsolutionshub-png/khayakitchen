@@ -17,6 +17,8 @@ class CustomerEmailOtp extends Model
         'tenant_id',
         'phone',
         'email',
+        'channel',
+        'purpose',
         'otp_hash',
         'expires_at',
         'attempts',

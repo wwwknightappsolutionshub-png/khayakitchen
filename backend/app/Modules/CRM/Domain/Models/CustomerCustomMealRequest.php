@@ -1,36 +1,41 @@
 <?php
 
-namespace App\Modules\RevenueRecovery\Domain\Models;
+namespace App\Modules\CRM\Domain\Models;
 
-use App\Modules\CRM\Domain\Models\Customer;
 use App\Shared\Database\Traits\BelongsToTenant;
 use App\Shared\Database\Traits\HasTenant;
 use App\Shared\Database\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CustomerSession extends Model
+class CustomerCustomMealRequest extends Model
 {
     use BelongsToTenant, HasTenant, HasUuid;
+
+    public const STATUS_SUBMITTED = 'submitted';
+
+    public const STATUS_ACKNOWLEDGED = 'acknowledged';
+
+    public const STATUS_CLOSED = 'closed';
 
     protected $fillable = [
         'tenant_id',
         'customer_id',
-        'phone',
-        'email',
-        'purpose',
-        'token_hash',
-        'location_opt_in',
-        'last_seen_at',
-        'expires_at',
+        'title',
+        'message',
+        'constraints',
+        'status',
+        'handled_by',
+        'acknowledged_at',
+        'closed_at',
+        'staff_note',
     ];
 
     protected function casts(): array
     {
         return [
-            'location_opt_in' => 'boolean',
-            'last_seen_at' => 'datetime',
-            'expires_at' => 'datetime',
+            'acknowledged_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 

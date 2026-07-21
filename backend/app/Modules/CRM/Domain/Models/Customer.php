@@ -20,9 +20,17 @@ class Customer extends Model
         'email',
         'phone',
         'referred_by_customer_id',
+        'app_installed_at',
         'created_by',
         'updated_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'app_installed_at' => 'datetime',
+        ];
+    }
 
     public function profile(): HasOne
     {
@@ -47,5 +55,15 @@ class Customer extends Model
     public function loyaltyAccount(): HasOne
     {
         return $this->hasOne(\App\Modules\Loyalty\Domain\Models\LoyaltyAccount::class, 'customer_id');
+    }
+
+    public function addresses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerAddress::class, 'customer_id');
+    }
+
+    public function customMealRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerCustomMealRequest::class, 'customer_id');
     }
 }

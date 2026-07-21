@@ -9,11 +9,13 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 import { kitchenService } from "@/services/kitchen.service";
+import { customMealsService } from "@/services/custom-meals.service";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, formatDate } from "@/lib/utils";
 import { getOrderAgeCardClass, getOrderAgeTone } from "@/lib/order-age";
-import { ChefHat, Clock, Bell } from "lucide-react";
+import { ChefHat, Clock, Bell, Utensils } from "lucide-react";
+import type { CustomMealRequest } from "@/lib/types";
 
 const ACTIVE_STATUSES = new Set(["accepted", "preparing", "ready"]);
 
@@ -33,6 +35,13 @@ export default function KitchenPage() {
     queryFn: () => kitchenService.getActiveOrders(),
     refetchInterval: pollInterval,
     staleTime: 2_000,
+  });
+
+  const { data: customMealsData, isLoading: customMealsLoading } = useQuery({
+    queryKey: ["kitchen", "custom-meals"],
+    queryFn: () => customMealsService.listForStaff(),
+    refetchInterval: pollInterval,
+    staleTime: 5_000,
   });
 
   const onRealtimeEvent = useCallback(
@@ -60,9 +69,20 @@ export default function KitchenPage() {
     },
   });
 
+  const customMealMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "acknowledged" | "closed" }) =>
+      customMealsService.updateStatus(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kitchen", "custom-meals"] });
+    },
+  });
+
   const orders = Array.isArray(data?.orders) ? data.orders : [];
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.has(o.status));
   const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
+  const customRequests = (customMealsData?.requests ?? []).filter(
+    (r) => r.status === "submitted" || r.status === "acknowledged",
+  );
   const loadError =
     error instanceof Error ? error.message : isError ? "Failed to load kitchen orders." : null;
   const updateError =
@@ -131,8 +151,29 @@ export default function KitchenPage() {
         </div>
       )}
 
-      {isFetching && !isLoading && (
-        <p className="mb-3 text-xs text-muted">Syncing…</p>
+      {isFetching && !isLoading && <p className="mb-3 text-xs text-muted">Syncing…</p>}
+
+      {(customMealsLoading || customRequests.length > 0) && (
+        <section className="mb-6">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted">
+            <Utensils className="h-4 w-4" />
+            Custom meal requests
+          </h2>
+          {customMealsLoading && customRequests.length === 0 && <CardSkeleton />}
+          <div className="grid gap-3">
+            {customRequests.map((req) => (
+              <CustomMealRequestCard
+                key={req.id}
+                request={req}
+                isPending={customMealMutation.isPending}
+                onAcknowledge={() =>
+                  customMealMutation.mutate({ id: req.id, status: "acknowledged" })
+                }
+                onClose={() => customMealMutation.mutate({ id: req.id, status: "closed" })}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {isLoading && (
@@ -185,6 +226,57 @@ export default function KitchenPage() {
         </div>
       )}
     </BackendPage>
+  );
+}
+
+function CustomMealRequestCard({
+  request,
+  isPending,
+  onAcknowledge,
+  onClose,
+}: {
+  request: CustomMealRequest;
+  isPending: boolean;
+  onAcknowledge: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Card className="border border-secondary/30 bg-secondary/5">
+      <CardContent className="py-4">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div>
+            <p className="font-semibold">{request.title || "Custom meal"}</p>
+            <p className="text-xs text-muted">
+              {request.customer?.name ?? "Customer"}
+              {request.customer?.phone ? ` · ${request.customer.phone}` : ""}
+              {request.created_at ? ` · ${formatDate(request.created_at)}` : ""}
+            </p>
+          </div>
+          <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs capitalize text-muted">
+            {request.status}
+          </span>
+        </div>
+        <p className="mb-2 text-sm">{request.message}</p>
+        {request.constraints && (
+          <p className="mb-3 text-xs text-muted">Constraints: {request.constraints}</p>
+        )}
+        {request.staff_note && (
+          <p className="mb-3 text-xs text-muted">Note: {request.staff_note}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {request.status === "submitted" && (
+            <Button size="sm" disabled={isPending} onClick={onAcknowledge}>
+              Acknowledge
+            </Button>
+          )}
+          {(request.status === "submitted" || request.status === "acknowledged") && (
+            <Button size="sm" variant="secondary" disabled={isPending} onClick={onClose}>
+              Close
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

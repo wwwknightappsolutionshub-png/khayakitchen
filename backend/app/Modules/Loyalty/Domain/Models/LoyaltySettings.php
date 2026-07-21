@@ -16,6 +16,9 @@ class LoyaltySettings extends Model
         'referral_stamp_credit',
         'referral_points_credit',
         'near_goal_threshold_percent',
+        'install_claim_points',
+        'install_welcome_subject',
+        'install_welcome_body',
     ];
 
     protected function casts(): array
@@ -25,6 +28,7 @@ class LoyaltySettings extends Model
             'referral_stamp_credit' => 'integer',
             'referral_points_credit' => 'integer',
             'near_goal_threshold_percent' => 'integer',
+            'install_claim_points' => 'integer',
         ];
     }
 }

@@ -45,6 +45,7 @@ class FeatureAccessService
         'tenant_customer_chat' => 'tenant_customer_chat',
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
+        'custom_meal_requests' => 'custom_meal_requests',
         'staff_performance' => 'staff_performance',
         'seasonal_promo' => 'seasonal_promo',
     ];
@@ -78,6 +79,7 @@ class FeatureAccessService
         'tenant_customer_chat' => 'tenant_customer_chat',
         'menu_likes_refer' => 'menu_likes_refer',
         'kitchen_reviews' => 'kitchen_reviews',
+        'custom_meal_requests' => 'custom_meal_requests',
         'staff_performance' => 'staff_performance',
         'seasonal_promo' => 'seasonal_promo',
     ];

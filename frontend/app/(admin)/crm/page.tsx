@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { Users, Smartphone } from "lucide-react";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -221,9 +221,17 @@ export default function CrmPage() {
                   title={customer.name}
                   subtitle={customer.phone ?? "—"}
                   meta={
-                    <Badge variant="outline" className="capitalize">
-                      {customer.profile?.segment ?? "new"}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge variant="outline" className="capitalize">
+                        {customer.profile?.segment ?? "new"}
+                      </Badge>
+                      {customer.app_installed ? (
+                        <Badge className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400">
+                          <Smartphone className="h-3 w-3" />
+                          App installed
+                        </Badge>
+                      ) : null}
+                    </div>
                   }
                   rows={[
                     {
@@ -254,6 +262,7 @@ export default function CrmPage() {
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Name</th>
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Phone</th>
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Segment</th>
+                  <th className="sticky top-0 bg-surface px-4 py-3 font-medium">App</th>
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Orders</th>
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Total Spent</th>
                   <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Last Order</th>
@@ -261,10 +270,10 @@ export default function CrmPage() {
               </thead>
               <tbody>
                 {customersLoading &&
-                  Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={6} />)}
+                  Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
                 {!customersLoading && customers.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       No customers yet
                     </td>
                   </tr>
@@ -278,6 +287,16 @@ export default function CrmPage() {
                     <td className="px-4 py-3 text-muted">{customer.phone ?? "—"}</td>
                     <td className="px-4 py-3 capitalize text-muted">
                       {customer.profile?.segment ?? "new"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {customer.app_installed ? (
+                        <Badge className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400">
+                          <Smartphone className="h-3 w-3" />
+                          Installed
+                        </Badge>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant="outline">

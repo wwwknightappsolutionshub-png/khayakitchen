@@ -2,14 +2,13 @@
 
 namespace App\Shared\Middleware;
 
-use App\Modules\RevenueRecovery\Application\Services\CustomerProximityAuthService;
 use App\Shared\Utils\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
 
 class ResolveCustomerSession
 {
-    public function __construct(private CustomerProximityAuthService $authService) {}
+    public function __construct(private \App\Modules\CRM\Application\Services\CustomerAuthService $authService) {}
 
     public function handle(Request $request, Closure $next)
     {

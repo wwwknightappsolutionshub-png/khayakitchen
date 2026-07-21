@@ -29,6 +29,9 @@ class LoyaltyProgramController extends Controller
             'referral_stamp_credit' => ['nullable', 'integer', 'min:0', 'max:50'],
             'referral_points_credit' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'near_goal_threshold_percent' => ['nullable', 'integer', 'min:50', 'max:99'],
+            'install_claim_points' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'install_welcome_subject' => ['nullable', 'string', 'max:200'],
+            'install_welcome_body' => ['nullable', 'string', 'max:10000'],
         ]);
 
         return ApiResponse::success([

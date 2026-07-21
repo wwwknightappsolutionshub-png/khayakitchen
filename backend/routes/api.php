@@ -13,6 +13,8 @@ use App\Modules\StaffPerformance\Interfaces\Controllers\StaffPerformanceControll
 use App\Modules\SeasonalPromo\Interfaces\Controllers\SeasonalPromoController;
 use App\Modules\Auth\Interfaces\Controllers\TenantWorkspaceController;
 use App\Modules\CRM\Interfaces\Controllers\CustomerController;
+use App\Modules\CRM\Interfaces\Controllers\CustomerAccountController;
+use App\Modules\CRM\Interfaces\Controllers\CustomMealRequestController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryController;
 use App\Modules\Delivery\Interfaces\Controllers\DeliveryZoneController;
 use App\Modules\Inventory\Interfaces\Controllers\InventoryController;
@@ -115,6 +117,31 @@ Route::prefix('v1')->group(function () {
         Route::post('/customer/notifications/device-token', [CustomerNotificationController::class, 'registerDeviceToken']);
     });
 
+    Route::middleware(['tenant.resolve', 'tenant.access', 'throttle:6,1'])->group(function () {
+        Route::post('/customer/auth/request-otp', [CustomerAccountController::class, 'requestOtp']);
+    });
+
+    Route::middleware(['tenant.resolve', 'tenant.access', 'throttle:10,1'])->group(function () {
+        Route::post('/customer/auth/verify-otp', [CustomerAccountController::class, 'verifyOtp']);
+    });
+
+    Route::middleware(['tenant.resolve', 'tenant.access', 'customer.session', 'throttle:api'])->group(function () {
+        Route::post('/customer/auth/logout', [CustomerAccountController::class, 'logout']);
+        Route::get('/customer/account/me', [CustomerAccountController::class, 'me']);
+        Route::patch('/customer/account/me', [CustomerAccountController::class, 'updateMe']);
+        Route::post('/customer/account/phone/request-otp', [CustomerAccountController::class, 'requestPhoneChange']);
+        Route::post('/customer/account/phone/confirm', [CustomerAccountController::class, 'confirmPhoneChange']);
+        Route::get('/customer/account/addresses', [CustomerAccountController::class, 'addresses']);
+        Route::post('/customer/account/addresses', [CustomerAccountController::class, 'storeAddress']);
+        Route::patch('/customer/account/addresses/{id}', [CustomerAccountController::class, 'updateAddress']);
+        Route::delete('/customer/account/addresses/{id}', [CustomerAccountController::class, 'destroyAddress']);
+        Route::post('/customer/loyalty/redeem', [CustomerAccountController::class, 'redeem']);
+        Route::get('/customer/account/notifications', [CustomerAccountController::class, 'notificationPreferences']);
+        Route::patch('/customer/account/notifications', [CustomerAccountController::class, 'updateNotificationPreferences']);
+        Route::get('/customer/account/custom-meals', [CustomerAccountController::class, 'myCustomMeals']);
+        Route::post('/customer/account/custom-meals', [CustomerAccountController::class, 'submitCustomMeal']);
+    });
+
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:orders', 'throttle:customer-orders'])->group(function () {
         Route::post('/customer/orders', [CustomerOrderController::class, 'store']);
         Route::get('/customer/orders', [CustomerOrderController::class, 'index']);
@@ -124,6 +151,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:loyalty'])->group(function () {
         Route::get('/customer/loyalty/{customerId}', [CustomerLoyaltyController::class, 'show']);
         Route::post('/customer/loyalty/opt-in', [CustomerLoyaltyController::class, 'optIn']);
+        Route::post('/customer/loyalty/claim-install', [CustomerLoyaltyController::class, 'claimInstall']);
     });
 
     Route::middleware(['auth:sanctum', 'tenant.resolve', 'tenant.access', 'permissions.load', 'throttle:api'])->group(function () {
@@ -147,6 +175,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/orders', [OrderController::class, 'store']);
             Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
             Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+            Route::get('/custom-meal-requests', [CustomMealRequestController::class, 'index']);
+            Route::patch('/custom-meal-requests/{id}', [CustomMealRequestController::class, 'updateStatus']);
         });
 
         Route::middleware('feature:inventory')->group(function () {

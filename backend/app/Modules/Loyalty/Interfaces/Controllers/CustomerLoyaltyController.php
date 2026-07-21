@@ -38,4 +38,26 @@ class CustomerLoyaltyController extends Controller
             'loyalty' => $this->loyaltyProgramService->optIn($data['customer_id'], $data['phone']),
         ]);
     }
+
+    public function claimInstall(Request $request)
+    {
+        $data = $request->validate([
+            'customer_id' => ['required', 'uuid'],
+            'phone' => ['required', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        if (! empty($data['email'])) {
+            $customer = \App\Modules\CRM\Domain\Models\Customer::where('id', $data['customer_id'])
+                ->where('phone', $data['phone'])
+                ->firstOrFail();
+            if (! $customer->email) {
+                $customer->update(['email' => $data['email']]);
+            }
+        }
+
+        $result = $this->loyaltyProgramService->claimInstall($data['customer_id'], $data['phone']);
+
+        return ApiResponse::success($result);
+    }
 }

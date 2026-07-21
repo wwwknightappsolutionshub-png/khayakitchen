@@ -12,9 +12,11 @@ import {
   getDeferredInstallPrompt,
   isIosDevice,
   isStandaloneDisplay,
+  PWA_INSTALL_REQUEST_EVENT,
   requestGuestWebPushAfterInstall,
   setPwaInstallUiOpen,
   subscribeInstallPrompt,
+  tryClaimPwaInstallReward,
 } from "@/lib/pwa-install";
 
 const PROMPT_DELAY_MS = 8_000;
@@ -46,8 +48,13 @@ export function PwaInstallPrompt() {
     setPwaInstallUiOpen(false);
   };
 
-  const openInstallUi = (promptEvent: BeforeInstallPromptEvent | null, asIos: boolean) => {
-    if (!canShow() || openRef.current) return;
+  const openInstallUi = (
+    promptEvent: BeforeInstallPromptEvent | null,
+    asIos: boolean,
+    options?: { force?: boolean },
+  ) => {
+    if (!canShow()) return;
+    if (openRef.current && !options?.force) return;
     openRef.current = true;
     setDeferredPrompt(promptEvent);
     setIosMode(asIos);
@@ -113,8 +120,21 @@ export function PwaInstallPrompt() {
     window.addEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
     timer = window.setTimeout(schedulePrompt, PROMPT_DELAY_MS + 500);
 
+    const onInstallRequest = () => {
+      readyToPromptRef.current = true;
+      window.clearTimeout(repromptTimerRef.current);
+      const promptEvent = getDeferredInstallPrompt();
+      if (promptEvent) {
+        openInstallUi(promptEvent, false, { force: true });
+        return;
+      }
+      openInstallUi(null, isIosDevice(), { force: true });
+    };
+    window.addEventListener(PWA_INSTALL_REQUEST_EVENT, onInstallRequest);
+
     return () => {
       window.removeEventListener(SPLASH_COMPLETE_EVENT, schedulePrompt);
+      window.removeEventListener(PWA_INSTALL_REQUEST_EVENT, onInstallRequest);
       window.clearTimeout(timer);
       window.clearTimeout(repromptTimerRef.current);
       setPwaInstallUiOpen(false);
@@ -138,8 +158,9 @@ export function PwaInstallPrompt() {
       setDeferredPrompt(null);
 
       if (choice.outcome === "accepted") {
-        // Install started — request notifications next, then close immediately.
+        // Install started — request notifications next, claim loyalty, then close immediately.
         await requestGuestWebPushAfterInstall();
+        await tryClaimPwaInstallReward();
         closeUi();
         window.clearTimeout(repromptTimerRef.current);
         return;

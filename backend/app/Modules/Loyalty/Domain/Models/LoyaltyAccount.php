@@ -24,6 +24,8 @@ class LoyaltyAccount extends Model
         'opted_in_at',
         'welcome_notified_at',
         'enrollment_source',
+        'install_claimed_at',
+        'install_welcome_sent_at',
         'created_at',
     ];
 
@@ -34,6 +36,8 @@ class LoyaltyAccount extends Model
             'enrolled_at' => 'datetime',
             'opted_in_at' => 'datetime',
             'welcome_notified_at' => 'datetime',
+            'install_claimed_at' => 'datetime',
+            'install_welcome_sent_at' => 'datetime',
             'points_balance' => 'integer',
             'stamps_balance' => 'integer',
         ];

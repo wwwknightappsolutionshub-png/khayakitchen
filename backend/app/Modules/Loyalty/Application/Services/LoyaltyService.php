@@ -70,6 +70,40 @@ class LoyaltyService
         return $this->applyPointsInternal($data['customer_id'], 'redeem', (int) $data['points'], $data['reference_id'] ?? null);
     }
 
+    /**
+     * Customer self-serve redeem — balance enforced server-side.
+     */
+    public function redeemForCustomer(string $customerId, string $phone, int $points, ?string $referenceId = null): LoyaltyAccount
+    {
+        $this->featureAccessService->assertAccess('loyalty_system');
+
+        $customer = Customer::where('id', $customerId)->where('phone', $phone)->firstOrFail();
+        $account = $this->findOrCreateAccountRecord($customer->id);
+
+        if ($account->membership_status !== 'active') {
+            throw ValidationException::withMessages([
+                'loyalty' => ['Join the loyalty program before redeeming points.'],
+            ]);
+        }
+
+        if ($points < 1) {
+            throw ValidationException::withMessages(['points' => ['Redeem at least 1 point.']]);
+        }
+
+        $account = $this->applyPointsInternal($customer->id, 'redeem', $points, $referenceId ?: 'customer_redeem');
+
+        app(\App\Modules\Pricing\Application\Services\AuditLogService::class)->log(
+            'loyalty.customer_redeemed',
+            $this->tenantContext->id(),
+            null,
+            'loyalty_account',
+            $account->id,
+            ['customer_id' => $customer->id, 'points' => $points],
+        );
+
+        return $account;
+    }
+
     public function handleOrderCompleted(Order $order): void
     {
         if (! $order->customer_id) {

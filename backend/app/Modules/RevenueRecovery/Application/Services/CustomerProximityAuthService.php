@@ -135,6 +135,7 @@ class CustomerProximityAuthService
 
         CustomerSession::where('tenant_id', $tenantId)
             ->where('customer_id', $customer->id)
+            ->where('purpose', 'proximity')
             ->delete();
 
         $plainToken = Str::random(64);
@@ -144,6 +145,7 @@ class CustomerProximityAuthService
             'customer_id' => $customer->id,
             'phone' => $phone,
             'email' => $email,
+            'purpose' => 'proximity',
             'token_hash' => hash('sha256', $plainToken),
             'location_opt_in' => false,
             'last_seen_at' => now(),

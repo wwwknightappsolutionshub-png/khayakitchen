@@ -4,14 +4,27 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { CheckCircle2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastState {
   id: number;
   message: string;
   description?: string;
+  action?: ToastAction;
+  durationMs: number;
+}
+
+interface ShowToastOptions {
+  actionLabel?: string;
+  onAction?: () => void;
+  durationMs?: number;
 }
 
 interface ToastContextValue {
-  showToast: (message: string, description?: string) => void;
+  showToast: (message: string, description?: string, options?: ShowToastOptions) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -19,13 +32,28 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastState[]>([]);
 
-  const showToast = useCallback((message: string, description?: string) => {
-    const id = Date.now();
-    setToasts((current) => [...current, { id, message, description }]);
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 6000);
+  const dismiss = useCallback((id: number) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
+
+  const showToast = useCallback(
+    (message: string, description?: string, options?: ShowToastOptions) => {
+      const id = Date.now() + Math.floor(Math.random() * 1000);
+      const durationMs = options?.durationMs ?? 6000;
+      const action =
+        options?.actionLabel && options?.onAction
+          ? { label: options.actionLabel, onClick: options.onAction }
+          : undefined;
+
+      setToasts((current) => [
+        ...current,
+        { id, message, description, action, durationMs },
+      ]);
+
+      window.setTimeout(() => dismiss(id), durationMs);
+    },
+    [dismiss],
+  );
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 
@@ -48,11 +76,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {toast.description ? (
                 <p className="mt-1 text-sm text-zinc-300">{toast.description}</p>
               ) : null}
+              {toast.action ? (
+                <button
+                  type="button"
+                  className="mt-3 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-emerald-400"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    dismiss(toast.id);
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              ) : null}
             </div>
             <button
               type="button"
               className="text-zinc-400 hover:text-white"
-              onClick={() => setToasts((current) => current.filter((item) => item.id !== toast.id))}
+              onClick={() => dismiss(toast.id)}
               aria-label="Dismiss notification"
             >
               <X className="h-4 w-4" />

@@ -94,6 +94,11 @@ export interface CreateOrderResponse {
   status: string;
   total: number;
   discount_total?: number;
+  customer_id?: string;
+  is_new_customer?: boolean;
+  install_claim_eligible?: boolean;
+  install_claim_points?: number;
+  app_installed?: boolean;
 }
 
 export interface Order {
@@ -167,7 +172,32 @@ export interface Customer {
   name: string;
   email?: string;
   phone?: string;
+  app_installed?: boolean;
+  app_installed_at?: string | null;
   profile?: CustomerProfile;
+}
+
+export interface CustomerAddress {
+  id: string;
+  label?: string | null;
+  line1: string;
+  line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+  is_default?: boolean;
+}
+
+export interface CustomMealRequest {
+  id: string;
+  title?: string | null;
+  message: string;
+  constraints?: string | null;
+  status: "submitted" | "acknowledged" | "closed";
+  staff_note?: string | null;
+  created_at?: string;
+  customer?: { id: string; name: string; phone?: string } | null;
 }
 
 export interface DashboardKpis {
@@ -185,6 +215,9 @@ export interface LoyaltyAccount {
   tier?: string;
   membership_status?: "prospect" | "eligible" | "active";
   enrolled_at?: string | null;
+  enrollment_source?: string | null;
+  install_claimed_at?: string | null;
+  install_welcome_sent_at?: string | null;
 }
 
 export interface LoyaltyPackage {
@@ -205,6 +238,9 @@ export interface LoyaltySettings {
   referral_stamp_credit: number;
   referral_points_credit: number;
   near_goal_threshold_percent: number;
+  install_claim_points?: number;
+  install_welcome_subject?: string | null;
+  install_welcome_body?: string | null;
 }
 
 export interface LoyaltyPackageProgress {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,13 +13,33 @@ import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { useStorefront } from "@/hooks/useStorefront";
 import { OrderSavingsSummary } from "@/components/customer/OrderSavingsSummary";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
+import { customerAuthService } from "@/services/customer-auth.service";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ApiClientError } from "@/lib/api-client";
+import { stashInstallClaimToast } from "@/lib/pwa-install";
+import type { CustomerAddress } from "@/lib/types";
+
+function formatAddressLine(a: CustomerAddress): string {
+  return [a.line1, a.line2, a.city, a.state, a.postal_code].filter(Boolean).join(", ");
+}
+
+function readCheckoutDefaults() {
+  if (typeof window === "undefined") {
+    return { name: "", phone: "", email: "", address: "" };
+  }
+  return {
+    name: localStorage.getItem("khayaos-customer-name") ?? "",
+    phone: localStorage.getItem("khayaos-customer-phone") ?? "",
+    email: localStorage.getItem("khayaos-customer-email") ?? "",
+    address: "",
+  };
+}
 
 const checkoutSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     phone: z.string().min(1, "Phone number is required"),
+    email: z.string().email("Enter a valid email").optional().or(z.literal("")),
     order_type: z.enum(["pickup", "delivery"]),
     address: z.string().optional(),
     scheduled_time: z.string().optional(),
@@ -42,6 +62,7 @@ export default function CheckoutPage() {
   const { data: storefront } = useStorefront();
   const isClosed = storefront?.status?.is_accepting_orders === false;
 
+  const stored = readCheckoutDefaults();
   const {
     register,
     handleSubmit,
@@ -51,10 +72,11 @@ export default function CheckoutPage() {
   } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      name: "",
-      phone: "",
+      name: stored.name,
+      phone: stored.phone,
+      email: stored.email,
       order_type: "pickup",
-      address: "",
+      address: stored.address,
       scheduled_time: "",
       payment_method: "cash",
       whatsapp_opt_in: true,
@@ -64,6 +86,29 @@ export default function CheckoutPage() {
   const orderType = useWatch({ control, name: "order_type" });
   const whatsappOptIn = useWatch({ control, name: "whatsapp_opt_in" });
   const paymentMethod = useWatch({ control, name: "payment_method" });
+
+  useEffect(() => {
+    const name = localStorage.getItem("khayaos-customer-name");
+    const phone = localStorage.getItem("khayaos-customer-phone");
+    const email = localStorage.getItem("khayaos-customer-email");
+    if (name) setValue("name", name);
+    if (phone) setValue("phone", phone);
+    if (email) setValue("email", email);
+
+    if (!customerAuthService.getSessionToken()) return;
+
+    void (async () => {
+      try {
+        const { addresses } = await customerAuthService.listAddresses();
+        const preferred = addresses.find((a) => a.is_default) ?? addresses[0];
+        if (preferred) {
+          setValue("address", formatAddressLine(preferred));
+        }
+      } catch {
+        // Session may be stale; leave address empty for manual entry.
+      }
+    })();
+  }, [setValue]);
 
   if (items.length === 0) {
     return (
@@ -96,6 +141,7 @@ export default function CheckoutPage() {
       const response = await placeOrder.mutateAsync({
         name: data.name,
         phone: data.phone,
+        email: data.email?.trim() || undefined,
         order_type: data.order_type,
         address: data.order_type === "delivery" ? data.address : undefined,
         payment_method: data.payment_method,
@@ -109,11 +155,26 @@ export default function CheckoutPage() {
       });
       localStorage.setItem("khayaos-customer-phone", data.phone.trim());
       localStorage.setItem("khayaos-customer-name", data.name.trim());
+      if (data.email?.trim()) {
+        localStorage.setItem("khayaos-customer-email", data.email.trim());
+      }
       if (referralToken) {
         localStorage.removeItem("khayaos-referral-token");
       }
       if (response.customer_id) {
         localStorage.setItem("khayaos-customer-id", response.customer_id);
+      }
+      if (
+        response.install_claim_eligible &&
+        response.customer_id &&
+        !response.app_installed
+      ) {
+        stashInstallClaimToast({
+          customerId: response.customer_id,
+          phone: data.phone.trim(),
+          points: response.install_claim_points ?? 200,
+          email: data.email?.trim() || undefined,
+        });
       }
       setActiveOrderId(response.order_id);
       clearCart();
@@ -146,6 +207,16 @@ export default function CheckoutPage() {
           error={errors.phone?.message}
           {...register("phone")}
         />
+        <CustomerInput
+          label="Email (optional)"
+          type="email"
+          autoComplete="email"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <p className=" -mt-4 text-xs text-[var(--muted)]">
+          Add email to receive your welcome message after installing the app.
+        </p>
 
         <section>
           <p className="mb-3 text-sm font-medium">Order type</p>

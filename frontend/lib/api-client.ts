@@ -150,6 +150,13 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
+  if (customerFacing && typeof window !== "undefined") {
+    const customerSession = localStorage.getItem("khayaos-customer-session");
+    if (customerSession && !headers["X-Customer-Session"]) {
+      headers["X-Customer-Session"] = customerSession;
+    }
+  }
+
   const isPlatformRoute = endpoint.startsWith("/platform");
   const isAuthLoginRoute = endpoint === "/auth/login";
   const isPublicAuthRoute =

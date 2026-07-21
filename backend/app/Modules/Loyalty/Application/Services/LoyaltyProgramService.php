@@ -90,6 +90,19 @@ class LoyaltyProgramService
             'referral_stamp_credit' => $data['referral_stamp_credit'] ?? $settings->referral_stamp_credit,
             'referral_points_credit' => $data['referral_points_credit'] ?? $settings->referral_points_credit,
             'near_goal_threshold_percent' => $data['near_goal_threshold_percent'] ?? $settings->near_goal_threshold_percent,
+            'install_claim_points' => array_key_exists('install_claim_points', $data)
+                ? max(0, (int) $data['install_claim_points'])
+                : $settings->install_claim_points,
+            'install_welcome_subject' => array_key_exists('install_welcome_subject', $data)
+                ? ($data['install_welcome_subject'] !== null && $data['install_welcome_subject'] !== ''
+                    ? (string) $data['install_welcome_subject']
+                    : null)
+                : $settings->install_welcome_subject,
+            'install_welcome_body' => array_key_exists('install_welcome_body', $data)
+                ? ($data['install_welcome_body'] !== null && $data['install_welcome_body'] !== ''
+                    ? (string) $data['install_welcome_body']
+                    : null)
+                : $settings->install_welcome_body,
         ]);
 
         $this->auditLogService->log(
@@ -98,7 +111,10 @@ class LoyaltyProgramService
             $this->tenantContext->user()?->id,
             'loyalty_settings',
             $settings->id,
-            ['enrollments_paused' => $settings->enrollments_paused],
+            [
+                'enrollments_paused' => $settings->enrollments_paused,
+                'install_claim_points' => $settings->install_claim_points,
+            ],
         );
 
         return $settings->fresh();
@@ -228,7 +244,195 @@ class LoyaltyProgramService
                 ->with('package')
                 ->get(),
             'enrollments_paused' => $settings->enrollments_paused,
+            'install_claim_eligible' => $account->install_claimed_at === null,
+            'install_claim_points' => (int) ($settings->install_claim_points ?: 200),
+            'app_installed' => $customer->app_installed_at !== null,
         ];
+    }
+
+    /**
+     * Eligibility for PWA install claim toast / CTA.
+     * Tokens are never credited here — only after claimInstall().
+     *
+     * @return array{eligible: bool, points: int, app_installed: bool, claimed: bool}
+     */
+    public function installClaimEligibilityForCustomer(Customer $customer): array
+    {
+        $points = 200;
+        $claimed = false;
+        $appInstalled = $customer->app_installed_at !== null;
+
+        if (! $this->featureAccessService->canAccess(self::FEATURE_KEY, $this->tenantContext->id())) {
+            return [
+                'eligible' => false,
+                'points' => $points,
+                'app_installed' => $appInstalled,
+                'claimed' => false,
+            ];
+        }
+
+        $settings = $this->settings();
+        $points = (int) ($settings->install_claim_points ?: 200);
+        $account = $this->loyaltyService->findOrCreateAccountRecord($customer->id);
+        $claimed = $account->install_claimed_at !== null;
+
+        return [
+            'eligible' => ! $claimed && ! $settings->enrollments_paused,
+            'points' => $points,
+            'app_installed' => $appInstalled,
+            'claimed' => $claimed,
+        ];
+    }
+
+    /**
+     * Claim PWA install reward: enroll (source pwa_install), credit tokens once, mark CRM app installed.
+     * Idempotent — second call returns existing balances without double credit.
+     *
+     * @return array{loyalty: LoyaltyAccount, customer: Customer, points_awarded: int, already_claimed: bool, welcome_email_sent: bool}
+     */
+    public function claimInstall(string $customerId, string $phone): array
+    {
+        $this->featureAccessService->assertAccess(self::FEATURE_KEY);
+
+        $customer = Customer::where('id', $customerId)->where('phone', $phone)->firstOrFail();
+        $settings = $this->settings();
+        $points = (int) ($settings->install_claim_points ?: 200);
+        $account = $this->loyaltyService->findOrCreateAccountRecord($customer->id);
+
+        if ($account->install_claimed_at) {
+            if (! $customer->app_installed_at) {
+                $customer->update(['app_installed_at' => now()]);
+                $customer = $customer->fresh();
+            }
+
+            $welcomeSent = $this->sendInstallWelcomeIfDue($customer);
+
+            return [
+                'loyalty' => $account->fresh(),
+                'customer' => $customer,
+                'points_awarded' => 0,
+                'already_claimed' => true,
+                'welcome_email_sent' => $welcomeSent,
+            ];
+        }
+
+        if ($settings->enrollments_paused && $account->membership_status !== 'active') {
+            throw ValidationException::withMessages([
+                'loyalty' => ['This kitchen has paused new loyalty enrollments.'],
+            ]);
+        }
+
+        return DB::transaction(function () use ($customer, $account, $points, $settings) {
+            $customer->update(['app_installed_at' => $customer->app_installed_at ?? now()]);
+            $customer = $customer->fresh();
+
+            $account = $this->enrollCustomer($customer, 'pwa_install', true);
+
+            $this->loyaltyService->applyPointsInternal(
+                $customer->id,
+                'earn',
+                $points,
+                'pwa_install:'.$customer->id,
+            );
+
+            $account = $this->loyaltyService->findOrCreateAccountRecord($customer->id);
+            $account->update(['install_claimed_at' => now()]);
+            $account = $account->fresh();
+
+            $welcomeSent = $this->sendInstallWelcomeIfDue($customer->fresh());
+
+            $this->auditLogService->log(
+                'loyalty.install_claimed',
+                $this->tenantContext->id(),
+                null,
+                'loyalty_account',
+                $account->id,
+                [
+                    'customer_id' => $customer->id,
+                    'points' => $points,
+                    'enrollment_source' => $account->enrollment_source,
+                ],
+            );
+
+            return [
+                'loyalty' => $account,
+                'customer' => $customer->fresh(),
+                'points_awarded' => $points,
+                'already_claimed' => false,
+                'welcome_email_sent' => $welcomeSent,
+            ];
+        });
+    }
+
+    /**
+     * Send install welcome email when claim succeeded and customer has email.
+     * Uses tenant-editable template with placeholders. Idempotent via install_welcome_sent_at.
+     */
+    public function sendInstallWelcomeIfDue(Customer $customer): bool
+    {
+        if (! $customer->email) {
+            return false;
+        }
+
+        if (! $this->featureAccessService->canAccess(self::FEATURE_KEY, $this->tenantContext->id())) {
+            return false;
+        }
+
+        $account = $this->loyaltyService->findOrCreateAccountRecord($customer->id);
+        if (! $account->install_claimed_at || $account->install_welcome_sent_at) {
+            return false;
+        }
+
+        $settings = $this->settings();
+        $points = (int) ($settings->install_claim_points ?: 200);
+        $restaurant = $this->restaurantFallback();
+        $subject = $this->renderInstallTemplate(
+            $settings->install_welcome_subject ?: $this->defaultInstallWelcomeSubject(),
+            $restaurant,
+            $points,
+        );
+        $body = $this->renderInstallTemplate(
+            $settings->install_welcome_body ?: $this->defaultInstallWelcomeBody(),
+            $restaurant,
+            $points,
+        );
+
+        $channels = $this->notificationService->notifyCustomer(
+            $this->tenantContext->id(),
+            $customer,
+            $subject,
+            $body,
+            ['event' => 'install_welcome', 'header' => $subject],
+        );
+
+        if ($channels['email']) {
+            $account->update(['install_welcome_sent_at' => now()]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function defaultInstallWelcomeSubject(): string
+    {
+        return 'Welcome to "{{restaurant_name}}"';
+    }
+
+    public function defaultInstallWelcomeBody(): string
+    {
+        return 'We are glad that you made this decision to join our family, it goes a long way to know that you are interested in what we do and we promise to keep up the good work we do here at {{restaurant_name}}. Be informed that you have been credited {{tokens}} tokens and have been enrolled into our loyalty program that comes with several rewards as you remain our ambassador. You can grow the tokens or redeem it immediately on your next visit or order.'
+            ."\n\n"
+            .'Thank you so much once again for your patronage and looking forward to growing with you. With love from, {{restaurant_name}}.';
+    }
+
+    private function renderInstallTemplate(string $template, string $restaurantName, int $tokens): string
+    {
+        return str_replace(
+            ['{{restaurant_name}}', '{{tokens}}', '{{points}}'],
+            [$restaurantName, (string) $tokens, (string) $tokens],
+            $template,
+        );
     }
 
     public function optIn(string $customerId, string $phone): LoyaltyAccount
@@ -256,6 +460,9 @@ class LoyaltyProgramService
                 'referral_stamp_credit' => 1,
                 'referral_points_credit' => 25,
                 'near_goal_threshold_percent' => 80,
+                'install_claim_points' => 200,
+                'install_welcome_subject' => null,
+                'install_welcome_body' => null,
             ],
         );
     }
@@ -326,11 +533,12 @@ class LoyaltyProgramService
         $account->update([
             'membership_status' => 'active',
             'enrolled_at' => now(),
-            'opted_in_at' => $source === 'signup' ? now() : $account->opted_in_at,
+            'opted_in_at' => in_array($source, ['signup', 'pwa_install'], true) ? now() : $account->opted_in_at,
             'enrollment_source' => $source,
         ]);
 
-        if (! $account->welcome_notified_at) {
+        // Install claim sends its own tenant-editable welcome email — skip generic loyalty welcome.
+        if ($source !== 'pwa_install' && ! $account->welcome_notified_at) {
             $summary = $this->notificationService->packagesSummary($this->tenantContext->id());
             $this->notificationService->notifyCustomer(
                 $this->tenantContext->id(),
@@ -506,6 +714,14 @@ class LoyaltyProgramService
 
     private function restaurantFallback(): string
     {
+        $branding = \App\Modules\TenantBranding\Domain\Models\TenantBranding::query()
+            ->where('tenant_id', $this->tenantContext->id())
+            ->first();
+
+        if ($branding?->restaurant_name) {
+            return $branding->restaurant_name;
+        }
+
         return $this->tenantContext->tenant()?->name ?? 'our kitchen';
     }
 }

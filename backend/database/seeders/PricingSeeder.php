@@ -41,6 +41,7 @@ class PricingSeeder extends Seeder
             ['key' => 'tenant_customer_chat', 'name' => 'Tenant Customer Chat', 'category' => 'crm', 'module' => 'tenant_customer_chat', 'description' => 'In-app chat between tenants and customers (live updates + typing)', 'implemented_at' => '2026-07-13'],
             ['key' => 'menu_likes_refer', 'name' => 'Menu Likes & Refer', 'category' => 'orders', 'module' => 'menu_likes_refer', 'description' => 'Customer meal likes and WhatsApp refer', 'implemented_at' => '2026-07-13'],
             ['key' => 'kitchen_reviews', 'name' => 'Kitchen Reviews', 'category' => 'crm', 'module' => 'kitchen_reviews', 'description' => 'Customer kitchen reviews with owner moderation', 'implemented_at' => '2026-07-13'],
+            ['key' => 'custom_meal_requests', 'name' => 'Custom Meal Requests', 'category' => 'crm', 'module' => 'custom_meal_requests', 'description' => 'Customers request off-menu custom meals; kitchen staff manage status', 'implemented_at' => '2026-07-21'],
             ['key' => 'staff_performance', 'name' => 'Staff Performance', 'category' => 'reporting', 'module' => 'staff_performance', 'description' => 'Waiter and chef performance tracking (free first 30 days)', 'implemented_at' => '2026-07-14'],
             ['key' => 'seasonal_promo', 'name' => 'Seasonal Promo', 'category' => 'marketing', 'module' => 'seasonal_promo', 'description' => 'Monthly/seasonal full-screen customer promo splash with menu CTA (free first 30 days)', 'implemented_at' => '2026-07-14'],
         ];
@@ -176,7 +177,7 @@ class PricingSeeder extends Seeder
         $growthKeys = array_merge($starterKeys, [
             'inventory_tracking', 'loyalty_system', 'whatsapp_notifications', 'pwa_push_notifications',
             'notification_campaigns', 'revenue_recovery', 'delivery', 'coupons',
-            'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat',
+            'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat', 'custom_meal_requests',
         ]);
         $professionalKeys = array_merge($growthKeys, [
             'reports', 'forecasting', 'staff_performance', 'seasonal_promo',

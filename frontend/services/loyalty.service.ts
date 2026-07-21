@@ -4,6 +4,7 @@ import type {
   LoyaltyPackage,
   LoyaltyPackageProgress,
   LoyaltySettings,
+  Customer,
 } from "@/lib/types";
 
 export const loyaltyService = {
@@ -74,7 +75,34 @@ export const loyaltyService = {
     );
   },
 
+  async claimInstall(customerId: string, phone: string, email?: string) {
+    return api.post<{
+      loyalty: LoyaltyAccount;
+      customer: Customer;
+      points_awarded: number;
+      already_claimed: boolean;
+      welcome_email_sent: boolean;
+    }>(
+      "/customer/loyalty/claim-install",
+      {
+        customer_id: customerId,
+        phone,
+        email: email || undefined,
+      },
+      { skipAuth: true },
+    );
+  },
+
   async redeem(customerId: string, points: number) {
     return api.post("/loyalty/redeem", { customer_id: customerId, points });
+  },
+
+  /** Logged-in customer redeem via session (X-Customer-Session auto-injected). */
+  async redeemAsCustomer(points: number) {
+    return api.post<{ loyalty: LoyaltyAccount }>(
+      "/customer/loyalty/redeem",
+      { points },
+      { skipAuth: true },
+    );
   },
 };
