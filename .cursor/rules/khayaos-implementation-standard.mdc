@@ -16,13 +16,14 @@ Before any code change, read `docs/IMPLEMENTATION_STANDARD.md`.
 5. **Backend deliverables** — migrations, services, thin controllers, audit logs on mutations, PHPUnit feature tests.
 6. **Frontend deliverables** — types in `lib/types.ts`, API in `services/`, KhayaOS UI (Card, Button, Anek font), `npm run build` must pass.
 7. **QA gate** — `php artisan test` and `npm run build` pass before considering work done.
-8. **Deploy** — see `docs/VPS_DEPLOY.md`. On VPS, **every git command must use** `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. When the user asks for a VPS deploy snippet, use the full block in that doc (pull + log + migrate + PricingSeeder + build + pm2 restart).
+8. **Deploy** — see `docs/VPS_DEPLOY.md`. On VPS, **every git command must use** `-c safe.directory=/www/wwwroot/khayaos.prohost.cloud`. Prefer `bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh`. When giving a manual VPS deploy snippet, use the full block below (pull + log + migrate + PricingSeeder + build + pm2 restart + verify-frontend-chunks).
+9. **Never rebuild `.next` while online** — never run `rm -rf .next` or `npm run build` while `khayaos-frontend` is serving traffic. Always `pm2 stop khayaos-frontend` first, then install/build, then `pm2 start khayaos-frontend`, then `bash scripts/verify-frontend-chunks.sh`. Rebuilding while online causes stale HTML ↔ missing `/_next/static` chunk 404 spinners.
 
 Reference implementation: Phase 1.0.2 SaaS Commercialization (`ffa9d2f`). Follow the same depth and completeness for all future features.
 
 ## VPS deploy snippet (mandatory format)
 
-When providing production deploy commands, **always** include the safe.directory prefix on git commands. Never output bare `git pull` for this server.
+When providing production deploy commands, **always** include the safe.directory prefix on git commands. Never output bare `git pull` for this server. Prefer the deploy script; never delete/rebuild `.next` while `khayaos-frontend` is online.
 
 ```bash
 # Preferred: bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-deploy.sh
@@ -35,4 +36,5 @@ pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build
 pm2 start khayaos-frontend
 pm2 restart khayaos-queue khayaos-reverb
+bash ../scripts/verify-frontend-chunks.sh
 ```
