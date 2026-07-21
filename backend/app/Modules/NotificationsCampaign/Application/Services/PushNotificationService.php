@@ -132,15 +132,23 @@ class PushNotificationService
         array $metadata,
         string $entityType = 'customer',
     ): void {
-        DB::table('activity_logs')->insert([
-            'id' => (string) Str::uuid(),
-            'tenant_id' => $tenantId,
-            'user_id' => null,
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'metadata' => json_encode($metadata),
-            'created_at' => now(),
-        ]);
+        try {
+            DB::table('activity_logs')->insert([
+                'id' => (string) Str::uuid(),
+                'tenant_id' => $tenantId,
+                'user_id' => null,
+                'action' => $action,
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'metadata' => json_encode($metadata),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Push activity log failed', [
+                'tenant_id' => $tenantId,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

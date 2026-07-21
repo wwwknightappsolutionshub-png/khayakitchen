@@ -283,24 +283,52 @@ class ChatService
             $body,
         );
 
-        if ($thread->type === 'tenant_customer' && $thread->customer_id) {
+        $tenantId = $thread->tenant_id;
+        $customerId = $thread->customer_id;
+        $threadType = $thread->type;
+        $threadIdForNotify = $thread->id;
+        $notifyBody = $body;
+        $staffLabel = $user?->name ?? 'Staff';
+
+        // Never block the HTTP response on push / realtime side-effects.
+        dispatch(function () use ($tenantId, $customerId, $threadType, $threadIdForNotify, $notifyBody, $staffLabel, $message) {
             try {
-                $this->pushNotificationService->send(
-                    $thread->tenant_id,
-                    $thread->customer_id,
-                    'New message from restaurant',
-                    $body,
-                    ['thread_id' => $thread->id],
-                );
+                if ($threadType === 'tenant_customer' && $customerId && $tenantId) {
+                    app(PushNotificationService::class)->send(
+                        $tenantId,
+                        $customerId,
+                        'New message from restaurant',
+                        $notifyBody,
+                        ['thread_id' => $threadIdForNotify],
+                    );
+                }
             } catch (\Throwable $e) {
                 report($e);
             }
-        }
 
-        $this->broadcastMessage($thread, $message);
-        $this->broadcastTyping($thread, 'tenant_user', $user?->name ?? 'Staff', false);
+            try {
+                $gateway = app(WebSocketGateway::class);
+                $gateway->emitChatMessageCreated($tenantId, $threadType, $threadIdForNotify, [
+                    'id' => $message->id,
+                    'thread_id' => $threadIdForNotify,
+                    'sender_type' => $message->sender_type,
+                    'sender_label' => $message->sender_label,
+                    'body' => $message->body,
+                    'created_at' => optional($message->created_at)?->toIso8601String(),
+                ]);
+                $gateway->emitChatTyping($tenantId, $threadType, [
+                    'thread_id' => $threadIdForNotify,
+                    'thread_type' => $threadType,
+                    'actor_type' => 'tenant_user',
+                    'actor_label' => $staffLabel,
+                    'is_typing' => false,
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        })->afterResponse();
 
-        return $message;
+        return $message->fresh() ?? $message;
     }
 
     public function postCustomerMessage(string $threadId, ?string $phone, string $body, ?string $guestKey = null): ChatMessage
@@ -318,18 +346,70 @@ class ChatService
             $body,
         );
 
-        try {
-            $this->notifyTenantStaffOfCustomerChat(
-                $thread,
-                'Urgent: customer message',
-                ($customer->name ?: 'Guest').': '.$body,
-            );
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $tenantId = $thread->tenant_id;
+        $threadType = $thread->type;
+        $customerName = $customer->name ?: 'Guest';
+        $notifyTitle = 'Urgent: customer message';
+        $notifyBody = $customerName.': '.$body;
+        $messagePayload = [
+            'id' => $message->id,
+            'thread_id' => $thread->id,
+            'sender_type' => $message->sender_type,
+            'sender_label' => $message->sender_label,
+            'body' => $message->body,
+            'created_at' => optional($message->created_at)?->toIso8601String(),
+        ];
+        $threadIdForJob = $thread->id;
 
-        $this->broadcastMessage($thread, $message);
-        $this->broadcastTyping($thread, 'customer', $customer->name ?: 'Guest', false);
+        dispatch(function () use ($tenantId, $threadType, $threadIdForJob, $notifyTitle, $notifyBody, $customerName, $messagePayload) {
+            try {
+                $thread = ChatThread::withoutGlobalScopes()->find($threadIdForJob);
+                if ($thread) {
+                    $users = User::withoutGlobalScopes()
+                        ->where('tenant_id', $thread->tenant_id)
+                        ->whereIn('role', ['owner', 'manager'])
+                        ->where('status', 'active')
+                        ->get();
+                    $push = app(PushNotificationService::class);
+                    foreach ($users as $user) {
+                        try {
+                            $push->sendToUser(
+                                $thread->tenant_id,
+                                $user->id,
+                                $notifyTitle,
+                                $notifyBody,
+                                [
+                                    'thread_id' => $thread->id,
+                                    'urgency' => 'high',
+                                    'kind' => 'customer_chat',
+                                    'url' => '/inbox',
+                                ],
+                            );
+                        } catch (\Throwable $e) {
+                            report($e);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            try {
+                if ($tenantId) {
+                    $gateway = app(WebSocketGateway::class);
+                    $gateway->emitChatMessageCreated($tenantId, $threadType, $threadIdForJob, $messagePayload);
+                    $gateway->emitChatTyping($tenantId, $threadType, [
+                        'thread_id' => $threadIdForJob,
+                        'thread_type' => $threadType,
+                        'actor_type' => 'customer',
+                        'actor_label' => $customerName,
+                        'is_typing' => false,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        })->afterResponse();
 
         return $message;
     }

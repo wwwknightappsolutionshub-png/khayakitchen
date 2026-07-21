@@ -177,7 +177,10 @@ export default function TenantInboxPage() {
   }, [thread.data, queryClient]);
 
   const post = useMutation({
-    mutationFn: () => engagementService.postTenantChatMessage(activeThreadId!, body),
+    mutationFn: () => {
+      setError(null);
+      return engagementService.postTenantChatMessage(activeThreadId!, body);
+    },
     onSuccess: () => {
       setBody("");
       onCompose(false);
@@ -187,7 +190,12 @@ export default function TenantInboxPage() {
       queryClient.invalidateQueries({ queryKey: ["engagement", "platform-threads"] });
       queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: Error) => {
+      setError(err.message);
+      void queryClient
+        .invalidateQueries({ queryKey: ["engagement", "thread", activeThreadId] })
+        .then(() => setError(null));
+    },
   });
 
   const openThread = (id: string) => {
@@ -251,13 +259,13 @@ export default function TenantInboxPage() {
         </CardContent>
       </Card>
 
-      <div className="grid min-h-[560px] overflow-hidden rounded-xl border border-border bg-surface lg:grid-cols-[320px_1fr]">
-        <aside className="flex max-h-[70vh] flex-col border-b border-border lg:max-h-none lg:border-b-0 lg:border-r">
-          <div className="border-b border-border px-4 py-3">
+      <div className="grid h-[min(70vh,720px)] overflow-hidden rounded-xl border border-border bg-surface lg:grid-cols-[320px_1fr]">
+        <aside className="flex min-h-0 flex-col border-b border-border lg:border-b-0 lg:border-r">
+          <div className="shrink-0 border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">Chats</p>
             <p className="text-xs text-muted">Select a conversation</p>
           </div>
-          <div className="flex-1 space-y-4 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
             <div>
               <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
                 With platform
@@ -299,7 +307,7 @@ export default function TenantInboxPage() {
           </div>
         </aside>
 
-        <section className="flex min-h-[420px] flex-col">
+        <section className="flex min-h-[280px] flex-col overflow-hidden lg:min-h-0">
           {!activeThreadId ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
               <MessageSquare className="h-10 w-10 text-muted" />
@@ -310,7 +318,7 @@ export default function TenantInboxPage() {
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
                   {initials(conversationTitle)}
                 </span>
@@ -325,7 +333,10 @@ export default function TenantInboxPage() {
                 </div>
               </div>
 
-              <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto bg-surface-elevated/40 px-4 py-4">
+              <div
+                ref={scrollerRef}
+                className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-surface-elevated/40 px-4 py-4"
+              >
                 {messages.map((m) => (
                   <MessageBubble
                     key={m.id}
@@ -338,10 +349,10 @@ export default function TenantInboxPage() {
                 )}
               </div>
 
-              <div className="border-t border-border p-3">
+              <div className="shrink-0 border-t border-border p-3">
                 <div className="flex items-end gap-2">
                   <textarea
-                    className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary"
+                    className="max-h-28 min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary"
                     value={body}
                     rows={2}
                     onChange={(e) => {

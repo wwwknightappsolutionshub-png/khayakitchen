@@ -21,8 +21,6 @@ export interface AddonPopularity {
   mealId?: string;
 }
 
-const ACTIVE_STATUSES = new Set(["pending", "accepted", "preparing", "ready"]);
-
 function isToday(iso: string): boolean {
   const d = new Date(iso);
   const now = new Date();
@@ -38,7 +36,7 @@ export function filterTodayOrders(orders: Order[]): Order[] {
 }
 
 export function countPendingOrders(orders: Order[]): number {
-  return orders.filter((o) => ACTIVE_STATUSES.has(o.status)).length;
+  return orders.filter((o) => o.status === "pending").length;
 }
 
 export function computeAverageOrderValue(orders: Order[]): number {

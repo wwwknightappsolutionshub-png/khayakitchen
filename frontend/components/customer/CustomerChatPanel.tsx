@@ -134,11 +134,13 @@ export function CustomerChatPanel() {
   });
 
   useEffect(() => {
-    if (thread.isSuccess) setError(null);
-    if (thread.isError && thread.error) {
+    // Clear sticky errors after a successful poll/refetch (isSuccess alone won't re-fire).
+    if (thread.isSuccess && thread.dataUpdatedAt) {
+      setError(null);
+    } else if (thread.isError && thread.error) {
       setError(thread.error instanceof Error ? thread.error.message : "Chat failed");
     }
-  }, [thread.isSuccess, thread.isError, thread.error]);
+  }, [thread.isSuccess, thread.isError, thread.error, thread.dataUpdatedAt]);
 
   const openChat = useMutation({
     mutationFn: () =>
@@ -159,8 +161,10 @@ export function CustomerChatPanel() {
   });
 
   const send = useMutation({
-    mutationFn: () =>
-      engagementService.postCustomerChatMessage(threadId!, identity, body),
+    mutationFn: () => {
+      setError(null);
+      return engagementService.postCustomerChatMessage(threadId!, identity, body);
+    },
     onSuccess: () => {
       setBody("");
       onCompose(false);
@@ -170,11 +174,13 @@ export function CustomerChatPanel() {
       });
     },
     onError: (err: Error) => {
+      // Prefer showing the conversation; clear transient server errors once messages refresh.
       setError(err.message);
-      // Message may already be saved server-side — refresh so the UI stays truthful.
-      queryClient.invalidateQueries({
-        queryKey: ["customer-chat", threadId, identity.phone ?? "", identity.guest_key],
-      });
+      queryClient
+        .invalidateQueries({
+          queryKey: ["customer-chat", threadId, identity.phone ?? "", identity.guest_key],
+        })
+        .then(() => setError(null));
     },
   });
 
@@ -188,8 +194,8 @@ export function CustomerChatPanel() {
   return (
     <ModalPortal open={open} onClose={closeCustomerChat}>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-        <div className="flex h-[min(88vh,640px)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl">
-          <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-3">
+        <div className="flex h-[min(88vh,640px)] max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl">
+          <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)]/15 text-[var(--primary)]">
               <MessageCircle className="h-5 w-5" />
             </div>
@@ -209,7 +215,7 @@ export function CustomerChatPanel() {
             </button>
           </div>
 
-          <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div ref={scrollerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
             {error && (
               <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                 {error}
@@ -258,7 +264,7 @@ export function CustomerChatPanel() {
           </div>
 
           {threadId && (
-            <div className="border-t border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface)] p-3">
               <div className="flex items-end gap-2">
                 <textarea
                   className="max-h-28 min-h-[44px] flex-1 resize-none rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"

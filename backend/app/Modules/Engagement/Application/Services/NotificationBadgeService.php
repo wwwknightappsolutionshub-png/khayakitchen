@@ -50,16 +50,15 @@ class NotificationBadgeService
 
         $crmAttention = 0;
         if ($this->permissionService->has($permissions, 'crm.view')) {
+            // Real CRM signal only — exclude guest chat rows (synthetic g-… phones).
             $crmAttention = Customer::query()
                 ->where('created_at', '>=', now()->subDay())
+                ->where('phone', 'not like', 'g-%')
                 ->count();
         }
 
-        $dashboardAttention = $pendingOrders
-            + $kitchenTickets
-            + $chat['unread_customer_messages']
-            + $pendingReviews
-            + $crmAttention;
+        // Dashboard badge = orders awaiting floor accept (matches Pending Orders KPI).
+        $dashboardAttention = $pendingOrders;
 
         return [
             'unread_customer_messages' => $chat['unread_customer_messages'],

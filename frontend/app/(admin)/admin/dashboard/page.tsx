@@ -82,7 +82,9 @@ export default function LiveRestaurantDashboardPage() {
                 newCount > 0 && "ring-2 ring-danger ring-offset-2 ring-offset-background",
               )}
             >
-              <KpiCard label="Pending Orders" value={data?.pendingOrdersCount ?? 0} />
+              <Link href="/orders" className="block transition-opacity hover:opacity-90">
+                <KpiCard label="Pending Orders" value={data?.pendingOrdersCount ?? 0} />
+              </Link>
             </div>
           </>
         )}
