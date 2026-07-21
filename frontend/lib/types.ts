@@ -740,6 +740,11 @@ export interface ChatThread {
   tenant_id: string;
   subject?: string | null;
   customer_id?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  last_message_preview?: string | null;
+  last_message_at?: string | null;
+  unread_count?: number;
   messages?: ChatMessage[];
   updated_at?: string;
 }

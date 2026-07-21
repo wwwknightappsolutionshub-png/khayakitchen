@@ -52,7 +52,8 @@ class ChatService
         return ChatThread::where('type', 'platform_tenant')
             ->orderByDesc('updated_at')
             ->with(['messages' => fn ($q) => $q->orderByDesc('created_at')->limit(1)])
-            ->get();
+            ->get()
+            ->map(fn (ChatThread $thread) => $this->decorateThreadForList($thread));
     }
 
     public function listTenantCustomerThreads(array $permissions): Collection
@@ -62,8 +63,12 @@ class ChatService
 
         return ChatThread::where('type', 'tenant_customer')
             ->orderByDesc('updated_at')
-            ->with(['messages' => fn ($q) => $q->orderByDesc('created_at')->limit(1)])
-            ->get();
+            ->with([
+                'customer',
+                'messages' => fn ($q) => $q->orderByDesc('created_at')->limit(1),
+            ])
+            ->get()
+            ->map(fn (ChatThread $thread) => $this->decorateThreadForList($thread, true));
     }
 
     public function openPlatformTenantThread(User $platformUser, string $tenantId, ?string $subject = null): ChatThread
@@ -144,11 +149,15 @@ class ChatService
         }
 
         if ($created) {
-            $this->notifyTenantStaffOfCustomerChat(
-                $thread,
-                'Customer opened chat',
-                ($customer->name ?: 'Guest').' started a chat with the restaurant.',
-            );
+            try {
+                $this->notifyTenantStaffOfCustomerChat(
+                    $thread,
+                    'Customer opened chat',
+                    ($customer->name ?: 'Guest').' started a chat with the restaurant.',
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return $thread->load('messages');
@@ -275,13 +284,17 @@ class ChatService
         );
 
         if ($thread->type === 'tenant_customer' && $thread->customer_id) {
-            $this->pushNotificationService->send(
-                $thread->tenant_id,
-                $thread->customer_id,
-                'New message from restaurant',
-                $body,
-                ['thread_id' => $thread->id],
-            );
+            try {
+                $this->pushNotificationService->send(
+                    $thread->tenant_id,
+                    $thread->customer_id,
+                    'New message from restaurant',
+                    $body,
+                    ['thread_id' => $thread->id],
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         $this->broadcastMessage($thread, $message);
@@ -305,11 +318,15 @@ class ChatService
             $body,
         );
 
-        $this->notifyTenantStaffOfCustomerChat(
-            $thread,
-            'Urgent: customer message',
-            ($customer->name ?: 'Guest').': '.$body,
-        );
+        try {
+            $this->notifyTenantStaffOfCustomerChat(
+                $thread,
+                'Urgent: customer message',
+                ($customer->name ?: 'Guest').': '.$body,
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $this->broadcastMessage($thread, $message);
         $this->broadcastTyping($thread, 'customer', $customer->name ?: 'Guest', false);
@@ -527,6 +544,35 @@ class ChatService
         }
     }
 
+    private function decorateThreadForList(ChatThread $thread, bool $includeUnread = false): ChatThread
+    {
+        $last = $thread->messages->first();
+        $thread->setAttribute('last_message_preview', $last?->body);
+        $thread->setAttribute(
+            'last_message_at',
+            optional($last?->created_at)?->toIso8601String() ?? optional($thread->updated_at)?->toIso8601String(),
+        );
+        $thread->setAttribute(
+            'customer_name',
+            $thread->customer?->name ?? ($thread->type === 'platform_tenant' ? 'Platform' : 'Guest'),
+        );
+        $thread->setAttribute('customer_phone', $thread->customer?->phone);
+
+        if ($includeUnread) {
+            $thread->setAttribute(
+                'unread_count',
+                ChatMessage::where('thread_id', $thread->id)
+                    ->where('sender_type', 'customer')
+                    ->whereNull('read_at')
+                    ->count(),
+            );
+        } else {
+            $thread->setAttribute('unread_count', 0);
+        }
+
+        return $thread;
+    }
+
     private function notifyTenantUsersOfPlatformChat(ChatThread $thread, string $body): void
     {
         $users = User::withoutGlobalScopes()
@@ -536,13 +582,17 @@ class ChatService
             ->get();
 
         foreach ($users as $user) {
-            $this->pushNotificationService->sendToUser(
-                $thread->tenant_id,
-                $user->id,
-                'New platform message',
-                $body,
-                ['thread_id' => $thread->id],
-            );
+            try {
+                $this->pushNotificationService->sendToUser(
+                    $thread->tenant_id,
+                    $user->id,
+                    'New platform message',
+                    $body,
+                    ['thread_id' => $thread->id],
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
     }
 
@@ -555,18 +605,22 @@ class ChatService
             ->get();
 
         foreach ($users as $user) {
-            $this->pushNotificationService->sendToUser(
-                $thread->tenant_id,
-                $user->id,
-                $title,
-                $body,
-                [
-                    'thread_id' => $thread->id,
-                    'urgency' => 'high',
-                    'kind' => 'customer_chat',
-                    'url' => '/inbox',
-                ],
-            );
+            try {
+                $this->pushNotificationService->sendToUser(
+                    $thread->tenant_id,
+                    $user->id,
+                    $title,
+                    $body,
+                    [
+                        'thread_id' => $thread->id,
+                        'urgency' => 'high',
+                        'kind' => 'customer_chat',
+                        'url' => '/inbox',
+                    ],
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
     }
 }
