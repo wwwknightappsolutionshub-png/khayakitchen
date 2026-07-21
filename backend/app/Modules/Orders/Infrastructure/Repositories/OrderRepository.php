@@ -16,7 +16,7 @@ class OrderRepository extends BaseRepository
     public function list(?string $status = null)
     {
         $query = $this->query()
-            ->with(['items.options', 'customer', 'payments'])
+            ->with(['items.meal', 'items.options', 'customer', 'payments'])
             ->orderByDesc('created_at');
 
         if ($status) {

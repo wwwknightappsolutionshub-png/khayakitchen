@@ -286,6 +286,8 @@ type KitchenOrder = {
   order_type: string;
   total_amount: number;
   created_at?: string;
+  scheduled_time?: string | null;
+  customer_name?: string | null;
   items?: { id: string; quantity: number; meal?: { name: string } }[];
 };
 
@@ -310,11 +312,17 @@ function KitchenOrderCard({
       ? getOrderAgeCardClass(getOrderAgeTone(order.created_at, nowMs))
       : getKitchenCardClass(order.status, isNew);
 
+  const pickupLabel =
+    order.order_type === "delivery" ? "Delivery time" : "Pickup time";
+
   return (
     <Card className={cn("border-2 transition-colors", ageClass, isNew && "ring-2 ring-primary/40")}>
       <CardContent className="py-4 sm:py-5">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div>
+            <p className="text-base font-semibold sm:text-lg">
+              {order.customer_name || "Guest"}
+            </p>
             <p className="font-mono text-xl font-bold sm:text-2xl">
               #{order.id.slice(0, 6).toUpperCase()}
             </p>
@@ -338,6 +346,17 @@ function KitchenOrderCard({
             ))}
           </ul>
         )}
+
+        <div className="mb-4 grid gap-1 text-sm text-muted">
+          <p>
+            <span className="font-medium text-foreground">Order time:</span>{" "}
+            {order.created_at ? formatDate(order.created_at) : "—"}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">{pickupLabel}:</span>{" "}
+            {order.scheduled_time ? formatDate(order.scheduled_time) : "ASAP"}
+          </p>
+        </div>
 
         <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-mono text-lg font-bold sm:text-xl">

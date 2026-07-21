@@ -60,6 +60,23 @@ export function ProximityLayer() {
       });
     });
 
+  const geolocationErrorMessage = (err: unknown): string => {
+    if (err && typeof err === "object" && "code" in err) {
+      const code = (err as GeolocationPositionError).code;
+      if (code === 1) {
+        return "Location access is blocked. Allow location for this site in your browser settings to see nearby offers.";
+      }
+      if (code === 2) {
+        return "Location unavailable right now. Try again outdoors or with a stronger signal.";
+      }
+      if (code === 3) {
+        return "Location request timed out. Check that location services are on, then try again.";
+      }
+    }
+    if (err instanceof Error && err.message) return err.message;
+    return "Could not read your location. Check browser permissions and try again.";
+  };
+
   const runProximityCycle = async () => {
     if (!readProximitySessionToken()) return;
 
@@ -85,8 +102,8 @@ export function ProximityLayer() {
       if (result.bait) {
         setBait(result.bait);
       }
-    } catch {
-      setLocationError("Could not read your location. Check browser permissions.");
+    } catch (err) {
+      setLocationError(geolocationErrorMessage(err));
     }
   };
 
@@ -207,8 +224,19 @@ export function ProximityLayer() {
       )}
 
       {locationError && !authOpen && (
-        <div className="mx-4 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">
-          {locationError}
+        <div
+          className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-amber-700/50 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
+          role="status"
+        >
+          <p className="flex-1 leading-snug">{locationError}</p>
+          <button
+            type="button"
+            aria-label="Dismiss location message"
+            className="shrink-0 text-amber-800/70 hover:text-amber-950"
+            onClick={() => setLocationError(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 

@@ -152,6 +152,8 @@ export default function OrdersPage() {
     return getOrderAgeRowClass(getOrderAgeTone(order.created_at, nowMs));
   };
 
+  const orderItems = (order: Order) => (Array.isArray(order.items) ? order.items : []);
+
   return (
     <BackendPage>
       <header className="backend-header">
@@ -212,7 +214,7 @@ export default function OrdersPage() {
                 <table className={BACKEND_TABLE_CLASS}>
                   <tbody>
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <TableRowSkeleton key={i} cols={9} />
+                      <TableRowSkeleton key={i} cols={11} />
                     ))}
                   </tbody>
                 </table>
@@ -252,23 +254,64 @@ export default function OrdersPage() {
                 <ResponsiveDataView
                   mobile={
                     <>
-                      {dayOrders.map((order) => (
-                        <MobileDataCard
-                          key={order.id}
-                          className={ageClass(order)}
-                          title={`#${order.id.slice(0, 8).toUpperCase()}`}
-                          subtitle={order.customer_name || "Guest"}
-                          meta={<StatusBadge status={order.status} />}
-                          rows={[
-                            { label: "Phone", value: order.customer_phone || "—" },
-                            { label: "Payment", value: order.payment_channel || "—" },
-                            { label: "Type", value: order.order_type },
-                            { label: "Total", value: formatCurrency(order.total_amount) },
-                            { label: "Created", value: formatDate(order.created_at) },
-                          ]}
-                          actions={orderActions(order)}
-                        />
-                      ))}
+                      {dayOrders.map((order) => {
+                        const items = orderItems(order);
+                        return (
+                          <MobileDataCard
+                            key={order.id}
+                            className={ageClass(order)}
+                            title={`#${order.id.slice(0, 8).toUpperCase()}`}
+                            subtitle={order.customer_name || "Guest"}
+                            meta={<StatusBadge status={order.status} />}
+                            rows={[
+                              {
+                                label: "Meal",
+                                value:
+                                  items.length === 0 ? (
+                                    "—"
+                                  ) : (
+                                    <ul className="space-y-0.5 text-right">
+                                      {items.map((item) => (
+                                        <li key={item.id}>{item.meal?.name ?? "Item"}</li>
+                                      ))}
+                                    </ul>
+                                  ),
+                              },
+                              {
+                                label: "Qty",
+                                value:
+                                  items.length === 0 ? (
+                                    "—"
+                                  ) : (
+                                    <ul className="space-y-0.5 text-right font-mono">
+                                      {items.map((item) => (
+                                        <li key={item.id}>{item.quantity}</li>
+                                      ))}
+                                    </ul>
+                                  ),
+                              },
+                              {
+                                label: "Price",
+                                value:
+                                  items.length === 0 ? (
+                                    "—"
+                                  ) : (
+                                    <ul className="space-y-0.5 text-right font-mono">
+                                      {items.map((item) => (
+                                        <li key={item.id}>{formatCurrency(item.final_price)}</li>
+                                      ))}
+                                    </ul>
+                                  ),
+                              },
+                              { label: "Total", value: formatCurrency(order.total_amount) },
+                              { label: "Payment", value: order.payment_channel || "—" },
+                              { label: "Type", value: order.order_type },
+                              { label: "Created", value: formatDate(order.created_at) },
+                            ]}
+                            actions={orderActions(order)}
+                          />
+                        );
+                      })}
                     </>
                   }
                 >
@@ -278,47 +321,82 @@ export default function OrdersPage() {
                         <tr className="border-b border-border text-left text-muted">
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Order</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Customer</th>
-                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Phone</th>
+                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Meal</th>
+                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Qty</th>
+                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Price</th>
+                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Total</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Payment</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Type</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Status</th>
-                          <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Total</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Created</th>
                           <th className="sticky top-0 bg-surface px-4 py-3 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {dayOrders.map((order) => (
-                          <tr
-                            key={order.id}
-                            className={cn(
-                              "border-b border-border transition-colors hover:bg-surface-elevated/50",
-                              ageClass(order),
-                            )}
-                          >
-                            <td className="px-4 py-3 font-mono text-xs">
-                              #{order.id.slice(0, 8).toUpperCase()}
-                            </td>
-                            <td className="px-4 py-3">{order.customer_name || "Guest"}</td>
-                            <td className="px-4 py-3 text-muted">
-                              {order.customer_phone || "—"}
-                            </td>
-                            <td className="px-4 py-3 capitalize text-muted">
-                              {order.payment_channel || "—"}
-                            </td>
-                            <td className="px-4 py-3 capitalize">{order.order_type}</td>
-                            <td className="px-4 py-3">
-                              <StatusBadge status={order.status} />
-                            </td>
-                            <td className="px-4 py-3 font-mono">
-                              {formatCurrency(order.total_amount)}
-                            </td>
-                            <td className="px-4 py-3 text-muted">
-                              {formatDate(order.created_at)}
-                            </td>
-                            <td className="px-4 py-3">{orderActions(order)}</td>
-                          </tr>
-                        ))}
+                        {dayOrders.map((order) => {
+                          const items = orderItems(order);
+                          return (
+                            <tr
+                              key={order.id}
+                              className={cn(
+                                "border-b border-border transition-colors hover:bg-surface-elevated/50",
+                                ageClass(order),
+                              )}
+                            >
+                              <td className="px-4 py-3 font-mono text-xs">
+                                #{order.id.slice(0, 8).toUpperCase()}
+                              </td>
+                              <td className="px-4 py-3">{order.customer_name || "Guest"}</td>
+                              <td className="px-4 py-3">
+                                {items.length === 0 ? (
+                                  <span className="text-muted">—</span>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {items.map((item) => (
+                                      <li key={item.id}>{item.meal?.name ?? "Item"}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono">
+                                {items.length === 0 ? (
+                                  <span className="text-muted">—</span>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {items.map((item) => (
+                                      <li key={item.id}>{item.quantity}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono text-sm">
+                                {items.length === 0 ? (
+                                  <span className="text-muted">—</span>
+                                ) : (
+                                  <ul className="space-y-1">
+                                    {items.map((item) => (
+                                      <li key={item.id}>{formatCurrency(item.final_price)}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono">
+                                {formatCurrency(order.total_amount)}
+                              </td>
+                              <td className="px-4 py-3 capitalize text-muted">
+                                {order.payment_channel || "—"}
+                              </td>
+                              <td className="px-4 py-3 capitalize">{order.order_type}</td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={order.status} />
+                              </td>
+                              <td className="px-4 py-3 text-muted">
+                                {formatDate(order.created_at)}
+                              </td>
+                              <td className="px-4 py-3">{orderActions(order)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </TableScroll>

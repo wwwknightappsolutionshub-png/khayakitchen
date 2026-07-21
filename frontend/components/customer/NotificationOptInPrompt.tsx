@@ -11,12 +11,15 @@ import {
   subscribePwaInstallUi,
   urlBase64ToUint8Array,
 } from "@/lib/pwa-install";
+import { useToast } from "@/providers/ToastProvider";
 
 const STORAGE_KEY = "khayaos-opt-in-dismissed";
+const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 /** Significant delay so Stay-in-the-loop never races the PWA install flow. */
 const PROMPT_DELAY_MS = 240_000;
 
 export function NotificationOptInPrompt() {
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const scheduledRef = useRef(false);
   const delayElapsedRef = useRef(false);
@@ -34,6 +37,8 @@ export function NotificationOptInPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const storedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
+    if (storedPhone) setPhone(storedPhone);
     if (localStorage.getItem(STORAGE_KEY)) return;
 
     let timer: number | undefined;
@@ -72,48 +77,67 @@ export function NotificationOptInPrompt() {
     setOpen(false);
   };
 
+  const registerPushBestEffort = async (customerId: string) => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 8_000)),
+      ]);
+      if (!reg) return;
+
+      const publicConfig = await realtimeService.getPublicConfig();
+      const vapidKey = publicConfig.vapid_public_key;
+      const applicationServerKey = vapidKey
+        ? (urlBase64ToUint8Array(vapidKey) as BufferSource)
+        : undefined;
+
+      const subscription = await reg.pushManager
+        .subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        })
+        .catch(() => null);
+
+      if (subscription) {
+        await customerNotificationsService.registerDeviceToken(
+          customerId,
+          JSON.stringify(subscription.toJSON()),
+        );
+      }
+    } catch {
+      // Push is optional; preferences already saved.
+    }
+  };
+
   const save = async () => {
     if (!phone.trim()) return;
     setSaving(true);
     try {
+      const trimmedPhone = phone.trim();
       const result = await customerNotificationsService.upsertPreferences({
-        phone: phone.trim(),
+        phone: trimmedPhone,
         push_enabled: pushEnabled,
         whatsapp_enabled: whatsappEnabled,
       });
 
       localStorage.setItem("khayaos-customer-id", result.customer_id);
-
-      if (pushEnabled && "Notification" in window && "serviceWorker" in navigator) {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-          const reg = await navigator.serviceWorker.ready;
-          const publicConfig = await realtimeService.getPublicConfig();
-          const vapidKey = publicConfig.vapid_public_key;
-          const applicationServerKey = vapidKey
-            ? (urlBase64ToUint8Array(vapidKey) as BufferSource)
-            : undefined;
-
-          const subscription = await reg.pushManager
-            .subscribe({
-              userVisibleOnly: true,
-              applicationServerKey,
-            })
-            .catch(() => null);
-
-          if (subscription) {
-            await customerNotificationsService.registerDeviceToken(
-              result.customer_id,
-              JSON.stringify(subscription.toJSON()),
-            );
-          }
-        }
-      }
-
+      localStorage.setItem(PHONE_STORAGE_KEY, trimmedPhone);
       localStorage.setItem(STORAGE_KEY, "1");
       setOpen(false);
-    } catch {
-      // Allow retry on next visit
+      showToast("Preferences saved", "We'll keep you updated on orders and offers.");
+
+      if (pushEnabled) {
+        void registerPushBestEffort(result.customer_id);
+      }
+    } catch (err) {
+      showToast(
+        "Could not save preferences",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     } finally {
       setSaving(false);
     }
