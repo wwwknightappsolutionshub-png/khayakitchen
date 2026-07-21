@@ -30,12 +30,12 @@ import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, flag: "dashboard" },
-  { href: "/orders", label: "Orders", icon: ShoppingBag, flag: "orders" },
-  { href: "/kitchen", label: "Kitchen", icon: ChefHat, flag: "kitchen" },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, flag: "dashboard", badge: "dashboard" as const },
+  { href: "/orders", label: "Orders", icon: ShoppingBag, flag: "orders", badge: "orders" as const },
+  { href: "/kitchen", label: "Kitchen", icon: ChefHat, flag: "kitchen", badge: "kitchen" as const },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, flag: "menu" },
   { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },
-  { href: "/crm", label: "CRM", icon: Users, flag: "crm" },
+  { href: "/crm", label: "CRM", icon: Users, flag: "crm", badge: "crm" as const },
   { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
   { href: "/inbox", label: "Inbox", icon: MessageSquare, flag: null, badge: "chat" as const },
   { href: "/reviews", label: "Reviews", icon: Star, flag: "kitchen_reviews", badge: "reviews" as const },
@@ -54,7 +54,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { isEnabled } = useFeatureFlags();
-  const { unreadChat, pendingReviews } = useEngagementBadges();
+  const {
+    unreadChat,
+    pendingReviews,
+    pendingOrders,
+    kitchenTickets,
+    crmAttention,
+    dashboardAttention,
+  } = useEngagementBadges();
 
   const visibleItems = navItems.filter((item) => {
     if (item.href === "/staff-performance" || item.href === "/seasonal-promo") {
@@ -65,6 +72,25 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     }
     return !item.flag || isEnabled(item.flag);
   });
+
+  const badgeFor = (badge?: string) => {
+    switch (badge) {
+      case "chat":
+        return unreadChat;
+      case "reviews":
+        return pendingReviews;
+      case "orders":
+        return pendingOrders;
+      case "kitchen":
+        return kitchenTickets;
+      case "crm":
+        return crmAttention;
+      case "dashboard":
+        return dashboardAttention;
+      default:
+        return 0;
+    }
+  };
 
   return (
     <aside
@@ -101,12 +127,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const badgeCount =
-            item.badge === "chat"
-              ? unreadChat
-              : item.badge === "reviews"
-                ? pendingReviews
-                : 0;
+          const badgeCount = badgeFor(item.badge);
           return (
             <Link
               key={item.href}

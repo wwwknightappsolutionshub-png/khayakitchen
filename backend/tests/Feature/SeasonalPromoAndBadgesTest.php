@@ -117,5 +117,9 @@ class SeasonalPromoAndBadgesTest extends TestCase
         $badges->assertOk();
         $this->assertArrayHasKey('unread_customer_messages', $badges->json());
         $this->assertArrayHasKey('pending_reviews', $badges->json());
+        $this->assertArrayHasKey('pending_orders', $badges->json());
+        $this->assertArrayHasKey('kitchen_tickets', $badges->json());
+        $this->assertArrayHasKey('crm_attention', $badges->json());
+        $this->assertArrayHasKey('dashboard_attention', $badges->json());
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Modules\Engagement\Interfaces\Controllers;
 
 use App\Modules\Engagement\Application\Services\ChatService;
+use App\Modules\Engagement\Application\Services\NotificationBadgeService;
 use App\Modules\Engagement\Application\Services\PlatformTenantMessagingService;
 use App\Modules\NotificationsCampaign\Application\Services\CustomerNotificationPreferenceService;
 use App\Shared\Tenancy\TenantContext;
@@ -18,6 +19,7 @@ class TenantEngagementController extends Controller
         private CustomerNotificationPreferenceService $preferenceService,
         private TenantContext $tenantContext,
         private \App\Modules\Engagement\Application\Services\KitchenReviewService $kitchenReviewService,
+        private NotificationBadgeService $notificationBadgeService,
     ) {}
 
     public function platformMessages(Request $request)
@@ -99,14 +101,9 @@ class TenantEngagementController extends Controller
 
     public function notificationBadges(Request $request)
     {
-        $permissions = $request->get('permissions', []);
-        $chat = $this->chatService->customerChatBadgeCounts($permissions);
-
-        return ApiResponse::success([
-            'unread_customer_messages' => $chat['unread_customer_messages'],
-            'unread_chat_threads' => $chat['unread_threads'],
-            'pending_reviews' => $this->kitchenReviewService->pendingCount(),
-        ]);
+        return ApiResponse::success(
+            $this->notificationBadgeService->counts($request->get('permissions', [])),
+        );
     }
 
     public function registerDeviceToken(Request $request)

@@ -159,6 +159,10 @@ export const engagementService = {
       unread_customer_messages: number;
       unread_chat_threads: number;
       pending_reviews: number;
+      pending_orders: number;
+      kitchen_tickets: number;
+      crm_attention: number;
+      dashboard_attention: number;
     }>("/engagement/notification-badges");
   },
 

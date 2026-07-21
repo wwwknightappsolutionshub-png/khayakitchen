@@ -39,8 +39,17 @@ export function useEngagementBadges() {
 
   const onRealtime = useCallback(
     (event: string) => {
-      if (event === "ChatMessageCreated") {
+      if (
+        event === "ChatMessageCreated" ||
+        event === "OrderCreated" ||
+        event === "OrderUpdated" ||
+        event === "OrderStatusChanged" ||
+        event === "OrderCancelled" ||
+        event === "NewKitchenTicket"
+      ) {
         queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
+      }
+      if (event === "ChatMessageCreated") {
         queryClient.invalidateQueries({ queryKey: ["engagement", "customer-threads"] });
       }
     },
@@ -76,6 +85,10 @@ export function useEngagementBadges() {
     unreadChat: badges.data?.unread_customer_messages ?? 0,
     unreadChatThreads: badges.data?.unread_chat_threads ?? 0,
     pendingReviews: badges.data?.pending_reviews ?? 0,
+    pendingOrders: badges.data?.pending_orders ?? 0,
+    kitchenTickets: badges.data?.kitchen_tickets ?? 0,
+    crmAttention: badges.data?.crm_attention ?? 0,
+    dashboardAttention: badges.data?.dashboard_attention ?? 0,
     isLoading: badges.isLoading,
     refetch: badges.refetch,
   };
