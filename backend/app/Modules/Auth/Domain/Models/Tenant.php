@@ -22,12 +22,14 @@ class Tenant extends Model
         'ui_theme',
         'signup_metadata',
         'status',
+        'trial_ends_at',
     ];
 
     protected function casts(): array
     {
         return [
             'signup_metadata' => 'array',
+            'trial_ends_at' => 'datetime',
         ];
     }
 

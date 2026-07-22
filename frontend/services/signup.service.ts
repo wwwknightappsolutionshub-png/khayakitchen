@@ -32,6 +32,7 @@ export type SignupPayload = {
   logo_url?: string;
   terms_accepted: boolean;
   marketing_opt_in?: boolean;
+  referral_code?: string;
 };
 
 export type SignupResponse = {

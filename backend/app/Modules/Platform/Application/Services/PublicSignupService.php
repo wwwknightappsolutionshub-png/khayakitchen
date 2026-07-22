@@ -7,6 +7,7 @@ use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
+use App\Modules\Pricing\Application\Services\TenantReferralService;
 use App\Modules\Pricing\Domain\Models\Plan;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class PublicSignupService
         private SubscriptionService $subscriptionService,
         private AuditLogService $auditLogService,
         private EmailVerificationService $emailVerificationService,
+        private TenantReferralService $referralService,
     ) {}
 
     /**
@@ -75,6 +77,7 @@ class PublicSignupService
                     'logo_url' => $data['logo_url'] ?? null,
                 ]);
 
+            // Referral trial/reward applied after create via TenantReferralService (valid codes only).
             $this->subscriptionService->assignPlan(
                 $tenant['id'],
                 $plan->id,
@@ -95,6 +98,7 @@ class PublicSignupService
                     'owner_email' => $data['owner_email'],
                     'business_type' => $data['business_type'] ?? null,
                     'email_verified' => false,
+                    'referral_code' => $data['referral_code'] ?? null,
                 ],
             );
 
@@ -115,6 +119,12 @@ class PublicSignupService
                 'message' => 'Check your email to confirm your account before signing in.',
             ];
         });
+
+        try {
+            $this->referralService->completeSignupAttribution($result['tenant']['id'], $data);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $owner = User::withoutGlobalScopes()->findOrFail($result['owner_id']);
         $this->emailVerificationService->createAndSendVerification($owner, $data['slug']);
@@ -151,6 +161,7 @@ class PublicSignupService
             'average_order_value' => $data['average_order_value'] ?? null,
             'tagline' => $data['tagline'] ?? null,
             'marketing_opt_in' => (bool) ($data['marketing_opt_in'] ?? false),
+            'referral_code' => isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null,
             'submitted_at' => now()->toIso8601String(),
         ];
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,6 +12,8 @@ import { signupService } from "@/services/signup.service";
 import { useToast } from "@/providers/ToastProvider";
 import { ApiClientError } from "@/lib/api-client";
 
+const REFERRAL_STORAGE_KEY = "khayaos-tenant-referral-code";
+
 interface SignupWizardProps {
   startAtForm?: boolean;
 }
@@ -21,6 +23,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [storedReferralCode, setStoredReferralCode] = useState<string | undefined>(undefined);
 
   const plansQuery = useQuery({
     queryKey: ["public-pricing", "signup"],
@@ -30,6 +33,21 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
 
   const plans = plansQuery.data?.plans ?? [];
   const selectedPlanSlug = searchParams.get("plan") ?? undefined;
+  const referralCode = (searchParams.get("ref") ?? "").trim().toUpperCase() || undefined;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (referralCode) {
+      localStorage.setItem(REFERRAL_STORAGE_KEY, referralCode);
+      setStoredReferralCode(referralCode);
+      return;
+    }
+    const existing = localStorage.getItem(REFERRAL_STORAGE_KEY)?.trim().toUpperCase();
+    setStoredReferralCode(existing || undefined);
+  }, [referralCode]);
+
+  const resolvedReferralCode = referralCode || storedReferralCode;
+
   const defaultPlanId = useMemo(() => {
     if (!selectedPlanSlug) return plans.find((plan) => plan.is_recommended)?.id ?? plans[0]?.id;
     return plans.find((plan) => plan.slug === selectedPlanSlug)?.id ?? plans[0]?.id;
@@ -48,6 +66,11 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   const signupMutation = useMutation({
     mutationFn: signupService.register,
     onSuccess: (response) => {
+      try {
+        localStorage.removeItem(REFERRAL_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
       showToast(
         "Almost there!",
         "Check your inbox and confirm your email to activate your account.",
@@ -108,6 +131,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       logo_url: values.logo_url || undefined,
       terms_accepted: values.terms_accepted,
       marketing_opt_in: values.marketing_opt_in,
+      referral_code: resolvedReferralCode,
     });
   };
 

@@ -52,6 +52,7 @@ class PublicSignupController extends Controller
             'logo_url' => ['nullable', 'url', 'max:500'],
             'terms_accepted' => ['accepted'],
             'marketing_opt_in' => ['nullable', 'boolean'],
+            'referral_code' => ['nullable', 'string', 'max:32'],
         ]);
 
         return ApiResponse::success(

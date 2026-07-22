@@ -147,17 +147,9 @@ class FeatureAccessService
 
     public function isInSharedFreeTrial(?string $tenantId = null): bool
     {
-        $tenantId = $tenantId ?? $this->tenantContext->id();
-        if (! $tenantId) {
-            return false;
-        }
+        $ends = $this->sharedFreeTrialEndsAt($tenantId);
 
-        $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
-        if (! $tenant?->created_at) {
-            return false;
-        }
-
-        return $tenant->created_at->gte(now()->subDays(self::FREE_TRIAL_DAYS));
+        return $ends !== null && $ends->isFuture();
     }
 
     public function sharedFreeTrialEndsAt(?string $tenantId = null): ?\Carbon\Carbon
@@ -170,6 +162,10 @@ class FeatureAccessService
         $tenant = \App\Modules\Auth\Domain\Models\Tenant::withoutGlobalScopes()->find($tenantId);
         if (! $tenant?->created_at) {
             return null;
+        }
+
+        if ($tenant->trial_ends_at) {
+            return $tenant->trial_ends_at->copy();
         }
 
         return $tenant->created_at->copy()->addDays(self::FREE_TRIAL_DAYS);

@@ -39,9 +39,11 @@ use App\Modules\Platform\Interfaces\Controllers\PublicSignupController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformEntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformFeatureController;
+use App\Modules\Pricing\Interfaces\Controllers\PlatformLeadsController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformPlanController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformSubscriptionController;
 use App\Modules\Pricing\Interfaces\Controllers\PublicPricingController;
+use App\Modules\Pricing\Interfaces\Controllers\TenantReferralController;
 use App\Modules\Realtime\Interfaces\Controllers\RealtimeController;
 use App\Modules\Reporting\Interfaces\Controllers\DashboardController;
 use App\Modules\RevenueRecovery\Interfaces\Controllers\CustomerProximityAuthController;
@@ -267,6 +269,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/feature-flags', [FeatureFlagController::class, 'index']);
         Route::get('/entitlements', [EntitlementController::class, 'index']);
         Route::post('/entitlements/upgrade-request', [EntitlementController::class, 'requestUpgrade']);
+        Route::get('/referrals', [TenantReferralController::class, 'summary']);
+        Route::post('/referrals/invite', [TenantReferralController::class, 'invite']);
         Route::get('/workspace', [TenantWorkspaceController::class, 'show']);
         Route::patch('/workspace', [TenantWorkspaceController::class, 'update']);
         Route::get('/engagement/platform-messages', [TenantEngagementController::class, 'platformMessages']);
@@ -362,6 +366,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/staff', [PlatformStaffUserController::class, 'index']);
             Route::post('/staff', [PlatformStaffUserController::class, 'store']);
+            Route::get('/leads', [PlatformLeadsController::class, 'index']);
         });
 
     Route::prefix('platform')

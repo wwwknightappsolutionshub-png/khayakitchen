@@ -137,6 +137,67 @@ class SubscriptionService
         return $subscription->fresh(['plan', 'tenant']);
     }
 
+    /**
+     * Extend shared free-access window (trial_ends_at) by N days.
+     * Used for referral referee trial and referrer reward.
+     */
+    public function extendFreeAccess(
+        string $tenantId,
+        int $days,
+        ?string $userId = null,
+        ?string $reason = null,
+        bool $setSubscriptionTrial = false,
+    ): Tenant {
+        $tenant = Tenant::withoutGlobalScopes()->findOrFail($tenantId);
+        $days = max(1, $days);
+
+        $defaultEnd = $tenant->created_at
+            ? $tenant->created_at->copy()->addDays(FeatureAccessService::FREE_TRIAL_DAYS)
+            : now()->addDays(FeatureAccessService::FREE_TRIAL_DAYS);
+
+        $currentEnd = $tenant->trial_ends_at && $tenant->trial_ends_at->isFuture()
+            ? $tenant->trial_ends_at->copy()
+            : ($defaultEnd->isFuture() ? $defaultEnd : now());
+
+        $newEnd = $currentEnd->copy()->addDays($days);
+        $tenant->trial_ends_at = $newEnd;
+        $tenant->save();
+
+        $subscription = TenantSubscription::where('tenant_id', $tenantId)->first();
+        if ($subscription) {
+            $updates = ['ends_at' => $newEnd];
+            if ($setSubscriptionTrial || $subscription->status === 'trial') {
+                $updates['status'] = 'trial';
+            }
+            $subscription->update($updates);
+        }
+
+        $this->featureAccessService->clearCache($tenantId);
+
+        $this->auditLogService->log(
+            'subscription.free_access_extended',
+            $tenantId,
+            $userId,
+            'tenant',
+            $tenantId,
+            ['days' => $days, 'trial_ends_at' => $newEnd->toIso8601String()],
+            $reason,
+        );
+
+        SubscriptionHistory::create([
+            'id' => (string) Str::uuid(),
+            'tenant_id' => $tenantId,
+            'plan_id' => $subscription?->plan_id,
+            'previous_plan_id' => $subscription?->plan_id,
+            'action' => 'free_access_extended',
+            'metadata' => ['days' => $days, 'trial_ends_at' => $newEnd->toIso8601String()],
+            'created_by' => $userId,
+            'created_at' => now(),
+        ]);
+
+        return $tenant->fresh();
+    }
+
     public function createUpgradeRequest(
         string $tenantId,
         ?string $requestedPlanId,

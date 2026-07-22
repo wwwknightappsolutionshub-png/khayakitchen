@@ -1,14 +1,17 @@
 "use client";
 
-import { Activity } from "lucide-react";
+import { useState } from "react";
+import { Activity, Gift } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
+import { Button } from "@/components/ui/Button";
 import { LiveDashboardStatusControl } from "@/components/admin/LiveDashboardStatusControl";
 import { TopSellingItems } from "@/components/admin/TopSellingItems";
 import { LiveOrdersFeed } from "@/components/admin/LiveOrdersFeed";
 import { InsightChart } from "@/components/admin/InsightChart";
 import { NewOrderAlertBadge } from "@/components/admin/NewOrderAlertBadge";
+import { ReferAndRewardModal } from "@/components/admin/ReferAndRewardModal";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useNewOrderAlerts } from "@/hooks/useNewOrderAlerts";
 import { useEngagementBadges } from "@/hooks/useEngagementBadges";
@@ -22,6 +25,8 @@ export default function LiveRestaurantDashboardPage() {
   const { summary, status } = useLiveDashboard();
   const role = useAuthStore((s) => s.user?.role);
   const canManage = role === "owner" || role === "super_admin";
+  const canRefer = role === "owner" || role === "manager";
+  const [referOpen, setReferOpen] = useState(false);
   const data = summary.data;
   const restaurantStatus = status.data?.status;
   const { newCount, muted, setMuted, clearAlerts } = useNewOrderAlerts(data?.liveOrders);
@@ -38,6 +43,16 @@ export default function LiveRestaurantDashboardPage() {
           </div>
         </div>
         <div className="backend-header-actions flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          {canRefer && (
+            <Button
+              type="button"
+              className="gap-2 shadow-sm"
+              onClick={() => setReferOpen(true)}
+            >
+              <Gift className="h-4 w-4" />
+              Refer & Reward
+            </Button>
+          )}
           <NewOrderAlertBadge
             count={newCount}
             muted={muted}
@@ -63,6 +78,10 @@ export default function LiveRestaurantDashboardPage() {
           <ReconnectingIndicator />
         </div>
       </header>
+
+      {canRefer && (
+        <ReferAndRewardModal open={referOpen} onClose={() => setReferOpen(false)} />
+      )}
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.isLoading ? (

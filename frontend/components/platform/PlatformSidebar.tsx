@@ -19,6 +19,7 @@ import {
   Radar,
   MessageSquare,
   Users,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +28,7 @@ import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 const allNavItems = [
   { href: "/platform/dashboard", label: "Dashboard", icon: LayoutDashboard, superOnly: true },
   { href: "/platform/inbox", label: "Inbox", icon: MessageSquare, superOnly: false },
+  { href: "/platform/leads", label: "Leads", icon: UserPlus, superOnly: true },
   { href: "/platform/staff", label: "Platform Staff", icon: Users, superOnly: true },
   { href: "/platform/tenants", label: "Tenants", icon: Building2, superOnly: true },
   { href: "/platform/modules", label: "Modules", icon: Boxes, superOnly: true },

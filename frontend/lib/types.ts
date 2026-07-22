@@ -847,6 +847,46 @@ export interface CrmStrategicAnalytics {
   orders_in_period: number;
 }
 
+/** Tenant-to-tenant Refer & Reward (not customer Loyalty referrals). */
+export interface TenantReferralInvite {
+  id: string;
+  prospect_email?: string | null;
+  prospect_phone?: string | null;
+  prospect_name?: string | null;
+  channel: string;
+  status: string;
+  invited_at?: string | null;
+}
+
+export interface TenantReferralSummary {
+  code: string;
+  link: string;
+  reward_days: number;
+  referee_trial_days: number;
+  stats: {
+    invites_sent: number;
+    successful_referrals: number;
+    days_earned: number;
+  };
+  invites: TenantReferralInvite[];
+  whatsapp_share_text: string;
+}
+
+export interface PlatformLead {
+  id: string;
+  prospect_email?: string | null;
+  prospect_phone?: string | null;
+  prospect_name?: string | null;
+  channel: string;
+  status: string;
+  invited_at?: string | null;
+  signed_up_at?: string | null;
+  rewarded_at?: string | null;
+  referrer_tenant?: { id: string; name: string; slug: string } | null;
+  referred_tenant?: { id: string; name: string; slug: string } | null;
+  referral_code?: { id: string; code: string } | null;
+}
+
 export interface CustomerProfile {
   total_spent?: number;
   total_orders?: number;
