@@ -304,6 +304,11 @@ export interface PlatformDashboardOverview {
   expired_plans?: number;
   pending_renewals?: number;
   newest_tenants?: PlatformTenant[];
+  tenants_online?: number;
+  tenants_away?: number;
+  tenants_with_staff_pwa?: number;
+  customers_with_pwa?: number;
+  tenants_with_customer_pwa?: number;
 }
 
 export interface PlatformBillingMetrics {
@@ -323,6 +328,15 @@ export interface PlatformTenant {
   slug: string;
   status: string;
   created_at?: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  presence?: "online" | "away" | "offline";
+  last_seen_at?: string | null;
+  last_login_at?: string | null;
+  staff_pwa_installed?: boolean;
+  staff_pwa_installs?: number;
+  customer_pwa_installs?: number;
+  last_poked_at?: string | null;
 }
 
 export interface PlatformTenantFlags {
@@ -651,6 +665,7 @@ export interface PlatformSettings {
   splash_headline?: string | null;
   splash_subheadline?: string | null;
   splash_image_url?: string | null;
+  og_image_url?: string | null;
   ticker_enabled: boolean;
   ticker_text?: string | null;
   public_pricing_enabled?: boolean;

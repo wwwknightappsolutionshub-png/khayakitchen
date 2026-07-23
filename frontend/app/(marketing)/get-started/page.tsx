@@ -1,37 +1,47 @@
-"use client";
+import type { Metadata } from "next";
+import { GetStartedClientShell } from "@/components/marketing/GetStartedClientShell";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { SignupWizard } from "@/components/marketing/SignupWizard";
-import { marketingTheme } from "@/lib/marketing-theme";
-import { cn } from "@/lib/utils";
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://khayaos.prohost.cloud"
+).replace(/\/$/, "");
 
-function GetStartedContent() {
-  const searchParams = useSearchParams();
-  const startAtForm = searchParams.get("signup") === "1";
+const OG_PATH = "/og-get-started.jpg";
+const OG_IMAGE = `${SITE_URL}${OG_PATH}`;
 
-  return (
-    <div>
-      {startAtForm ? (
-        <div className="mb-8 max-w-3xl">
-          <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
-            Get started
-          </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">Create your KhayaOS workspace</h1>
-          <p className="mt-4 text-base leading-relaxed text-zinc-400">
-            Complete enterprise onboarding to provision your tenant instantly.
-          </p>
-        </div>
-      ) : null}
-      <SignupWizard startAtForm={startAtForm} />
-    </div>
-  );
-}
+export const metadata: Metadata = {
+  title: "KhayaOS — Kitchen operating system for food businesses",
+  description:
+    "Orders, kitchen display, inventory, loyalty, campaigns, and revenue recovery in one workspace. Start free on KhayaOS.",
+  alternates: {
+    canonical: `${SITE_URL}/get-started`,
+  },
+  openGraph: {
+    title: "KhayaOS — The kitchen operating system",
+    description:
+      "Run orders, prep, inventory, and growth tools in one place. Start your restaurant workspace free.",
+    url: `${SITE_URL}/get-started`,
+    siteName: "KhayaOS",
+    type: "website",
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "KhayaOS — kitchen operating system for food businesses",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KhayaOS — The kitchen operating system",
+    description:
+      "Orders, kitchen, inventory, loyalty, and revenue recovery — one workspace for food businesses.",
+    images: [OG_IMAGE],
+  },
+};
 
 export default function GetStartedPage() {
-  return (
-    <Suspense fallback={<p className="text-zinc-400">Loading signup wizard…</p>}>
-      <GetStartedContent />
-    </Suspense>
-  );
+  return <GetStartedClientShell />;
 }

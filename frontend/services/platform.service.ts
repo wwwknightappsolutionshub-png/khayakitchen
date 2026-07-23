@@ -74,6 +74,12 @@ export const platformService = {
     return api.delete<{ deleted: boolean }>(`/platform/tenants/${tenantId}`);
   },
 
+  async pokeTenant(tenantId: string): Promise<{ message: unknown; channel: string }> {
+    return api.post<{ message: unknown; channel: string }>(
+      `/platform/tenants/${tenantId}/poke`,
+    );
+  },
+
   async getAuditLogs(params?: {
     limit?: number;
     tenant_id?: string;

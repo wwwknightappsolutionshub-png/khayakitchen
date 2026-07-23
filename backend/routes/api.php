@@ -35,6 +35,7 @@ use App\Modules\Platform\Interfaces\Controllers\PlatformFeatureFlagController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformModuleController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformSettingsController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformTenantController;
+use App\Modules\Platform\Interfaces\Controllers\PresenceController;
 use App\Modules\Platform\Interfaces\Controllers\PublicSignupController;
 use App\Modules\Pricing\Interfaces\Controllers\EntitlementController;
 use App\Modules\Pricing\Interfaces\Controllers\PlatformEntitlementController;
@@ -80,6 +81,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::patch('/auth/email', [AuthController::class, 'updateEmail']);
         Route::patch('/auth/password', [AuthController::class, 'updatePassword']);
+        Route::post('/presence/heartbeat', [PresenceController::class, 'heartbeat'])
+            ->middleware('throttle:60,1');
+        Route::post('/workspace/pwa-install', [PresenceController::class, 'claimStaffPwa'])
+            ->middleware('throttle:10,1');
     });
 
     // Public customer endpoints (tenant resolved via header/subdomain)
@@ -316,6 +321,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/tenants', [PlatformTenantController::class, 'store']);
             Route::put('/tenants/{tenantId}', [PlatformTenantController::class, 'update']);
             Route::delete('/tenants/{tenantId}', [PlatformTenantController::class, 'destroy']);
+            Route::post('/tenants/{tenantId}/poke', [PlatformTenantController::class, 'poke']);
             Route::get('/audit-logs', [PlatformAuditLogController::class, 'index']);
             Route::patch('/tenants/{tenantId}/restaurant-status', [PlatformRestaurantStatusController::class, 'update']);
             Route::patch('/tenants/{tenantId}/branding', [PlatformBrandingController::class, 'update']);
@@ -329,6 +335,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('/settings', [PlatformSettingsController::class, 'update']);
             Route::post('/settings/logo', [PlatformSettingsController::class, 'uploadLogo']);
             Route::post('/settings/splash-image', [PlatformSettingsController::class, 'uploadSplashImage']);
+            Route::post('/settings/og-image', [PlatformSettingsController::class, 'uploadOgImage']);
 
             Route::prefix('pricing')->group(function () {
                 Route::get('/plans', [PlatformPlanController::class, 'index']);

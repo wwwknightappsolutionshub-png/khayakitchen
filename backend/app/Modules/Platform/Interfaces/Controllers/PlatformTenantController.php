@@ -52,4 +52,16 @@ class PlatformTenantController extends Controller
 
         return ApiResponse::success(['deleted' => true]);
     }
+
+    public function poke(\Illuminate\Http\Request $request, string $tenantId)
+    {
+        $user = $request->user();
+        if (! $user) {
+            abort(401);
+        }
+
+        return ApiResponse::success(
+            $this->tenantService->poke($user, $tenantId),
+        );
+    }
 }

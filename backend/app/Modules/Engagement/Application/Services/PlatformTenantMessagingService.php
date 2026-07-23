@@ -100,6 +100,70 @@ class PlatformTenantMessagingService
         return $query->limit(200)->get();
     }
 
+    /**
+     * Super Admin poke — try push first, fall back to email. Bypasses plan feature gates.
+     *
+     * @return array{message: PlatformTenantMessage, channel: string}
+     */
+    public function poke(User $sender, string $tenantId): array
+    {
+        if (! PlatformRoles::isPlatformStaff($sender)) {
+            abort(403, 'Platform staff access required');
+        }
+
+        $tenant = Tenant::withoutGlobalScopes()->findOrFail($tenantId);
+        $title = '👋 Poke from KhayaOS';
+        $body = 'KhayaOS platform wants a quick check-in. Open your admin dashboard when you can.';
+
+        $channel = 'push';
+        $message = PlatformTenantMessage::withoutGlobalScopes()->create([
+            'tenant_id' => $tenant->id,
+            'sender_user_id' => $sender->id,
+            'channel' => $channel,
+            'title' => $title,
+            'body' => $body,
+            'status' => 'queued',
+            'created_at' => now(),
+        ]);
+
+        try {
+            try {
+                $this->deliverPush($tenant, $title, $body);
+            } catch (\Throwable) {
+                $channel = 'email';
+                $message->update(['channel' => 'email']);
+                $this->deliverEmail($tenant, $title, $body);
+            }
+
+            $message->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $message->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+            throw ValidationException::withMessages([
+                'tenant_id' => ['Could not deliver poke (no push tokens or owner email).'],
+            ]);
+        }
+
+        $this->auditLogService->log(
+            'platform.tenant.poked',
+            $tenant->id,
+            $sender->id,
+            'platform_tenant_message',
+            $message->id,
+            ['channel' => $channel],
+        );
+
+        return [
+            'message' => $message->fresh(),
+            'channel' => $channel,
+        ];
+    }
+
     private function deliverEmail(Tenant $tenant, string $title, string $body): void
     {
         $owners = User::withoutGlobalScopes()

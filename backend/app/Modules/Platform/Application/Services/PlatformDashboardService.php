@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class PlatformDashboardService
 {
-    public function __construct(private PlatformModuleRepository $moduleRepository) {}
+    public function __construct(
+        private PlatformModuleRepository $moduleRepository,
+        private TenantPresenceService $presenceService,
+    ) {}
 
     public function overview(): array
     {
@@ -26,6 +29,7 @@ class PlatformDashboardService
         $totalTenants = Tenant::query()->count();
         $activeTenants = Tenant::query()->where('status', 'active')->count();
         $totalOrders = Order::withoutGlobalScopes()->count();
+        $presence = $this->presenceService->platformAggregates();
 
         $subscriptions = TenantSubscription::with('plan')->get();
         $mrr = $subscriptions
@@ -87,6 +91,11 @@ class PlatformDashboardService
             'average_revenue' => round((float) $avgRevenue, 2),
             'feature_adoption' => $featureAdoption,
             'upgrade_requests' => UpgradeRequest::where('status', 'pending')->count(),
+            'tenants_online' => $presence['tenants_online'],
+            'tenants_away' => $presence['tenants_away'],
+            'tenants_with_staff_pwa' => $presence['tenants_with_staff_pwa'],
+            'customers_with_pwa' => $presence['customers_with_pwa'],
+            'tenants_with_customer_pwa' => $presence['tenants_with_customer_pwa'],
         ];
     }
 }

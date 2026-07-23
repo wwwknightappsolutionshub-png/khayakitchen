@@ -161,6 +161,7 @@ export const engagementService = {
       pending_reviews: number;
       pending_orders: number;
       kitchen_tickets: number;
+      ready_awaiting_completion: number;
       crm_attention: number;
       dashboard_attention: number;
     }>("/engagement/notification-badges");

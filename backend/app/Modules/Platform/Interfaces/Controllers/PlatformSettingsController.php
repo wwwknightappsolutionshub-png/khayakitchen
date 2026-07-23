@@ -69,6 +69,19 @@ class PlatformSettingsController extends Controller
         ]);
     }
 
+    public function uploadOgImage(Request $request)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ]);
+
+        $settings = $this->platformSettingsService->uploadOgImage($request->file('image'));
+
+        return ApiResponse::success([
+            'settings' => $this->platformSettingsService->toPublicArray($settings),
+        ]);
+    }
+
     public function publicConfig()
     {
         $settings = $this->platformSettingsService->get();

@@ -24,6 +24,7 @@ class NotificationBadgeService
      *   pending_reviews: int,
      *   pending_orders: int,
      *   kitchen_tickets: int,
+     *   ready_awaiting_completion: int,
      *   crm_attention: int,
      *   dashboard_attention: int
      * }
@@ -35,6 +36,12 @@ class NotificationBadgeService
         $pendingOrders = $this->permissionService->has($permissions, 'orders.view')
             ? Order::query()->where('status', 'pending')->count()
             : 0;
+
+        // Floor/receptionist must confirm ready → completed.
+        $readyAwaiting = 0;
+        if ($this->permissionService->has($permissions, 'orders.view')) {
+            $readyAwaiting = Order::query()->where('status', 'ready')->count();
+        }
 
         $kitchenTickets = 0;
         if ($this->permissionService->has($permissions, 'kitchen.view')
@@ -66,6 +73,7 @@ class NotificationBadgeService
             'pending_reviews' => $pendingReviews,
             'pending_orders' => $pendingOrders,
             'kitchen_tickets' => $kitchenTickets,
+            'ready_awaiting_completion' => $readyAwaiting,
             'crm_attention' => $crmAttention,
             'dashboard_attention' => $dashboardAttention,
         ];

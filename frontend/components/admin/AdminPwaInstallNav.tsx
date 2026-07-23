@@ -141,6 +141,13 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
       setMode("notify");
       setStatus("App install started. Next, enable notifications so platform push can reach you.");
 
+      try {
+        const { presenceService } = await import("@/services/presence.service");
+        await presenceService.claimStaffPwa();
+      } catch {
+        /* claim is best-effort; heartbeat will retry */
+      }
+
       const pushOk = await registerStaffWebPush({ requestPermission: true });
       if (pushOk) {
         setStatus("Installed and registered for push alerts. You can close this.");

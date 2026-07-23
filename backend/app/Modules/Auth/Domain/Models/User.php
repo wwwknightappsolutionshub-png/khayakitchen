@@ -21,6 +21,8 @@ class User extends Authenticatable
         'status',
         'email_verified_at',
         'last_login_at',
+        'last_seen_at',
+        'pwa_installed_at',
     ];
 
     protected $hidden = [
@@ -31,6 +33,8 @@ class User extends Authenticatable
     {
         return [
             'last_login_at' => 'datetime',
+            'last_seen_at' => 'datetime',
+            'pwa_installed_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];

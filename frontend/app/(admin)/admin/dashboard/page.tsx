@@ -30,7 +30,7 @@ export default function LiveRestaurantDashboardPage() {
   const data = summary.data;
   const restaurantStatus = status.data?.status;
   const { newCount, muted, setMuted, clearAlerts } = useNewOrderAlerts(data?.liveOrders);
-  const { unreadChat } = useEngagementBadges();
+  const { unreadChat, readyAwaitingCompletion } = useEngagementBadges();
 
   return (
     <BackendPage>
@@ -58,6 +58,8 @@ export default function LiveRestaurantDashboardPage() {
             muted={muted}
             onToggleMute={() => setMuted(!muted)}
             onClear={clearAlerts}
+            readyAwaiting={readyAwaitingCompletion}
+            unreadChat={unreadChat}
           />
           <Link
             href="/inbox"

@@ -20,6 +20,7 @@ class PlatformSettings extends Model
         'splash_headline',
         'splash_subheadline',
         'splash_image_url',
+        'og_image_url',
         'ticker_enabled',
         'ticker_text',
         'public_pricing_enabled',

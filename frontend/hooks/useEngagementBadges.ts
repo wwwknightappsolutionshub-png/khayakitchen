@@ -1,26 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { engagementService } from "@/services/engagement.service";
-import { fireUrgencyAlert } from "@/lib/urgency-alert";
+import {
+  isUrgencyMuted,
+  setUrgencyMuted,
+  setUrgencyReason,
+} from "@/lib/urgency-alert";
 import { useAuthStore } from "@/stores/auth-store";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
-import { useCallback } from "react";
 
 const MUTE_KEY = "khayaos-urgency-alert-muted";
-const SEEN_CHAT_KEY = "khayaos-chat-alert-seen";
 
 /** Shared urgency mute — default is alarm ON (audio + vibrate). */
-export function isUrgencyMuted(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(MUTE_KEY) === "1";
+export function isUrgencyMutedShared(): boolean {
+  return isUrgencyMuted();
 }
 
-export function setUrgencyMuted(muted: boolean): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+export function setUrgencyMutedShared(muted: boolean): void {
+  setUrgencyMuted(muted);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+  }
 }
 
 export function useEngagementBadges() {
@@ -57,29 +60,33 @@ export function useEngagementBadges() {
   );
   useRealtimeEvent(onRealtime);
 
-  // Audio+vibrate when unread customer messages increase (default unmuted).
+  // Recursive alarms: chat unread + kitchen ready awaiting receptionist confirmation.
   useEffect(() => {
-    if (!enabled || !badges.data) return;
-    const count = badges.data.unread_customer_messages;
-    let seen = 0;
-    try {
-      seen = Number(localStorage.getItem(SEEN_CHAT_KEY) ?? "0");
-      if (Number.isNaN(seen)) seen = 0;
-    } catch {
-      seen = 0;
+    if (!enabled) {
+      setUrgencyReason("chat", false);
+      setUrgencyReason("kitchen_ready", false);
+      return;
     }
+    if (!badges.data) return;
+
+    const unread = badges.data.unread_customer_messages ?? 0;
+    const readyAwaiting = badges.data.ready_awaiting_completion ?? 0;
+    const muted = isUrgencyMuted();
 
     if (!seeded.current) {
       seeded.current = true;
-      localStorage.setItem(SEEN_CHAT_KEY, String(count));
-      return;
     }
 
-    if (count > seen && !isUrgencyMuted()) {
-      fireUrgencyAlert();
-    }
-    localStorage.setItem(SEEN_CHAT_KEY, String(count));
+    setUrgencyReason("chat", unread > 0 && !muted);
+    setUrgencyReason("kitchen_ready", readyAwaiting > 0 && !muted);
   }, [enabled, badges.data]);
+
+  useEffect(() => {
+    return () => {
+      setUrgencyReason("chat", false);
+      setUrgencyReason("kitchen_ready", false);
+    };
+  }, []);
 
   return {
     unreadChat: badges.data?.unread_customer_messages ?? 0,
@@ -87,6 +94,7 @@ export function useEngagementBadges() {
     pendingReviews: badges.data?.pending_reviews ?? 0,
     pendingOrders: badges.data?.pending_orders ?? 0,
     kitchenTickets: badges.data?.kitchen_tickets ?? 0,
+    readyAwaitingCompletion: badges.data?.ready_awaiting_completion ?? 0,
     crmAttention: badges.data?.crm_attention ?? 0,
     dashboardAttention: badges.data?.dashboard_attention ?? 0,
     isLoading: badges.isLoading,

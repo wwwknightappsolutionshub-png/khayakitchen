@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Hand } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -13,8 +13,10 @@ import { ModalFrame } from "@/components/ui/ModalFrame";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { platformService } from "@/services/platform.service";
 import { pricingService } from "@/services/pricing.service";
-import type { RestaurantOperationalStatus } from "@/lib/types";
+import type { PlatformTenant, RestaurantOperationalStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/providers/ToastProvider";
+import { ApiClientError } from "@/lib/api-client";
 
 const STATUS_OPTIONS: RestaurantOperationalStatus[] = [
   "open",
@@ -23,8 +25,29 @@ const STATUS_OPTIONS: RestaurantOperationalStatus[] = [
   "promo_mode",
 ];
 
+function presenceBadgeVariant(
+  presence?: PlatformTenant["presence"],
+): "primary" | "warning" | "default" {
+  if (presence === "online") return "primary";
+  if (presence === "away") return "warning";
+  return "default";
+}
+
+function formatRelative(iso?: string | null): string {
+  if (!iso) return "Never";
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return formatDate(iso);
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return formatDate(iso);
+}
+
 export default function PlatformTenantsPage() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -62,6 +85,21 @@ export default function PlatformTenantsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["platform", "tenants"],
     queryFn: () => platformService.getTenants(),
+    refetchInterval: 30_000,
+  });
+
+  const pokeMutation = useMutation({
+    mutationFn: (tenantId: string) => platformService.pokeTenant(tenantId),
+    onSuccess: (res) => {
+      showToast("Poke sent", `Delivered via ${res.channel}.`);
+      queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
+    },
+    onError: (err) => {
+      showToast(
+        "Poke failed",
+        err instanceof ApiClientError ? err.message : "Could not poke this tenant.",
+      );
+    },
   });
 
   const entitlementsQuery = useQuery({
@@ -235,9 +273,11 @@ export default function PlatformTenantsPage() {
                 <thead>
                   <tr className="border-b border-border bg-surface-elevated/50 text-left text-muted">
                     <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Slug</th>
+                    <th className="px-4 py-3 font-medium">Presence</th>
+                    <th className="px-4 py-3 font-medium">Last online</th>
+                    <th className="px-4 py-3 font-medium">Staff PWA</th>
+                    <th className="px-4 py-3 font-medium">Customer PWAs</th>
                     <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Created</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -247,20 +287,45 @@ export default function PlatformTenantsPage() {
                       key={tenant.id}
                       className="border-b border-border last:border-0 hover:bg-surface-elevated/30"
                     >
-                      <td className="px-4 py-3 font-medium">{tenant.name}</td>
-                      <td className="px-4 py-3 font-mono text-muted">{tenant.slug}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{tenant.name}</p>
+                        <p className="font-mono text-xs text-muted">{tenant.slug}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={presenceBadgeVariant(tenant.presence)}>
+                          {tenant.presence ?? "offline"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted">
+                        {formatRelative(tenant.last_seen_at ?? tenant.last_login_at)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {tenant.staff_pwa_installed
+                          ? `Yes (${tenant.staff_pwa_installs ?? 1})`
+                          : "No"}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-mono">
+                        {tenant.customer_pwa_installs ?? 0}
+                      </td>
                       <td className="px-4 py-3">
                         <Badge variant={tenant.status === "active" ? "secondary" : "warning"}>
                           {tenant.status}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-muted">
-                        {tenant.created_at
-                          ? new Date(tenant.created_at).toLocaleDateString()
-                          : "—"}
-                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="gap-1"
+                            isLoading={
+                              pokeMutation.isPending && pokeMutation.variables === tenant.id
+                            }
+                            onClick={() => pokeMutation.mutate(tenant.id)}
+                          >
+                            <Hand className="h-3.5 w-3.5" />
+                            Poke
+                          </Button>
                           <Button
                             size="sm"
                             variant="secondary"

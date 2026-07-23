@@ -23,6 +23,7 @@ class Tenant extends Model
         'signup_metadata',
         'status',
         'trial_ends_at',
+        'last_poked_at',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class Tenant extends Model
         return [
             'signup_metadata' => 'array',
             'trial_ends_at' => 'datetime',
+            'last_poked_at' => 'datetime',
         ];
     }
 

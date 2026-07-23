@@ -19,17 +19,23 @@ class PlatformTenantService
         'menu', 'orders', 'inventory', 'crm', 'loyalty', 'dashboard', 'kitchen', 'delivery', 'notifications',
     ];
 
+    public const POKE_COOLDOWN_SECONDS = 300;
+
     public function __construct(
         private AuditLogService $auditLogService,
         private TenantContext $tenantContext,
+        private TenantPresenceService $presenceService,
+        private \App\Modules\Engagement\Application\Services\PlatformTenantMessagingService $messagingService,
     ) {}
 
     public function listTenants(): array
     {
+        $stats = $this->presenceService->statsByTenantId();
+
         return Tenant::query()
             ->orderBy('name')
             ->get()
-            ->map(fn (Tenant $tenant) => $this->formatTenant($tenant))
+            ->map(fn (Tenant $tenant) => $this->formatTenant($tenant, $stats))
             ->values()
             ->all();
     }
@@ -146,9 +152,36 @@ class PlatformTenantService
         );
     }
 
-    private function formatTenant(Tenant $tenant): array
+    /**
+     * One-tap nudge to tenant staff (push, email fallback). Rate-limited.
+     *
+     * @return array{message: mixed, channel: string}
+     */
+    public function poke(User $sender, string $tenantId): array
     {
-        return [
+        $tenant = Tenant::withoutGlobalScopes()->findOrFail($tenantId);
+
+        if ($tenant->last_poked_at && $tenant->last_poked_at->gt(now()->subSeconds(self::POKE_COOLDOWN_SECONDS))) {
+            $wait = self::POKE_COOLDOWN_SECONDS - $tenant->last_poked_at->diffInSeconds(now());
+            throw ValidationException::withMessages([
+                'tenant_id' => ["Please wait {$wait}s before poking this tenant again."],
+            ]);
+        }
+
+        $result = $this->messagingService->poke($sender, $tenantId);
+
+        $tenant->last_poked_at = now();
+        $tenant->save();
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, object>  $statsByTenant
+     */
+    private function formatTenant(Tenant $tenant, array $statsByTenant = []): array
+    {
+        return array_merge([
             'id' => $tenant->id,
             'name' => $tenant->name,
             'slug' => $tenant->slug,
@@ -156,6 +189,10 @@ class PlatformTenantService
             'logo_url' => $tenant->logo_url,
             'primary_color' => $tenant->primary_color,
             'created_at' => $tenant->created_at?->toIso8601String(),
-        ];
+        ], $this->presenceService->formatPresenceFields(
+            $tenant->id,
+            $statsByTenant,
+            $tenant->last_poked_at,
+        ));
     }
 }

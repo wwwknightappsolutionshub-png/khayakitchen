@@ -25,4 +25,10 @@ export const platformSettingsService = {
     formData.append("image", file);
     return api.upload<{ settings: PlatformSettings }>("/platform/settings/splash-image", formData);
   },
+
+  async uploadOgImage(file: File): Promise<{ settings: PlatformSettings }> {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.upload<{ settings: PlatformSettings }>("/platform/settings/og-image", formData);
+  },
 };

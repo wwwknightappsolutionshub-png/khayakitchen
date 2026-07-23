@@ -42,11 +42,27 @@ export default function PlatformDashboardPage() {
           <>
             <KpiCard label="Total Tenants" value={overview?.total_tenants ?? 0} />
             <KpiCard label="Active Tenants" value={overview?.active_tenants ?? 0} />
-            <KpiCard label="Total Orders" value={overview?.total_orders ?? 0} />
+            <KpiCard label="Online now" value={overview?.tenants_online ?? 0} />
+            <KpiCard label="Away" value={overview?.tenants_away ?? 0} />
+          </>
+        )}
+      </div>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {overviewLoading ? (
+          Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={`pwa-${i}`} />)
+        ) : (
+          <>
             <KpiCard
-              label="System Health"
-              value={overview?.system_health ?? "—"}
+              label="Tenants with staff PWA"
+              value={overview?.tenants_with_staff_pwa ?? 0}
             />
+            <KpiCard
+              label="Tenants with customer PWA"
+              value={overview?.tenants_with_customer_pwa ?? 0}
+            />
+            <KpiCard label="Customer PWAs installed" value={overview?.customers_with_pwa ?? 0} />
+            <KpiCard label="Total Orders" value={overview?.total_orders ?? 0} />
           </>
         )}
       </div>

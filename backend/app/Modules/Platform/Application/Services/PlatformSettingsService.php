@@ -49,6 +49,7 @@ class PlatformSettingsService
             'splash_headline' => $settings->splash_headline,
             'splash_subheadline' => $settings->splash_subheadline,
             'splash_image_url' => $settings->splash_image_url,
+            'og_image_url' => $settings->og_image_url,
             'ticker_enabled' => $settings->ticker_enabled,
             'ticker_text' => $settings->ticker_text,
             'public_pricing_enabled' => $settings->public_pricing_enabled ?? true,
@@ -107,6 +108,26 @@ class PlatformSettingsService
             'platform_settings',
             $settings->id,
             ['splash_image_url' => $url],
+        );
+
+        return $settings->fresh();
+    }
+
+    public function uploadOgImage(UploadedFile $file): PlatformSettings
+    {
+        $settings = $this->get();
+        $path = $file->store('platform/og', 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $settings->update(['og_image_url' => $url]);
+
+        $this->auditLogService->log(
+            'platform.og_image_uploaded',
+            null,
+            $this->tenantContext->user()?->id,
+            'platform_settings',
+            $settings->id,
+            ['og_image_url' => $url],
         );
 
         return $settings->fresh();
