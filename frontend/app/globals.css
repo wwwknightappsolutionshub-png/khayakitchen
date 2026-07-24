@@ -542,6 +542,42 @@ h1, h2, h3, h4, h5, h6 {
   animation: signup-splash-fade-up 0.8s ease-out 0.45s both;
 }
 
+@keyframes get-started-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes get-started-hero-pan {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.get-started-fade-up {
+  animation: get-started-fade-up 0.85s ease-out both;
+}
+
+.get-started-fade-up-delay {
+  animation: get-started-fade-up 0.85s ease-out 0.18s both;
+}
+
+.get-started-fade-up-late {
+  animation: get-started-fade-up 0.85s ease-out 0.36s both;
+}
+
+.get-started-hero-pan {
+  animation: get-started-hero-pan 8s ease-out both;
+}
+
 /* Public signup wizard — matches KitchenSignupSplash palette */
 .marketing-app {
   --background: #0a0806;

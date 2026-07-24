@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     canonical: `${SITE_URL}/get-started`,
   },
   openGraph: {
-    title: "KhayaOS — The kitchen operating system",
+    title: "KhayaOS — The kitchen operating system for food businesses",
     description:
-      "Run orders, prep, inventory, and growth tools in one place. Start your restaurant workspace free.",
+      "Own your customers and run orders, prep, inventory, and growth in one place — not rented marketplace traffic.",
     url: `${SITE_URL}/get-started`,
     siteName: "KhayaOS",
     type: "website",
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "KhayaOS — The kitchen operating system",
+    title: "KhayaOS — The kitchen operating system for food businesses",
     description:
-      "Orders, kitchen, inventory, loyalty, and revenue recovery — one workspace for food businesses.",
+      "Orders, kitchen, inventory, loyalty, and revenue recovery — one workspace you own.",
     images: [OG_IMAGE],
   },
 };
