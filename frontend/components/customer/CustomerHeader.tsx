@@ -11,7 +11,7 @@ import { useUiStore } from "@/stores/ui-store";
 export function CustomerHeader() {
   const { data } = useStorefront();
   const openCustomerChat = useUiStore((s) => s.openCustomerChat);
-  const name = data?.branding?.restaurant_name ?? "Khaya Kitchen";
+  const name = data?.branding?.restaurant_name ?? data?.workspace?.name ?? "";
   const logo = data?.branding?.logo_url;
   const status = data?.status?.status ?? "open";
   const closingAt = data?.status?.closing_at ?? null;
@@ -28,12 +28,16 @@ export function CustomerHeader() {
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
-            ) : (
+            ) : name ? (
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)]/20 text-sm font-bold text-[var(--primary)]">
                 {name.charAt(0)}
               </span>
+            ) : (
+              <span className="h-9 w-9 shrink-0 rounded-lg bg-[var(--surface-elevated)]" />
             )}
-            <span className="truncate text-base font-semibold leading-tight tracking-tight">{name}</span>
+            <span className="truncate text-base font-semibold leading-tight tracking-tight">
+              {name || "\u00a0"}
+            </span>
           </CustomerRouteLink>
           <div className="flex shrink-0 items-center gap-1.5">
             <RestaurantStatusPill status={status} closingAt={closingAt} promoEndsAt={promoEndsAt} />

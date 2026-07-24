@@ -116,6 +116,8 @@ class TenantWorkspaceAndOrdersCrmTest extends TestCase
         $this->assertSame('+2348011112222', $match['customer_phone']);
         $this->assertSame('card', $match['payment_channel']);
 
+        $order->update(['status' => 'accepted']);
+
         $kitchen = $this->getJson('/api/v1/kitchen/orders', [
             'Authorization' => "Bearer {$token}",
             'X-Tenant-Slug' => $tenant->slug,

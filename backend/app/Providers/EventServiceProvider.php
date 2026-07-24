@@ -7,6 +7,7 @@ use App\Modules\CRM\Listeners\UpdateCrmOnOrderCompleted;
 use App\Modules\CRM\Listeners\UpdateCrmOnOrderCreated;
 use App\Modules\Inventory\Listeners\ConsumeInventoryOnOrderCompleted;
 use App\Modules\Loyalty\Listeners\AwardLoyaltyOnOrderCompleted;
+use App\Modules\Notifications\Listeners\SendEmailOrderNotifications;
 use App\Modules\Notifications\Listeners\SendOrderNotifications;
 use App\Modules\NotificationsCampaign\Listeners\SendPushOrderNotifications;
 use App\Modules\Notifications\Listeners\SendWhatsAppOrderNotifications;
@@ -26,12 +27,14 @@ class EventServiceProvider extends ServiceProvider
             UpdateCrmOnOrderCreated::class,
             [SendOrderNotifications::class, 'handleOrderCreated'],
             [SendWhatsAppOrderNotifications::class, 'handleOrderCreated'],
+            [SendEmailOrderNotifications::class, 'handleOrderCreated'],
             [SendPushOrderNotifications::class, 'handleOrderCreated'],
             [BroadcastRealtimeOrderUpdates::class, 'handleOrderCreated'],
         ],
         OrderStatusUpdated::class => [
             [SendOrderNotifications::class, 'handleOrderStatusUpdated'],
             [SendWhatsAppOrderNotifications::class, 'handleOrderStatusUpdated'],
+            [SendEmailOrderNotifications::class, 'handleOrderStatusUpdated'],
             [SendPushOrderNotifications::class, 'handle'],
             [BroadcastRealtimeOrderUpdates::class, 'handleOrderStatusUpdated'],
         ],

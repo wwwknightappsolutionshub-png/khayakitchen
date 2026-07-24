@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { TenantWorkspace } from "@/lib/types";
+import type { TenantWhatsAppSettings, TenantWorkspace } from "@/lib/types";
 
 export const workspaceService = {
   async getWorkspace(): Promise<{ workspace: TenantWorkspace }> {
@@ -14,5 +14,21 @@ export const workspaceService = {
     ui_theme?: "light" | "dark";
   }): Promise<{ workspace: TenantWorkspace }> {
     return api.patch<{ workspace: TenantWorkspace }>("/workspace", payload);
+  },
+
+  async getWhatsApp(): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.get<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp");
+  },
+
+  async updateWhatsApp(payload: {
+    enabled?: boolean;
+    provider?: "meta" | "twilio";
+    phone_number_id?: string | null;
+    access_token?: string | null;
+    twilio_account_sid?: string | null;
+    twilio_auth_token?: string | null;
+    twilio_from?: string | null;
+  }): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.patch<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp", payload);
   },
 };

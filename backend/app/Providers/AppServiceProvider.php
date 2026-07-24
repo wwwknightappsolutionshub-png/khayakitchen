@@ -4,8 +4,7 @@ namespace App\Providers;
 
 use App\Modules\Menu\Infrastructure\Repositories\MealRepository;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
-use App\Modules\Notifications\Infrastructure\WhatsApp\Providers\MetaCloudWhatsAppProvider;
-use App\Modules\Notifications\Infrastructure\WhatsApp\Providers\TwilioWhatsAppProvider;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Providers\DelegatingWhatsAppProvider;
 use App\Modules\Orders\Infrastructure\Repositories\OrderRepository;
 use App\Shared\Entitlements\FeatureAccessService;
 use App\Shared\FeatureFlags\FeatureFlagService;
@@ -34,12 +33,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->bind(WhatsAppProviderInterface::class, function () {
-            return match (config('whatsapp.provider', 'meta')) {
-                'twilio' => new TwilioWhatsAppProvider,
-                default => new MetaCloudWhatsAppProvider,
-            };
-        });
+        $this->app->bind(WhatsAppProviderInterface::class, DelegatingWhatsAppProvider::class);
 
         $this->app->bind(MealRepository::class, function ($app) {
             return new MealRepository(

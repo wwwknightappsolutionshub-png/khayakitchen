@@ -7,6 +7,7 @@ use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Engagement\Domain\Models\MealLike;
 use App\Modules\Loyalty\Application\Services\LoyaltyProgramService;
 use App\Modules\Menu\Domain\Models\Meal;
+use App\Modules\TenantBranding\Application\Services\BrandingService;
 use App\Shared\Entitlements\FeatureAccessService;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ class MealLikeService
         private FeatureAccessService $featureAccessService,
         private TenantContext $tenantContext,
         private LoyaltyProgramService $loyaltyProgramService,
+        private BrandingService $brandingService,
     ) {}
 
     public function assertEnabled(): void
@@ -97,22 +99,26 @@ class MealLikeService
         $this->assertEnabled();
         $meal = Meal::findOrFail($mealId);
         $tenant = $this->tenantContext->tenant() ?? Tenant::withoutGlobalScopes()->find($this->tenantContext->id());
-        $restaurantName = $tenant?->name ?? 'our restaurant';
+        $branding = $this->brandingService->getForTenant($this->tenantContext->id());
+        $restaurantName = $branding->restaurant_name ?: ($tenant?->name ?? 'our kitchen');
         $slug = $tenant?->slug ?? 'pilot';
         $frontend = rtrim((string) config('app.frontend_url', 'http://localhost:3000'), '/');
 
-        $refQuery = '';
+        $query = [];
         if ($phone && $this->featureAccessService->canAccess('loyalty_system', $this->tenantContext->id())) {
             $customer = Customer::where('phone', $phone)->first();
             if ($customer) {
                 $referral = $this->loyaltyProgramService->ensureReferralToken($customer->id);
-                $refQuery = '&ref='.urlencode($referral->token);
+                $query['ref'] = $referral->token;
             }
         }
 
-        $menuUrl = $frontend.'/r/'.$slug.'?meal='.urlencode($meal->id).$refQuery;
+        $menuUrl = $frontend.'/r/'.$slug.'/meal/'.$meal->id;
+        if ($query !== []) {
+            $menuUrl .= '?'.http_build_query($query);
+        }
 
-        $message = 'I will suggest you try this menu from "'.$restaurantName.'", I think you will love it';
+        $message = 'Hey 👋 , I will like you to try this menu from "'.$restaurantName.'". I think you will really love it.';
 
         return [
             'meal_id' => $meal->id,
@@ -126,8 +132,7 @@ class MealLikeService
             'whatsapp_text' => $message."\n\n".$meal->name
                 .($meal->description ? "\n".$meal->description : '')
                 ."\nPrice: ".$meal->base_price
-                ."\nOrder here: ".$menuUrl
-                .($meal->image_url ? "\n".$meal->image_url : ''),
+                ."\nOrder here: ".$menuUrl,
         ];
     }
 }

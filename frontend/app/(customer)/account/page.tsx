@@ -303,8 +303,11 @@ export default function AccountPage() {
   });
 
   const prefsMutation = useMutation({
-    mutationFn: (payload: { push_enabled?: boolean; whatsapp_enabled?: boolean }) =>
-      customerAuthService.updateNotificationPreferences(payload),
+    mutationFn: (payload: {
+      push_enabled?: boolean;
+      whatsapp_enabled?: boolean;
+      email_enabled?: boolean;
+    }) => customerAuthService.updateNotificationPreferences(payload),
     onSuccess: () => {
       setPrefsMsg("Preferences saved.");
       queryClient.invalidateQueries({ queryKey: ["customer-notif-prefs"] });
@@ -885,7 +888,7 @@ export default function AccountPage() {
             }}
           />
         </label>
-        <label className="flex cursor-pointer items-center justify-between gap-3">
+        <label className="mb-3 flex cursor-pointer items-center justify-between gap-3">
           <span className="text-sm">WhatsApp updates</span>
           <input
             type="checkbox"
@@ -894,6 +897,18 @@ export default function AccountPage() {
             onChange={(e) => {
               setPrefsMsg(null);
               prefsMutation.mutate({ whatsapp_enabled: e.target.checked });
+            }}
+          />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between gap-3">
+          <span className="text-sm">Email updates</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[var(--secondary)]"
+            checked={!!prefs?.email_enabled}
+            onChange={(e) => {
+              setPrefsMsg(null);
+              prefsMutation.mutate({ email_enabled: e.target.checked });
             }}
           />
         </label>

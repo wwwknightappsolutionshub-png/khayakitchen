@@ -10,8 +10,20 @@ class MetaCloudWhatsAppProvider implements WhatsAppProviderInterface
 {
     public function send(string $toPhone, string $message, array $context = []): void
     {
-        $token = config('whatsapp.meta.access_token');
-        $phoneNumberId = config('whatsapp.meta.phone_number_id');
+        $this->sendWithCredentials($toPhone, $message, [
+            'access_token' => config('whatsapp.meta.access_token'),
+            'phone_number_id' => config('whatsapp.meta.phone_number_id'),
+        ], $context);
+    }
+
+    /**
+     * @param  array{access_token?: ?string, phone_number_id?: ?string}  $credentials
+     * @param  array<string, mixed>  $context
+     */
+    public function sendWithCredentials(string $toPhone, string $message, array $credentials, array $context = []): void
+    {
+        $token = $credentials['access_token'] ?? null;
+        $phoneNumberId = $credentials['phone_number_id'] ?? null;
 
         if (! $token || ! $phoneNumberId) {
             Log::info('WhatsApp (Meta stub): message not sent — credentials not configured', [

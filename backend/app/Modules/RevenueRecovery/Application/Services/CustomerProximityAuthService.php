@@ -84,8 +84,21 @@ class CustomerProximityAuthService
             $branding->restaurant_name ?? 'Our kitchen',
         ));
 
+        if ($customer->phone && ! app()->runningUnitTests()) {
+            try {
+                app(\App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface::class)->send(
+                    $customer->phone,
+                    "Your ".($branding->restaurant_name ?? 'kitchen')." login code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
+                    ['type' => 'proximity_otp', 'tenant_id' => $tenantId],
+                );
+            } catch (\Throwable) {
+                // Email already sent — WhatsApp is best-effort parallel.
+            }
+        }
+
         return [
             'sent' => true,
+            'channel' => 'email+whatsapp',
             'expires_in_seconds' => self::OTP_TTL_MINUTES * 60,
         ];
     }

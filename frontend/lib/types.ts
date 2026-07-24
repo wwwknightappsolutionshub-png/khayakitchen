@@ -694,6 +694,21 @@ export interface TenantWorkspace {
   ordering_url_hint?: string;
 }
 
+export interface TenantWhatsAppSettings {
+  tenant_id: string;
+  enabled: boolean;
+  provider: "meta" | "twilio";
+  phone_number_id?: string | null;
+  has_access_token: boolean;
+  twilio_account_sid?: string | null;
+  has_twilio_auth_token: boolean;
+  twilio_from?: string | null;
+  using_platform_fallback: boolean;
+  active_source: "tenant" | "platform";
+  active_provider: string;
+  platform_configured: boolean;
+}
+
 export interface StorefrontWorkspace {
   tenant_id: string;
   slug: string;

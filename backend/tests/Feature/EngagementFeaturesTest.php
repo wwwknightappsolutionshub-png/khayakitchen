@@ -116,7 +116,8 @@ class EngagementFeaturesTest extends TestCase
             'X-Tenant-Slug' => 'pilot',
         ]);
         $refer->assertOk();
-        $this->assertStringContainsString('I will suggest you try this menu from', $refer->json('refer.message'));
+        $this->assertStringContainsString('I will like you to try this menu from', $refer->json('refer.message'));
+        $this->assertStringContainsString('/r/pilot/meal/', $refer->json('refer.menu_url'));
 
         $review = $this->postJson('/api/v1/customer/reviews', [
             'name' => 'Ada',

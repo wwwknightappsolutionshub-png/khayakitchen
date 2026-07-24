@@ -234,13 +234,20 @@ class CustomerAccountController extends Controller
             'email_enabled' => ['nullable', 'boolean'],
         ]);
 
+        $existing = $customer->notificationPreference;
         $pref = $this->preferenceService->upsertByPhone(
             $this->tenantContext->id(),
             $customer->phone,
             $customer->name,
-            (bool) ($data['push_enabled'] ?? false),
-            (bool) ($data['whatsapp_enabled'] ?? false),
-            (bool) ($data['email_enabled'] ?? false),
+            array_key_exists('push_enabled', $data)
+                ? (bool) $data['push_enabled']
+                : (bool) ($existing?->push_enabled ?? false),
+            array_key_exists('whatsapp_enabled', $data)
+                ? (bool) $data['whatsapp_enabled']
+                : (bool) ($existing?->whatsapp_enabled ?? false),
+            array_key_exists('email_enabled', $data)
+                ? (bool) $data['email_enabled']
+                : (bool) ($existing?->email_enabled ?? false),
         );
 
         return ApiResponse::success(['preferences' => $pref]);

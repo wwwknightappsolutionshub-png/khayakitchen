@@ -95,4 +95,21 @@ class CustomerNotificationPreferenceService
             ->where('customer_id', $customerId)
             ->value('push_enabled');
     }
+
+    /**
+     * Transactional email: opt-in when preference says so, or when no preference row exists yet.
+     */
+    public function isEmailOptedIn(string $tenantId, string $customerId): bool
+    {
+        $pref = CustomerNotificationPreference::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('customer_id', $customerId)
+            ->first();
+
+        if (! $pref) {
+            return true;
+        }
+
+        return (bool) $pref->email_enabled;
+    }
 }

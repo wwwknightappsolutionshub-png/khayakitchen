@@ -25,6 +25,7 @@ use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyController;
 use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyProgramController;
 use App\Modules\Menu\Interfaces\Controllers\MenuController;
 use App\Modules\Notifications\Interfaces\Controllers\NotificationController;
+use App\Modules\Notifications\Interfaces\Controllers\TenantWhatsAppSettingsController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CustomerNotificationController;
 use App\Modules\Orders\Interfaces\Controllers\CustomerOrderController;
@@ -73,6 +74,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware(['tenant.resolve'])->group(function () {
         Route::get('/storefront', [StorefrontController::class, 'show']);
+        Route::get('/storefront/meal-share/{mealId}', [StorefrontController::class, 'mealShare']);
         Route::post('/storefront/revenue-recovery/campaigns/{id}/track-open', [StorefrontController::class, 'trackCampaignOpen']);
     });
 
@@ -278,6 +280,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/referrals/invite', [TenantReferralController::class, 'invite']);
         Route::get('/workspace', [TenantWorkspaceController::class, 'show']);
         Route::patch('/workspace', [TenantWorkspaceController::class, 'update']);
+        Route::get('/workspace/whatsapp', [TenantWhatsAppSettingsController::class, 'show']);
+        Route::patch('/workspace/whatsapp', [TenantWhatsAppSettingsController::class, 'update']);
         Route::get('/engagement/platform-messages', [TenantEngagementController::class, 'platformMessages']);
         Route::get('/engagement/platform-chat/threads', [TenantEngagementController::class, 'platformThreads']);
         Route::get('/engagement/customer-chat/threads', [TenantEngagementController::class, 'customerThreads']);

@@ -11,5 +11,6 @@ export function useStorefront() {
     queryFn: () => tenantBrandingService.getStorefront(),
     staleTime: 30_000,
     refetchInterval: 60_000,
+    placeholderData: (previous) => previous,
   });
 }

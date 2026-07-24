@@ -78,7 +78,12 @@ export function WelcomeSplashGate() {
       return;
     }
 
-    setMode(firstVisit ? "welcome" : "loading");
+    if (firstVisit) {
+      setMode("welcome");
+      return;
+    }
+
+    finishSplash();
   }, [
     isRootEntry,
     configLoading,

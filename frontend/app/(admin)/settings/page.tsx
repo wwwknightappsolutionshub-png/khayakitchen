@@ -66,6 +66,8 @@ export default function SettingsPage() {
 
   const displayedEmail = emailForm.email || user?.email || "";
   const canEditWorkspace = user?.role === "owner" || user?.role === "super_admin";
+  const canEditWhatsApp =
+    user?.role === "owner" || user?.role === "super_admin" || user?.role === "manager";
 
   const { data: flagsData } = useQuery({
     queryKey: ["feature-flags"],
@@ -76,6 +78,23 @@ export default function SettingsPage() {
   const { data: workspaceData, isLoading: workspaceLoading } = useQuery({
     queryKey: ["workspace"],
     queryFn: () => workspaceService.getWorkspace(),
+  });
+
+  const { data: whatsappData, isLoading: whatsappLoading } = useQuery({
+    queryKey: ["workspace-whatsapp"],
+    queryFn: () => workspaceService.getWhatsApp(),
+  });
+
+  const [whatsappError, setWhatsappError] = useState<string | null>(null);
+  const [whatsappSuccess, setWhatsappSuccess] = useState<string | null>(null);
+  const [whatsappForm, setWhatsappForm] = useState({
+    enabled: false,
+    provider: "meta" as "meta" | "twilio",
+    phone_number_id: "",
+    access_token: "",
+    twilio_account_sid: "",
+    twilio_auth_token: "",
+    twilio_from: "",
   });
 
   const { data: staffData, isLoading: staffLoading } = useQuery({
@@ -96,6 +115,20 @@ export default function SettingsPage() {
     });
     applyWorkspaceRuntime(workspace);
   }, [workspaceData?.workspace]);
+
+  useEffect(() => {
+    const wa = whatsappData?.whatsapp;
+    if (!wa) return;
+    setWhatsappForm({
+      enabled: wa.enabled,
+      provider: wa.provider === "twilio" ? "twilio" : "meta",
+      phone_number_id: wa.phone_number_id ?? "",
+      access_token: "",
+      twilio_account_sid: wa.twilio_account_sid ?? "",
+      twilio_auth_token: "",
+      twilio_from: wa.twilio_from ?? "",
+    });
+  }, [whatsappData?.whatsapp]);
 
   const orderingUrl = useMemo(() => {
     const path = workspaceData?.workspace?.ordering_path ?? "";
@@ -140,6 +173,31 @@ export default function SettingsPage() {
       setWorkspaceSuccess(null);
       setWorkspaceError(
         err instanceof ApiClientError ? err.message : "Failed to update workspace settings.",
+      );
+    },
+  });
+
+  const updateWhatsAppMutation = useMutation({
+    mutationFn: () =>
+      workspaceService.updateWhatsApp({
+        enabled: whatsappForm.enabled,
+        provider: whatsappForm.provider,
+        phone_number_id: whatsappForm.phone_number_id.trim() || null,
+        access_token: whatsappForm.access_token.trim() || null,
+        twilio_account_sid: whatsappForm.twilio_account_sid.trim() || null,
+        twilio_auth_token: whatsappForm.twilio_auth_token.trim() || null,
+        twilio_from: whatsappForm.twilio_from.trim() || null,
+      }),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace-whatsapp"], response);
+      setWhatsappForm((f) => ({ ...f, access_token: "", twilio_auth_token: "" }));
+      setWhatsappError(null);
+      setWhatsappSuccess("WhatsApp settings saved.");
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(
+        err instanceof ApiClientError ? err.message : "Failed to update WhatsApp settings.",
       );
     },
   });
@@ -362,6 +420,140 @@ export default function SettingsPage() {
                 </p>
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>WhatsApp Business</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {whatsappLoading ? (
+              <p className="text-sm text-muted">Loading WhatsApp settings…</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted">
+                  Connect your own WhatsApp Business credentials for OTPs and order updates.
+                  When disabled or incomplete, KhayaOS uses the platform WhatsApp sender as
+                  fallback.
+                </p>
+                {whatsappData?.whatsapp?.using_platform_fallback ? (
+                  <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                    Currently sending via platform WhatsApp
+                    {whatsappData.whatsapp.platform_configured ? "" : " (not configured yet)"}.
+                  </p>
+                ) : (
+                  <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                    Currently sending via your tenant WhatsApp credentials.
+                  </p>
+                )}
+                <label className="flex cursor-pointer items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Use tenant WhatsApp credentials</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    disabled={!canEditWhatsApp}
+                    checked={whatsappForm.enabled}
+                    onChange={(e) =>
+                      setWhatsappForm((f) => ({ ...f, enabled: e.target.checked }))
+                    }
+                  />
+                </label>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Provider</label>
+                  <select
+                    className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm"
+                    value={whatsappForm.provider}
+                    disabled={!canEditWhatsApp}
+                    onChange={(e) =>
+                      setWhatsappForm((f) => ({
+                        ...f,
+                        provider: e.target.value === "twilio" ? "twilio" : "meta",
+                      }))
+                    }
+                  >
+                    <option value="meta">Meta Cloud API</option>
+                    <option value="twilio">Twilio</option>
+                  </select>
+                </div>
+                {whatsappForm.provider === "meta" ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Phone number ID"
+                      value={whatsappForm.phone_number_id}
+                      disabled={!canEditWhatsApp}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, phone_number_id: e.target.value }))
+                      }
+                    />
+                    <Input
+                      label={
+                        whatsappData?.whatsapp?.has_access_token
+                          ? "Access token (leave blank to keep)"
+                          : "Access token"
+                      }
+                      type="password"
+                      value={whatsappForm.access_token}
+                      disabled={!canEditWhatsApp}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, access_token: e.target.value }))
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Twilio Account SID"
+                      value={whatsappForm.twilio_account_sid}
+                      disabled={!canEditWhatsApp}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, twilio_account_sid: e.target.value }))
+                      }
+                    />
+                    <Input
+                      label={
+                        whatsappData?.whatsapp?.has_twilio_auth_token
+                          ? "Auth token (leave blank to keep)"
+                          : "Auth token"
+                      }
+                      type="password"
+                      value={whatsappForm.twilio_auth_token}
+                      disabled={!canEditWhatsApp}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, twilio_auth_token: e.target.value }))
+                      }
+                    />
+                    <Input
+                      label="From number"
+                      value={whatsappForm.twilio_from}
+                      disabled={!canEditWhatsApp}
+                      placeholder="whatsapp:+1415..."
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, twilio_from: e.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                {whatsappError && (
+                  <p className="rounded-[var(--radius)] bg-danger/10 px-3 py-2 text-sm text-danger">
+                    {whatsappError}
+                  </p>
+                )}
+                {whatsappSuccess && (
+                  <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
+                    {whatsappSuccess}
+                  </p>
+                )}
+                {canEditWhatsApp && (
+                  <Button
+                    onClick={() => updateWhatsAppMutation.mutate()}
+                    isLoading={updateWhatsAppMutation.isPending}
+                  >
+                    Save WhatsApp
+                  </Button>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
