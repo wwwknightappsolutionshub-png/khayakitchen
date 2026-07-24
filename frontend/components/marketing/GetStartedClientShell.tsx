@@ -8,12 +8,32 @@ import { marketingTheme } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
 const SignupWizard = dynamic(
-  () =>
-    import("@/components/marketing/SignupWizard").then((m) => m.SignupWizard),
+  () => import("@/components/marketing/SignupWizard").then((m) => m.SignupWizard),
   {
     ssr: false,
     loading: () => <p className="text-sm text-zinc-400">Loading signup…</p>,
   },
+);
+
+const MarketingVisitorRotator = dynamic(
+  () =>
+    import("@/components/marketing/MarketingVisitorRotator").then(
+      (m) => m.MarketingVisitorRotator,
+    ),
+  { ssr: false },
+);
+
+const MarketingChatbot = dynamic(
+  () => import("@/components/marketing/MarketingChatbot").then((m) => m.MarketingChatbot),
+  { ssr: false },
+);
+
+const MarketingPwaInstallGate = dynamic(
+  () =>
+    import("@/components/marketing/MarketingPwaInstallGate").then(
+      (m) => m.MarketingPwaInstallGate,
+    ),
+  { ssr: false },
 );
 
 function buildSignupHref(searchParams: URLSearchParams): string {
@@ -43,11 +63,19 @@ function GetStartedClient() {
           </p>
         </div>
         <SignupWizard startAtForm />
+        <MarketingChatbot />
       </div>
     );
   }
 
-  return <GetStartedMarketingHero signupHref={signupHref} />;
+  return (
+    <>
+      <GetStartedMarketingHero signupHref={signupHref} />
+      <MarketingVisitorRotator />
+      <MarketingChatbot />
+      <MarketingPwaInstallGate />
+    </>
+  );
 }
 
 export function GetStartedClientShell() {

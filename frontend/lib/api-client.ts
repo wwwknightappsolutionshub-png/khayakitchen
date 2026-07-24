@@ -166,8 +166,16 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
     endpoint === "/auth/reset-password";
   const isPublicSignupRoute = endpoint === "/signup";
   const isPublicPricingRoute = endpoint === "/pricing/plans";
+  const isMarketingRoute = endpoint.startsWith("/marketing/");
 
-  if (!isPlatformRoute && !isAuthLoginRoute && !isPublicAuthRoute && !isPublicSignupRoute && !isPublicPricingRoute) {
+  if (
+    !isPlatformRoute &&
+    !isAuthLoginRoute &&
+    !isPublicAuthRoute &&
+    !isPublicSignupRoute &&
+    !isPublicPricingRoute &&
+    !isMarketingRoute
+  ) {
     const { tenantId, tenantSlug } = resolveTenantHeaders(endpoint);
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
     if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;

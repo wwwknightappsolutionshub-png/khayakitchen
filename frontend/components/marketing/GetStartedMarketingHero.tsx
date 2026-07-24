@@ -2,7 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import {
+  CheckCircle2,
+  Clock3,
+  ShieldCheck,
+  Smartphone,
+  Store,
+  TrendingUp,
+  UtensilsCrossed,
+  Wallet,
+} from "lucide-react";
 import { KHAYA_FEATURE_SLIDES } from "@/lib/khayaos-features";
+import { MarketingUrgencyCountdown } from "@/components/marketing/MarketingUrgencyCountdown";
 import { marketingTheme } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
@@ -10,18 +21,22 @@ const BENEFITS = [
   {
     title: "Own your customers",
     body: "Your branded PWA and menu — not rented traffic inside someone else’s app.",
+    icon: Smartphone,
   },
   {
     title: "Keep more of every order",
     body: "Direct orders avoid marketplace commission. Growth tools push repeat visits back to you.",
+    icon: Wallet,
   },
   {
     title: "Run the kitchen in one place",
     body: "Orders, prep board, inventory, loyalty, and campaigns — one operating system.",
+    icon: UtensilsCrossed,
   },
   {
     title: "Recover revenue others leave behind",
     body: "End-of-day offers, proximity pushes, and loyalty redeem the customers marketplaces forget.",
+    icon: TrendingUp,
   },
 ] as const;
 
@@ -48,7 +63,30 @@ const COMPARE_ROWS = [
   },
 ] as const;
 
-/** Marketing face for /get-started — hero → why → benefits → capabilities. */
+const PROOF = [
+  {
+    title: "Live kitchen ops",
+    body: "Orders move from pending → accepted → preparing → ready with staff accountability.",
+    icon: Clock3,
+  },
+  {
+    title: "Tenant isolation",
+    body: "Every kitchen workspace is multi-tenant safe — your menu, customers, and data stay yours.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Installable PWA",
+    body: "Staff and diners add KhayaOS to the home screen for app-speed ordering and service.",
+    icon: Smartphone,
+  },
+  {
+    title: "Direct + marketplace ready",
+    body: "Keep Uber Eats as a channel if you want — KhayaOS still runs the kitchen you own.",
+    icon: Store,
+  },
+] as const;
+
+/** Marketing face for /get-started — hero → why → benefits → proof → capabilities → start. */
 export function GetStartedMarketingHero({
   signupHref,
 }: {
@@ -56,7 +94,6 @@ export function GetStartedMarketingHero({
 }) {
   return (
     <div className="space-y-20 md:space-y-28">
-      {/* Full-bleed hero: brand + one headline + support + CTAs + dominant image */}
       <section className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-10 w-screen">
         <div className="relative min-h-[78vh] overflow-hidden md:min-h-[85vh]">
           <Image
@@ -64,6 +101,7 @@ export function GetStartedMarketingHero({
             alt="Busy restaurant kitchen pass during service"
             fill
             priority
+            quality={70}
             sizes="100vw"
             className="object-cover object-center get-started-hero-pan"
           />
@@ -77,11 +115,7 @@ export function GetStartedMarketingHero({
           />
 
           <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-6 pb-16 pt-24 md:min-h-[85vh] md:pb-24 md:pt-32">
-            <p
-              className={cn(
-                "get-started-fade-up text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl",
-              )}
-            >
+            <p className="get-started-fade-up text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
               KhayaOS
             </p>
             <h1 className="get-started-fade-up-delay mt-4 max-w-2xl text-2xl font-semibold tracking-tight text-white md:text-3xl lg:text-4xl">
@@ -90,7 +124,7 @@ export function GetStartedMarketingHero({
             <p className="get-started-fade-up-late mt-4 max-w-xl text-base leading-relaxed text-zinc-300 md:text-lg">
               Orders, prep, inventory, loyalty, and revenue recovery — one workspace you own.
             </p>
-            <div className="get-started-fade-up-late mt-8 flex flex-wrap items-center gap-3">
+            <div className="get-started-fade-up-late mt-8">
               <Link
                 href={signupHref}
                 className={cn(
@@ -100,22 +134,12 @@ export function GetStartedMarketingHero({
               >
                 Start free
               </Link>
-              <Link
-                href="/pricing"
-                className={cn(
-                  "inline-flex items-center justify-center rounded-full border px-6 py-2.5 text-sm font-semibold",
-                  marketingTheme.secondaryButton,
-                )}
-              >
-                View pricing
-              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why KhayaOS */}
-      <section className="max-w-3xl">
+      <section id="why" className="max-w-3xl scroll-mt-28">
         <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">Why KhayaOS</h2>
         <p className="mt-3 text-base leading-relaxed text-zinc-400 md:text-lg">
           Food businesses are stuck stitching delivery apps, spreadsheets, and kitchen screens
@@ -124,51 +148,99 @@ export function GetStartedMarketingHero({
         </p>
       </section>
 
-      {/* Benefits vs marketplaces */}
-      <section className="space-y-10">
-        <div className="max-w-3xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-            Benefits of KhayaOS
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-zinc-400 md:text-lg">
-            Uber Eats, Just Eat, and Deliveroo are demand channels. KhayaOS is the system that
-            runs your kitchen and keeps the customer after the order.
-          </p>
-        </div>
+      <section
+        id="benefits"
+        className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen scroll-mt-24"
+      >
+        <div className="border-y border-amber-500/20 bg-gradient-to-b from-amber-500/10 via-[#14100c] to-[#0a0806] px-6 py-16 md:py-20">
+          <div className="mx-auto max-w-6xl space-y-12">
+            <div className="max-w-3xl">
+              <p className={cn("text-sm font-semibold uppercase tracking-[0.2em]", marketingTheme.eyebrow)}>
+                Own the relationship
+              </p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
+                Benefits of KhayaOS
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-zinc-300 md:text-lg">
+                Uber Eats, Just Eat, and Deliveroo are demand channels. KhayaOS is the system that
+                runs your kitchen and keeps the customer after the order.
+              </p>
+            </div>
 
-        <ul className="grid gap-8 sm:grid-cols-2">
-          {BENEFITS.map((item) => (
-            <li key={item.title} className="max-w-md">
-              <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.body}</p>
-            </li>
-          ))}
-        </ul>
+            <ul className="grid gap-5 sm:grid-cols-2">
+              {BENEFITS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li
+                    key={item.title}
+                    className="rounded-2xl border border-amber-500/25 bg-[#0a0806]/70 p-5 shadow-[0_0_40px_rgba(224,122,95,0.08)]"
+                  >
+                    <span
+                      className={cn(
+                        "mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl",
+                        marketingTheme.iconBox,
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-400">{item.body}</p>
+                  </li>
+                );
+              })}
+            </ul>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/15 text-zinc-400">
-                <th className="py-3 pr-4 font-medium"> </th>
-                <th className="py-3 pr-4 font-medium">Marketplaces</th>
-                <th className={cn("py-3 font-medium", marketingTheme.eyebrow)}>KhayaOS</th>
-              </tr>
-            </thead>
-            <tbody>
+            <div className="overflow-hidden rounded-2xl border border-amber-500/30 bg-[#0a0806]/80">
+              <div className="grid grid-cols-[minmax(7rem,1.1fr)_1fr_1fr] gap-0 border-b border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-300 sm:px-5 sm:text-sm">
+                <span className="sr-only sm:not-sr-only sm:text-transparent">.</span>
+                <span>Marketplaces</span>
+                <span className={marketingTheme.eyebrow}>KhayaOS</span>
+              </div>
               {COMPARE_ROWS.map((row) => (
-                <tr key={row.label} className="border-b border-white/10">
-                  <th className="py-3 pr-4 align-top font-medium text-zinc-300">{row.label}</th>
-                  <td className="py-3 pr-4 align-top text-zinc-500">{row.marketplace}</td>
-                  <td className="py-3 align-top text-amber-100/90">{row.khayaos}</td>
-                </tr>
+                <div
+                  key={row.label}
+                  className="grid grid-cols-[minmax(7rem,1.1fr)_1fr_1fr] gap-3 border-b border-white/10 px-4 py-4 text-sm last:border-b-0 sm:gap-4 sm:px-5"
+                >
+                  <div className="font-medium text-zinc-200">{row.label}</div>
+                  <div className="text-zinc-500">{row.marketplace}</div>
+                  <div className="font-medium text-amber-100">{row.khayaos}</div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* What you get — existing feature catalog */}
-      <section className="space-y-8">
+      <section id="proof" className="scroll-mt-28 space-y-8">
+        <div className="max-w-3xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
+            Proof of service
+          </h2>
+          <p className="mt-3 text-base text-zinc-400 md:text-lg">
+            Built as a production kitchen OS — not a landing-page mock. These are capabilities live
+            in KhayaOS today.
+          </p>
+        </div>
+        <ul className="grid gap-6 sm:grid-cols-2">
+          {PROOF.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.title} className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-amber-200/80" aria-hidden />
+                    <h3 className="font-semibold text-white">{item.title}</h3>
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-400">{item.body}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section id="capabilities" className="scroll-mt-28 space-y-8">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">What you get</h2>
           <p className="mt-2 text-sm text-zinc-400 md:text-base">
@@ -213,15 +285,16 @@ export function GetStartedMarketingHero({
         </div>
       </section>
 
-      {/* Closing CTA */}
-      <section className="max-w-2xl pb-4">
+      <section id="start" className="max-w-2xl scroll-mt-28 pb-4">
         <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
           Start your kitchen workspace
         </h2>
         <p className="mt-3 text-base text-zinc-400">
-          Provision your tenant free — then grow with the tools your plan unlocks.
+          Provision your tenant free — then grow with the tools your plan unlocks. This window
+          resets at midnight.
         </p>
-        <div className="mt-8 flex flex-wrap gap-3">
+        <MarketingUrgencyCountdown />
+        <div className="mt-8">
           <Link
             href={signupHref}
             className={cn(
@@ -229,16 +302,7 @@ export function GetStartedMarketingHero({
               marketingTheme.primaryButton,
             )}
           >
-            Start free
-          </Link>
-          <Link
-            href="/pricing"
-            className={cn(
-              "inline-flex items-center justify-center rounded-full border px-6 py-2.5 text-sm font-semibold",
-              marketingTheme.secondaryButton,
-            )}
-          >
-            View pricing
+            Start free now
           </Link>
         </div>
       </section>

@@ -30,6 +30,7 @@ use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CustomerNotificationController;
 use App\Modules\Orders\Interfaces\Controllers\CustomerOrderController;
 use App\Modules\Orders\Interfaces\Controllers\OrderController;
+use App\Modules\Platform\Interfaces\Controllers\MarketingEngagementController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformAuditLogController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformDashboardController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformFeatureFlagController;
@@ -69,6 +70,10 @@ Route::prefix('v1')->group(function () {
     Route::post('/signup', [PublicSignupController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
+    Route::post('/marketing/visitor-hit', [MarketingEngagementController::class, 'visitorHit'])
+        ->middleware('throttle:30,1');
+    Route::post('/marketing/chat', [MarketingEngagementController::class, 'chat'])
+        ->middleware('throttle:20,1');
 
     Route::get('/storefront/pwa-manifest/{slug}', [StorefrontController::class, 'pwaManifest']);
 
