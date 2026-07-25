@@ -782,10 +782,22 @@ export interface ChatThread {
 export interface PlatformTenantMessage {
   id: string;
   tenant_id: string;
-  channel: "push" | "email";
+  channel: "push" | "email" | "suggestion";
   title: string;
   body: string;
   status: string;
+  metadata?: {
+    kind?: "peak" | "off_peak" | string;
+    cta_path?: string;
+    window?: {
+      weekday?: number;
+      start_hour?: number;
+      end_hour?: number;
+      label?: string;
+    };
+    local_at?: string;
+    [key: string]: unknown;
+  } | null;
   created_at: string;
 }
 

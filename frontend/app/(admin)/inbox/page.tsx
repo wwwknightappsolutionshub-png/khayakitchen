@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -10,7 +11,7 @@ import { engagementService } from "@/services/engagement.service";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useChatTyping, useTypingPublisher } from "@/hooks/useChatTyping";
 import { cn, formatDate } from "@/lib/utils";
-import type { ChatMessage, ChatThread } from "@/lib/types";
+import type { ChatMessage, ChatThread, PlatformTenantMessage } from "@/lib/types";
 
 function initials(name?: string | null): string {
   const parts = (name || "G").trim().split(/\s+/).slice(0, 2);
@@ -29,10 +30,48 @@ function formatShortTime(iso?: string | null): string {
     if (sameDay) {
       return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(d);
     }
-    return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(d);
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(d);
   } catch {
     return "";
   }
+}
+
+function CampaignTipRow({ message }: { message: PlatformTenantMessage }) {
+  const cta = message.metadata?.cta_path || "/marketing";
+  const kindLabel =
+    message.metadata?.kind === "off_peak"
+      ? "Off-peak tip"
+      : message.metadata?.kind === "peak"
+        ? "Peak tip"
+        : "Timing tip";
+
+  return (
+    <div className="rounded-lg border border-amber-500/20 bg-surface p-3 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+            {kindLabel}
+          </p>
+          <p className="mt-0.5 font-medium">{message.title}</p>
+          <p className="mt-1 text-muted">{message.body}</p>
+          {message.created_at && (
+            <p className="mt-1 text-[10px] text-muted">{formatDate(message.created_at)}</p>
+          )}
+        </div>
+        <Link
+          href={cta}
+          className="inline-flex shrink-0 items-center rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-3 py-1.5 text-xs font-semibold text-white"
+        >
+          Create campaign
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 function ThreadRow({
@@ -222,6 +261,10 @@ export default function TenantInboxPage() {
   const conversationTitle =
     activeMeta?.customer_name || activeMeta?.subject || "Conversation";
 
+  const allPlatformMessages = platformMessages.data?.messages ?? [];
+  const campaignTips = allPlatformMessages.filter((m) => m.channel === "suggestion");
+  const staffNotices = allPlatformMessages.filter((m) => m.channel !== "suggestion");
+
   return (
     <BackendPage>
       <header className="backend-header">
@@ -237,12 +280,28 @@ export default function TenantInboxPage() {
         </p>
       )}
 
+      {campaignTips.length > 0 && (
+        <Card className="mb-4 border-amber-500/25 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-500" aria-hidden />
+              Campaign tips
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {campaignTips.map((m) => (
+              <CampaignTipRow key={m.id} message={m} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Platform notifications</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(platformMessages.data?.messages ?? []).map((m) => (
+          {staffNotices.map((m) => (
             <div key={m.id} className="rounded-lg border border-border p-3 text-sm">
               <p className="font-medium">
                 [{m.channel}] {m.title}
@@ -253,7 +312,7 @@ export default function TenantInboxPage() {
               )}
             </div>
           ))}
-          {(platformMessages.data?.messages ?? []).length === 0 && (
+          {staffNotices.length === 0 && (
             <p className="text-sm text-muted">No platform messages yet.</p>
           )}
         </CardContent>

@@ -19,6 +19,7 @@ class PlatformTenantMessage extends Model
         'channel',
         'title',
         'body',
+        'metadata',
         'status',
         'error_message',
         'sent_at',
@@ -30,6 +31,7 @@ class PlatformTenantMessage extends Model
         return [
             'sent_at' => 'datetime',
             'created_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 }

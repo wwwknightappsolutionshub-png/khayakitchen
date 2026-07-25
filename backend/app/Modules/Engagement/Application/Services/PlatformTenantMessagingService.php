@@ -90,6 +90,33 @@ class PlatformTenantMessagingService
             ->get();
     }
 
+    /**
+     * System-generated campaign timing tip (inbox only — not a Super Admin push/email).
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    public function createSystemSuggestion(
+        string $tenantId,
+        string $title,
+        string $body,
+        array $metadata = [],
+        ?\Carbon\CarbonInterface $at = null,
+    ): PlatformTenantMessage {
+        $at = $at ? \Carbon\Carbon::instance($at)->utc() : now()->utc();
+
+        return PlatformTenantMessage::withoutGlobalScopes()->create([
+            'tenant_id' => $tenantId,
+            'sender_user_id' => null,
+            'channel' => 'suggestion',
+            'title' => $title,
+            'body' => $body,
+            'metadata' => $metadata,
+            'status' => 'sent',
+            'sent_at' => $at,
+            'created_at' => $at,
+        ]);
+    }
+
     public function listForPlatform(?string $tenantId = null)
     {
         $query = PlatformTenantMessage::withoutGlobalScopes()->orderByDesc('created_at');

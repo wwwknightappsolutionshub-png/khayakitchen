@@ -29,8 +29,8 @@ return new class extends Migration
         Schema::create('platform_tenant_messages', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('tenant_id');
-            $table->uuid('sender_user_id');
-            $table->enum('channel', ['push', 'email']);
+            $table->uuid('sender_user_id')->nullable();
+            $table->enum('channel', ['push', 'email', 'suggestion']);
             $table->string('title');
             $table->text('body');
             $table->enum('status', ['queued', 'sent', 'failed'])->default('queued');

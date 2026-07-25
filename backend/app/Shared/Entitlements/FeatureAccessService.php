@@ -48,6 +48,7 @@ class FeatureAccessService
         'custom_meal_requests' => 'custom_meal_requests',
         'staff_performance' => 'staff_performance',
         'seasonal_promo' => 'seasonal_promo',
+        'campaign_timing_intelligence' => 'campaign_timing_intelligence',
     ];
 
     /** @var array<string, string> */
@@ -82,6 +83,7 @@ class FeatureAccessService
         'custom_meal_requests' => 'custom_meal_requests',
         'staff_performance' => 'staff_performance',
         'seasonal_promo' => 'seasonal_promo',
+        'campaign_timing_intelligence' => 'campaign_timing_intelligence',
     ];
 
     /**

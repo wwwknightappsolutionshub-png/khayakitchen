@@ -44,6 +44,7 @@ class PricingSeeder extends Seeder
             ['key' => 'custom_meal_requests', 'name' => 'Custom Meal Requests', 'category' => 'crm', 'module' => 'custom_meal_requests', 'description' => 'Customers request off-menu custom meals; kitchen staff manage status', 'implemented_at' => '2026-07-21'],
             ['key' => 'staff_performance', 'name' => 'Staff Performance', 'category' => 'reporting', 'module' => 'staff_performance', 'description' => 'Waiter and chef performance tracking (free first 30 days)', 'implemented_at' => '2026-07-14'],
             ['key' => 'seasonal_promo', 'name' => 'Seasonal Promo', 'category' => 'marketing', 'module' => 'seasonal_promo', 'description' => 'Monthly/seasonal full-screen customer promo splash with menu CTA (free first 30 days)', 'implemented_at' => '2026-07-14'],
+            ['key' => 'campaign_timing_intelligence', 'name' => 'Campaign Timing Intelligence', 'category' => 'marketing', 'module' => 'campaign_timing_intelligence', 'description' => 'Learns peak/off-peak order rhythm and auto-suggests when to run push campaigns', 'implemented_at' => '2026-07-25'],
         ];
 
         // updateOrCreate keeps Feature Library in sync (name/module/category/implemented_at).
@@ -178,6 +179,7 @@ class PricingSeeder extends Seeder
             'inventory_tracking', 'loyalty_system', 'whatsapp_notifications', 'pwa_push_notifications',
             'notification_campaigns', 'revenue_recovery', 'delivery', 'coupons',
             'menu_likes_refer', 'kitchen_reviews', 'tenant_customer_chat', 'custom_meal_requests',
+            'campaign_timing_intelligence',
         ]);
         $professionalKeys = array_merge($growthKeys, [
             'reports', 'forecasting', 'staff_performance', 'seasonal_promo',
