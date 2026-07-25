@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  MARKETING_THEME_HTML_ATTR,
   MARKETING_THEME_STORAGE_KEY,
   marketingThemes,
   parseMarketingThemeMode,
@@ -27,31 +28,44 @@ type MarketingThemeContextValue = {
 
 const MarketingThemeContext = createContext<MarketingThemeContextValue | null>(null);
 
-function readStoredMode(): MarketingThemeMode {
+function readBootMode(): MarketingThemeMode {
   if (typeof window === "undefined") return "dark";
   try {
+    const fromHtml = parseMarketingThemeMode(
+      document.documentElement.getAttribute(MARKETING_THEME_HTML_ATTR),
+    );
+    if (fromHtml) return fromHtml;
     return parseMarketingThemeMode(window.localStorage.getItem(MARKETING_THEME_STORAGE_KEY)) ?? "dark";
   } catch {
     return "dark";
   }
 }
 
+function writeBootMode(mode: MarketingThemeMode) {
+  if (typeof window === "undefined") return;
+  try {
+    document.documentElement.setAttribute(MARKETING_THEME_HTML_ATTR, mode);
+    window.localStorage.setItem(MARKETING_THEME_STORAGE_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function MarketingThemeProvider({ children }: { children: ReactNode }) {
+  // SSR defaults dark; useLayoutEffect aligns to boot script / localStorage before paint.
   const [mode, setModeState] = useState<MarketingThemeMode>("dark");
   const [ready, setReady] = useState(false);
 
   useLayoutEffect(() => {
-    setModeState(readStoredMode());
+    const next = readBootMode();
+    setModeState(next);
+    writeBootMode(next);
     setReady(true);
   }, []);
 
   const setMode = useCallback((next: MarketingThemeMode) => {
     setModeState(next);
-    try {
-      window.localStorage.setItem(MARKETING_THEME_STORAGE_KEY, next);
-    } catch {
-      /* ignore quota / private mode */
-    }
+    writeBootMode(next);
   }, []);
 
   const toggle = useCallback(() => {

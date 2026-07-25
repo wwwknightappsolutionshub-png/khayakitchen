@@ -661,7 +661,8 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Public signup / marketing shell — dark default; light via data-marketing-theme */
+/* Public signup / marketing shell — dark default; light via data-marketing-theme
+   and html[data-khayaos-mkt] from the beforeInteractive boot script (FOUC guard). */
 .marketing-app {
   --background: #0a0806;
   --foreground: #ffffff;
@@ -671,9 +672,17 @@ h1, h2, h3, h4, h5, h6 {
   --primary-hover: #e89078;
   --border: rgba(255, 255, 255, 0.1);
   --muted: #a1a1aa;
+  background-color: #0a0806;
+  color: #ffffff;
 }
 
-.marketing-app[data-marketing-theme="light"] {
+.marketing-app .marketing-header {
+  background-color: rgb(10 8 6 / 0.85);
+  border-bottom-color: rgb(255 255 255 / 0.1);
+}
+
+.marketing-app[data-marketing-theme="light"],
+html[data-khayaos-mkt="light"] .marketing-app {
   --background: #f6f1ea;
   --foreground: #18181b;
   --surface: #ffffff;
@@ -682,4 +691,18 @@ h1, h2, h3, h4, h5, h6 {
   --primary-hover: #d4684e;
   --border: rgba(28, 25, 23, 0.12);
   --muted: #57534e;
+  background-color: #f6f1ea;
+  color: #18181b;
+}
+
+html[data-khayaos-mkt="light"] .marketing-app .marketing-header,
+.marketing-app[data-marketing-theme="light"] .marketing-header {
+  background-color: rgb(246 241 234 / 0.9);
+  border-bottom-color: rgb(231 229 228 / 0.8);
+}
+
+html[data-khayaos-mkt="dark"] .marketing-app,
+.marketing-app[data-marketing-theme="dark"] {
+  background-color: #0a0806;
+  color: #ffffff;
 }

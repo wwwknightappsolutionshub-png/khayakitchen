@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { MARKETING_THEME_BOOT_SCRIPT } from "@/lib/marketing-theme";
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -12,5 +14,12 @@ export const metadata: Metadata = {
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return <MarketingShell>{children}</MarketingShell>;
+  return (
+    <>
+      <Script id="khayaos-marketing-theme-boot" strategy="beforeInteractive">
+        {MARKETING_THEME_BOOT_SCRIPT}
+      </Script>
+      <MarketingShell>{children}</MarketingShell>
+    </>
+  );
 }

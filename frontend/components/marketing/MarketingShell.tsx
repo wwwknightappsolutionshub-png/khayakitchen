@@ -6,7 +6,6 @@ import {
   MarketingThemeProvider,
   useMarketingTheme,
 } from "@/providers/MarketingThemeProvider";
-import { MARKETING_THEME_STORAGE_KEY } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
 const SECTION_LINKS = [
@@ -17,22 +16,21 @@ const SECTION_LINKS = [
   { href: "/get-started#start", label: "Start" },
 ] as const;
 
-const BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(MARKETING_THEME_STORAGE_KEY)};var t=localStorage.getItem(k);if(t==='light'||t==='dark'){var el=document.currentScript&&document.currentScript.parentElement;if(el){el.setAttribute('data-marketing-theme',t);}}}catch(e){}})();`;
-
 function MarketingShellInner({ children }: { children: React.ReactNode }) {
-  const { mode, theme } = useMarketingTheme();
+  const { mode, theme, ready } = useMarketingTheme();
 
   return (
     <div
       className={cn(
         "marketing-app relative min-h-screen font-[family-name:var(--font-anek)]",
-        theme.pageBg,
-        theme.pageText,
+        // Page bg/text come from CSS + html[data-khayaos-mkt] (boot script) to avoid FOUC.
+        // Token classes apply after ready so SSR dark utilities don't paint over light.
+        ready && theme.pageText,
       )}
       data-marketing-theme={mode}
+      data-theme-ready={ready ? "1" : "0"}
       suppressHydrationWarning
     >
-      <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
       <div
         className={cn(
           "signup-splash-glow pointer-events-none absolute inset-0",
@@ -41,8 +39,8 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
       />
       <header
         className={cn(
-          "sticky top-0 z-30 border-b px-6 py-4 backdrop-blur-md",
-          theme.headerBg,
+          "marketing-header sticky top-0 z-30 border-b px-6 py-4 backdrop-blur-md",
+          ready ? theme.headerBg : "border-transparent bg-transparent",
         )}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
@@ -98,10 +96,21 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </header>
-      <main className="relative mx-auto max-w-6xl px-6 pt-10 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2rem))]">
+      <main
+        className={cn(
+          "relative mx-auto max-w-6xl px-6 pt-10 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2rem))]",
+          !ready && "invisible",
+        )}
+      >
         {children}
       </main>
-      <footer className={cn("relative border-t px-6 py-10", theme.surfaceBorder)}>
+      <footer
+        className={cn(
+          "relative border-t px-6 py-10",
+          theme.surfaceBorder,
+          !ready && "invisible",
+        )}
+      >
         <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}

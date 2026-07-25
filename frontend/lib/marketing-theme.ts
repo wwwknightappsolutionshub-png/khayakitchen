@@ -4,6 +4,16 @@ export type MarketingThemeMode = "dark" | "light";
 
 export const MARKETING_THEME_STORAGE_KEY = "khayaos_marketing_theme";
 
+/** Set on <html> by the beforeInteractive boot script (prevents light-theme FOUC). */
+export const MARKETING_THEME_HTML_ATTR = "data-khayaos-mkt";
+
+/** Inline boot — runs before body paint; always sets light or dark on <html>. */
+export const MARKETING_THEME_BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(
+  "khayaos_marketing_theme",
+)};var a=${JSON.stringify("data-khayaos-mkt")};var t=localStorage.getItem(k);if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute(a,t);}catch(e){document.documentElement.setAttribute(${JSON.stringify(
+  "data-khayaos-mkt",
+)},"dark");}})();`;
+
 export type MarketingThemeTokens = {
   pageBg: string;
   pageText: string;
