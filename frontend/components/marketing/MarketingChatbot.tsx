@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { marketingService } from "@/services/marketing.service";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
 
 const WA = "https://wa.me/447756183484";
@@ -16,6 +16,7 @@ function sleep(ms: number) {
 
 /** Natural marketing chatbot with typing lag and WhatsApp email handoff. */
 export function MarketingChatbot() {
+  const { theme, mode } = useMarketingTheme();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [email, setEmail] = useState("");
@@ -105,6 +106,15 @@ export function MarketingChatbot() {
     await runAssistant(value, nextHistory, value);
   };
 
+  const userBubble =
+    mode === "light"
+      ? "ml-auto bg-amber-100 text-amber-950"
+      : "ml-auto bg-amber-500/20 text-amber-50";
+  const botBubble =
+    mode === "light" ? "bg-stone-100 text-zinc-800" : "bg-white/5 text-zinc-200";
+  const typingBubble =
+    mode === "light" ? "bg-stone-100 text-zinc-500" : "bg-white/5 text-zinc-400";
+
   return (
     <>
       <button
@@ -113,28 +123,33 @@ export function MarketingChatbot() {
         onClick={() => setOpen(true)}
         className={cn(
           "fixed bottom-6 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg sm:right-6",
-          marketingTheme.primaryButton,
+          theme.primaryButton,
         )}
       >
         <MessageCircle className="h-6 w-6" />
       </button>
 
       {open ? (
-        <div className="fixed bottom-24 right-4 z-50 flex w-[min(100vw-2rem,22rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#14100c] shadow-2xl sm:right-6">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div
+          className={cn(
+            "fixed bottom-24 right-4 z-50 flex w-[min(100vw-2rem,22rem)] flex-col overflow-hidden rounded-2xl border shadow-2xl sm:right-6",
+            theme.chatPanel,
+          )}
+        >
+          <div className={cn("flex items-center justify-between border-b px-4 py-3", theme.surfaceBorder)}>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icon-192.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
               <div>
-                <p className="text-sm font-semibold text-white">KhayaOS assistant</p>
-                <p className="text-[11px] text-zinc-500">Usually replies in a few seconds</p>
+                <p className={cn("text-sm font-semibold", theme.heading)}>KhayaOS assistant</p>
+                <p className={cn("text-[11px]", theme.subtle)}>Usually replies in a few seconds</p>
               </div>
             </div>
             <button
               type="button"
               aria-label="Close chat"
               onClick={() => setOpen(false)}
-              className="rounded-full p-1 text-zinc-400 hover:text-white"
+              className={cn("rounded-full p-1", theme.iconButton)}
             >
               <X className="h-4 w-4" />
             </button>
@@ -146,16 +161,14 @@ export function MarketingChatbot() {
                 key={`${turn.role}-${index}`}
                 className={cn(
                   "max-w-[90%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap",
-                  turn.role === "user"
-                    ? "ml-auto bg-amber-500/20 text-amber-50"
-                    : "bg-white/5 text-zinc-200",
+                  turn.role === "user" ? userBubble : botBubble,
                 )}
               >
                 {turn.content}
               </div>
             ))}
             {typing ? (
-              <div className="max-w-[85%] rounded-2xl bg-white/5 px-3 py-2.5 text-sm text-zinc-400">
+              <div className={cn("max-w-[85%] rounded-2xl px-3 py-2.5 text-sm", typingBubble)}>
                 <span className="sr-only">Typing you a response</span>
                 <span className="inline-flex items-center gap-1">
                   Typing you a response
@@ -169,10 +182,10 @@ export function MarketingChatbot() {
             ) : null}
           </div>
 
-          <div className="border-t border-white/10 p-3">
+          <div className={cn("border-t p-3", theme.surfaceBorder)}>
             {awaitingEmail ? (
               <form onSubmit={(e) => void sendEmail(e)} className="space-y-2">
-                <p className="text-xs text-zinc-400">
+                <p className={cn("text-xs", theme.muted)}>
                   Email for WhatsApp handoff (we attach this chat history):
                 </p>
                 <div className="flex gap-2">
@@ -182,14 +195,17 @@ export function MarketingChatbot() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@kitchen.com"
-                    className="h-10 flex-1 rounded-full border border-white/10 bg-[#0a0806] px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-amber-500/40"
+                    className={cn(
+                      "h-10 flex-1 rounded-full border px-3 text-sm outline-none",
+                      theme.input,
+                    )}
                   />
                   <button
                     type="submit"
                     disabled={busy || !email.trim()}
                     className={cn(
                       "rounded-full px-4 text-sm font-semibold text-white disabled:opacity-50",
-                      marketingTheme.primaryButton,
+                      theme.primaryButton,
                     )}
                   >
                     Send
@@ -203,14 +219,17 @@ export function MarketingChatbot() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about KhayaOS…"
                   disabled={busy}
-                  className="h-10 flex-1 rounded-full border border-white/10 bg-[#0a0806] px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-amber-500/40 disabled:opacity-60"
+                  className={cn(
+                    "h-10 flex-1 rounded-full border px-3 text-sm outline-none disabled:opacity-60",
+                    theme.input,
+                  )}
                 />
                 <button
                   type="submit"
                   disabled={busy || !input.trim()}
                   className={cn(
                     "rounded-full px-4 text-sm font-semibold text-white disabled:opacity-50",
-                    marketingTheme.primaryButton,
+                    theme.primaryButton,
                   )}
                 >
                   Send
@@ -221,7 +240,7 @@ export function MarketingChatbot() {
               href={whatsappUrl}
               target="_blank"
               rel="noreferrer"
-              className={cn("mt-2 block text-center text-xs font-medium", marketingTheme.link)}
+              className={cn("mt-2 block text-center text-xs font-medium", theme.link)}
             >
               Or open WhatsApp +44 7756 183484
             </a>

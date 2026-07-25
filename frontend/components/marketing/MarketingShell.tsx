@@ -1,0 +1,155 @@
+"use client";
+
+import Link from "next/link";
+import { MarketingThemeToggle } from "@/components/marketing/MarketingThemeToggle";
+import {
+  MarketingThemeProvider,
+  useMarketingTheme,
+} from "@/providers/MarketingThemeProvider";
+import { MARKETING_THEME_STORAGE_KEY } from "@/lib/marketing-theme";
+import { cn } from "@/lib/utils";
+
+const SECTION_LINKS = [
+  { href: "/get-started#why", label: "Why" },
+  { href: "/get-started#benefits", label: "Benefits" },
+  { href: "/get-started#proof", label: "Proof" },
+  { href: "/get-started#capabilities", label: "Capabilities" },
+  { href: "/get-started#start", label: "Start" },
+] as const;
+
+const BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(MARKETING_THEME_STORAGE_KEY)};var t=localStorage.getItem(k);if(t==='light'||t==='dark'){var el=document.currentScript&&document.currentScript.parentElement;if(el){el.setAttribute('data-marketing-theme',t);}}}catch(e){}})();`;
+
+function MarketingShellInner({ children }: { children: React.ReactNode }) {
+  const { mode, theme } = useMarketingTheme();
+
+  return (
+    <div
+      className={cn(
+        "marketing-app relative min-h-screen font-[family-name:var(--font-anek)]",
+        theme.pageBg,
+        theme.pageText,
+      )}
+      data-marketing-theme={mode}
+      suppressHydrationWarning
+    >
+      <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+      <div
+        className={cn(
+          "signup-splash-glow pointer-events-none absolute inset-0",
+          theme.glowOpacity,
+        )}
+      />
+      <header
+        className={cn(
+          "sticky top-0 z-30 border-b px-6 py-4 backdrop-blur-md",
+          theme.headerBg,
+        )}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+          <Link
+            href="/get-started"
+            className="flex shrink-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon-192.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg object-cover"
+            />
+            KhayaOS
+          </Link>
+          <nav className="hidden items-center gap-4 text-sm md:flex">
+            {SECTION_LINKS.map((link) => (
+              <a key={link.href} href={link.href} className={theme.navLink}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2 sm:gap-3 text-sm">
+            <MarketingThemeToggle />
+            <Link href="/login" className={theme.link}>
+              Sign in
+            </Link>
+            <Link
+              href="/get-started?signup=1"
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-semibold text-white",
+                theme.primaryButton,
+              )}
+            >
+              Sign up
+            </Link>
+          </div>
+        </div>
+        <nav className="mx-auto mt-3 flex max-w-6xl gap-3 overflow-x-auto pb-1 text-xs md:hidden">
+          {SECTION_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1",
+                theme.navChip,
+              )}
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+      </header>
+      <main className="relative mx-auto max-w-6xl px-6 pt-10 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2rem))]">
+        {children}
+      </main>
+      <footer className={cn("relative border-t px-6 py-10", theme.surfaceBorder)}>
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon-192.png"
+              alt=""
+              width={36}
+              height={36}
+              className="mt-0.5 h-9 w-9 rounded-lg object-cover"
+            />
+            <div>
+              <p className={cn("text-lg font-semibold", theme.heading)}>KhayaOS</p>
+              <p className={cn("mt-2 max-w-sm text-sm", theme.subtle)}>
+                The kitchen operating system for food businesses.
+              </p>
+            </div>
+          </div>
+          <nav className={cn("flex flex-wrap gap-x-5 gap-y-2 text-sm", theme.muted)}>
+            {SECTION_LINKS.map((link) => (
+              <a key={link.href} href={link.href} className={theme.navLink}>
+                {link.label}
+              </a>
+            ))}
+            <Link href="/login" className={theme.navLink}>
+              Sign in
+            </Link>
+            <Link href="/get-started?signup=1" className={theme.navLink}>
+              Sign up
+            </Link>
+            <a
+              href="https://wa.me/447756183484"
+              className={theme.navLink}
+              rel="noreferrer"
+            >
+              WhatsApp
+            </a>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/** Client chrome for `(marketing)` routes — theme toggle + light/dark shell. */
+export function MarketingShell({ children }: { children: React.ReactNode }) {
+  return (
+    <MarketingThemeProvider>
+      <MarketingShellInner>{children}</MarketingShellInner>
+    </MarketingThemeProvider>
+  );
+}

@@ -20,16 +20,20 @@ class MarketingEngagementTest extends TestCase
     {
         $first = $this->postJson('/api/v1/marketing/visitor-hit');
         $first->assertOk();
-        $first->assertJsonPath('display_count', 210);
         $first->assertJsonPath('incremented', true);
+        $count = (int) $first->json('display_count');
+        $step = (int) $first->json('step');
+        $this->assertGreaterThanOrEqual(1, $step);
+        $this->assertLessThanOrEqual(10, $step);
+        $this->assertSame(200 + $step, $count);
 
         $second = $this->postJson('/api/v1/marketing/visitor-hit');
         $second->assertOk();
-        $second->assertJsonPath('display_count', 210);
+        $second->assertJsonPath('display_count', $count);
         $second->assertJsonPath('incremented', false);
 
         $this->assertDatabaseCount('marketing_visitor_ips', 1);
-        $this->assertSame(210, (int) MarketingVisitorStat::query()->value('display_count'));
+        $this->assertSame($count, (int) MarketingVisitorStat::query()->value('display_count'));
     }
 
     public function test_marketing_chat_returns_reply_and_whatsapp_fallback(): void
@@ -44,20 +48,38 @@ class MarketingEngagementTest extends TestCase
         $response->assertJsonPath('confident', true);
     }
 
-    public function test_marketing_chat_asks_email_then_handoffs_to_whatsapp(): void
+    public function test_marketing_chat_greets_and_steers_off_topic_to_specialty(): void
     {
-        $unsure = $this->postJson('/api/v1/marketing/chat', [
+        $hello = $this->postJson('/api/v1/marketing/chat', [
+            'message' => 'Hi',
+        ]);
+        $hello->assertOk();
+        $hello->assertJsonPath('confident', true);
+        $hello->assertJsonPath('needs_email', false);
+        $this->assertStringContainsString('KhayaOS', (string) $hello->json('reply'));
+
+        $offTopic = $this->postJson('/api/v1/marketing/chat', [
             'message' => 'What is the capital of Atlantis?',
         ]);
-        $unsure->assertOk();
-        $unsure->assertJsonPath('needs_email', true);
-        $unsure->assertJsonPath('confident', false);
+        $offTopic->assertOk();
+        $offTopic->assertJsonPath('needs_email', false);
+        $offTopic->assertJsonPath('confident', true);
+        $this->assertStringContainsString('kitchen', strtolower((string) $offTopic->json('reply')));
+    }
+
+    public function test_marketing_chat_email_handoffs_to_whatsapp_when_requested(): void
+    {
+        $human = $this->postJson('/api/v1/marketing/chat', [
+            'message' => 'I want to speak to a human on WhatsApp',
+        ]);
+        $human->assertOk();
+        $human->assertJsonPath('needs_email', true);
 
         $handoff = $this->postJson('/api/v1/marketing/chat', [
             'message' => 'owner@kitchen.test',
             'email' => 'owner@kitchen.test',
             'history' => [
-                ['role' => 'user', 'content' => 'What is the capital of Atlantis for kitchens?'],
+                ['role' => 'user', 'content' => 'I want to speak to a human on WhatsApp'],
                 ['role' => 'assistant', 'content' => 'Need email'],
             ],
         ]);

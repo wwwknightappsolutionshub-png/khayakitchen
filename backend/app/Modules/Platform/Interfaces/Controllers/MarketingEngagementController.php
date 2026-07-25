@@ -23,7 +23,7 @@ class MarketingEngagementController extends Controller
         return ApiResponse::success([
             'display_count' => $result['display_count'],
             'incremented' => $result['incremented'],
-            'step' => MarketingVisitorService::INCREMENT,
+            'step' => $result['step'],
         ]);
     }
 

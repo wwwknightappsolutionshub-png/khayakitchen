@@ -16,7 +16,7 @@ import type { PublicPricingPlan } from "@/lib/types";
 import { KHAYA_FEATURE_SLIDES } from "@/lib/khayaos-features";
 import { CURRENCIES } from "@/lib/currencies";
 import { isPostalCodeRequired } from "@/lib/postal-code-policy";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
 
 const signupSchema = z
@@ -175,10 +175,11 @@ function slugify(value: string): string {
 }
 
 function SectionTitle({ title, description }: { title: string; description: string }) {
+  const { theme } = useMarketingTheme();
   return (
-    <div className="border-b border-white/10 pb-4">
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-1 text-sm text-zinc-400">{description}</p>
+    <div className={cn("border-b pb-4", theme.surfaceBorder)}>
+      <h3 className={cn("text-lg font-semibold", theme.heading)}>{title}</h3>
+      <p className={cn("mt-1 text-sm", theme.muted)}>{description}</p>
     </div>
   );
 }
@@ -207,6 +208,7 @@ function LabeledSelect({
 }
 
 function UnifiedProgress({ currentStep, label }: { currentStep: number; label: string }) {
+  const { theme, mode } = useMarketingTheme();
   return (
     <div className="mb-6">
       <div className="flex items-center gap-1.5">
@@ -217,13 +219,17 @@ function UnifiedProgress({ currentStep, label }: { currentStep: number; label: s
                 "h-1.5 rounded-full transition-colors",
                 index < currentStep && "bg-orange-600",
                 index === currentStep && "bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500",
-                index > currentStep && "bg-white/10",
+                index > currentStep && (mode === "light" ? "bg-stone-200" : "bg-white/10"),
               )}
             />
             <p
               className={cn(
                 "mt-2 hidden text-center text-[10px] font-medium sm:block",
-                index === currentStep ? "text-amber-100" : "text-zinc-500",
+                index === currentStep
+                  ? mode === "light"
+                    ? "text-amber-900"
+                    : "text-amber-100"
+                  : theme.subtle,
               )}
             >
               {stepLabel}
@@ -231,7 +237,7 @@ function UnifiedProgress({ currentStep, label }: { currentStep: number; label: s
           </div>
         ))}
       </div>
-      <p className={cn("mt-3 text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+      <p className={cn("mt-3 text-sm font-semibold uppercase tracking-[0.18em]", theme.eyebrow)}>
         Step {currentStep + 1} of {TOTAL_STEPS} — {label}
       </p>
     </div>
@@ -249,6 +255,7 @@ export function EnterpriseSignupForm({
   plansErrorMessage = null,
   onRetryPlans,
 }: EnterpriseSignupFormProps) {
+  const { theme } = useMarketingTheme();
   const [step, setStep] = useState(startAtForm ? FEATURE_COUNT : 0);
   const [countries, setCountries] = useState<CountryRow[]>([]);
   const [states, setStates] = useState<StateRow[]>([]);
@@ -458,7 +465,7 @@ export function EnterpriseSignupForm({
             <button
               type="button"
               onClick={() => setStep(FEATURE_COUNT)}
-              className={cn("text-sm font-medium underline-offset-4 hover:underline", marketingTheme.link)}
+              className={cn("text-sm font-medium underline-offset-4 hover:underline", theme.link)}
             >
               Skip intro → go to signup form
             </button>
@@ -466,7 +473,7 @@ export function EnterpriseSignupForm({
           <FeatureExplainerSlide slide={KHAYA_FEATURE_SLIDES[step]} />
         </div>
       ) : (
-        <section className={cn("space-y-4 rounded-2xl border p-5", marketingTheme.surfaceBorder, marketingTheme.surface)}>
+        <section className={cn("space-y-4 rounded-2xl border p-5", theme.surfaceBorder, theme.surface)}>
           <SectionTitle title={SIGNUP_PHASES[phase].title} description={SIGNUP_PHASES[phase].description} />
 
           {phase === 0 ? (
@@ -485,7 +492,7 @@ export function EnterpriseSignupForm({
               />
               <LabeledSelect label="Business type" tooltip="Helps KhayaOS tailor default settings for your operation.">
                 <select
-                  className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
+                  className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-[var(--foreground)]"
                   {...register("business_type")}
                 >
                   <option value="restaurant">Restaurant</option>
@@ -622,11 +629,11 @@ export function EnterpriseSignupForm({
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 text-sm text-zinc-300">
-                    <input type="checkbox" className={marketingTheme.checkbox} {...register("order_types_pickup")} />
+                    <input type="checkbox" className={theme.checkbox} {...register("order_types_pickup")} />
                     Pickup
                   </label>
                   <label className="flex items-center gap-2 text-sm text-zinc-300">
-                    <input type="checkbox" className={marketingTheme.checkbox} {...register("order_types_delivery")} />
+                    <input type="checkbox" className={theme.checkbox} {...register("order_types_delivery")} />
                     Delivery
                   </label>
                 </div>
@@ -672,7 +679,7 @@ export function EnterpriseSignupForm({
                 <div className="md:col-span-2">
                   <LabeledSelect label="Subscription plan" error={errors.plan_id?.message}>
                     <select
-                      className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-white"
+                      className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm text-[var(--foreground)]"
                       {...register("plan_id")}
                       disabled={plansLoading || plans.length === 0}
                     >
@@ -706,7 +713,7 @@ export function EnterpriseSignupForm({
                         <button
                           type="button"
                           onClick={onRetryPlans}
-                          className={cn("mt-2 text-xs font-semibold underline", marketingTheme.link)}
+                          className={cn("mt-2 text-xs font-semibold underline", theme.link)}
                         >
                           Retry loading plans
                         </button>
@@ -716,7 +723,7 @@ export function EnterpriseSignupForm({
                 </div>
               </div>
               <label className="flex items-start gap-3">
-                <input type="checkbox" className={cn("mt-1", marketingTheme.checkbox)} {...register("terms_accepted")} />
+                <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("terms_accepted")} />
                 <span className="text-sm text-zinc-300">
                   I agree to the KhayaOS terms of service and confirm the information provided is accurate.
                 </span>
@@ -725,7 +732,7 @@ export function EnterpriseSignupForm({
                 <p className="text-sm text-red-400">{errors.terms_accepted.message}</p>
               ) : null}
               <label className="flex items-start gap-3">
-                <input type="checkbox" className={cn("mt-1", marketingTheme.checkbox)} {...register("marketing_opt_in")} />
+                <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("marketing_opt_in")} />
                 <span className="text-sm text-zinc-300">
                   Keep me updated about KhayaOS product news and best practices.
                 </span>
@@ -739,7 +746,7 @@ export function EnterpriseSignupForm({
         <Button
           type="button"
           variant="secondary"
-          className={marketingTheme.secondaryButton}
+          className={theme.secondaryButton}
           onClick={goPrev}
           disabled={step === 0}
         >
@@ -749,7 +756,7 @@ export function EnterpriseSignupForm({
         {isLastStep ? (
           <Button
             type="submit"
-            className={marketingTheme.primaryButton}
+            className={theme.primaryButton}
             size="lg"
             isLoading={isSubmitting}
             disabled={plansUnavailable}
@@ -757,7 +764,7 @@ export function EnterpriseSignupForm({
             Create my KhayaOS workspace
           </Button>
         ) : (
-          <Button type="button" className={marketingTheme.primaryButton} size="lg" onClick={goNext}>
+          <Button type="button" className={theme.primaryButton} size="lg" onClick={goNext}>
             {isFeatureStep ? "Continue" : "Next"}
             <ArrowRight className="h-4 w-4" />
           </Button>

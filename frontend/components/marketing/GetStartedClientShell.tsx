@@ -4,14 +4,14 @@ import { Suspense, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { GetStartedMarketingHero } from "@/components/marketing/GetStartedMarketingHero";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
 
 const SignupWizard = dynamic(
   () => import("@/components/marketing/SignupWizard").then((m) => m.SignupWizard),
   {
     ssr: false,
-    loading: () => <p className="text-sm text-zinc-400">Loading signup…</p>,
+    loading: () => <p className="text-sm text-zinc-500">Loading signup…</p>,
   },
 );
 
@@ -44,6 +44,7 @@ function buildSignupHref(searchParams: URLSearchParams): string {
 }
 
 function GetStartedClient() {
+  const { theme } = useMarketingTheme();
   const searchParams = useSearchParams();
   const startAtForm = searchParams.get("signup") === "1";
   const signupHref = useMemo(() => buildSignupHref(searchParams), [searchParams]);
@@ -52,13 +53,13 @@ function GetStartedClient() {
     return (
       <div>
         <div className="mb-8 max-w-3xl">
-          <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+          <p className={cn("text-sm font-semibold uppercase tracking-[0.18em]", theme.eyebrow)}>
             Get started
           </p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight md:text-5xl">
+          <h1 className={cn("mt-2 text-4xl font-bold tracking-tight md:text-5xl", theme.heading)}>
             Create your KhayaOS workspace
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-zinc-400">
+          <p className={cn("mt-4 text-base leading-relaxed", theme.muted)}>
             Complete enterprise onboarding to provision your tenant instantly.
           </p>
         </div>

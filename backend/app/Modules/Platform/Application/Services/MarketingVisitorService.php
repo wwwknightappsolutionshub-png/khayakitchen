@@ -10,12 +10,19 @@ class MarketingVisitorService
 {
     public const START_COUNT = 200;
 
-    public const INCREMENT = 10;
+    public const INCREMENT_MIN = 1;
+
+    public const INCREMENT_MAX = 10;
+
+    private function randomIncrement(): int
+    {
+        return random_int(self::INCREMENT_MIN, self::INCREMENT_MAX);
+    }
 
     /**
      * Record a visit by IP hash. New IPs (or returning after 12h) bump the public display count.
      *
-     * @return array{display_count: int, incremented: bool}
+     * @return array{display_count: int, incremented: bool, step: int}
      */
     public function hit(string $ip): array
     {
@@ -32,6 +39,7 @@ class MarketingVisitorService
 
             $visitor = MarketingVisitorIp::query()->where('ip_hash', $hash)->lockForUpdate()->first();
             $incremented = false;
+            $step = 0;
             $now = now();
 
             if (! $visitor) {
@@ -41,7 +49,8 @@ class MarketingVisitorService
                     'last_seen_at' => $now,
                     'visit_count' => 1,
                 ]);
-                $stats->display_count = (int) $stats->display_count + self::INCREMENT;
+                $step = $this->randomIncrement();
+                $stats->display_count = (int) $stats->display_count + $step;
                 $stats->save();
                 $incremented = true;
             } else {
@@ -53,7 +62,8 @@ class MarketingVisitorService
                 $visitor->save();
 
                 if ($shouldBump) {
-                    $stats->display_count = (int) $stats->display_count + self::INCREMENT;
+                    $step = $this->randomIncrement();
+                    $stats->display_count = (int) $stats->display_count + $step;
                     $stats->save();
                     $incremented = true;
                 }
@@ -62,6 +72,7 @@ class MarketingVisitorService
             return [
                 'display_count' => max(self::START_COUNT, (int) $stats->display_count),
                 'incremented' => $incremented,
+                'step' => $step,
             ];
         });
     }

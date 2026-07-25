@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
 
 function msUntilMidnight(): number {
@@ -24,6 +24,7 @@ function formatRemaining(ms: number): { h: string; m: string; s: string } {
 }
 
 export function MarketingUrgencyCountdown() {
+  const { theme } = useMarketingTheme();
   const [remaining, setRemaining] = useState(msUntilMidnight);
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function MarketingUrgencyCountdown() {
 
   return (
     <div className="mt-6">
-      <p className={cn("text-xs font-semibold uppercase tracking-[0.18em]", marketingTheme.eyebrow)}>
+      <p className={cn("text-xs font-semibold uppercase tracking-[0.18em]", theme.eyebrow)}>
         Free workspace window closes in
       </p>
       <div className="mt-3 flex gap-2" aria-label="Countdown to midnight">
@@ -50,12 +51,16 @@ export function MarketingUrgencyCountdown() {
             key={label}
             className={cn(
               "min-w-[4.25rem] rounded-xl border px-3 py-2 text-center",
-              marketingTheme.surfaceBorder,
+              theme.surfaceBorder,
               "bg-gradient-to-b from-amber-500/15 to-transparent",
             )}
           >
-            <div className="font-mono text-2xl font-bold tabular-nums text-white">{value}</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
+            <div className={cn("font-mono text-2xl font-bold tabular-nums", theme.heading)}>
+              {value}
+            </div>
+            <div className={cn("mt-0.5 text-[10px] uppercase tracking-wider", theme.subtle)}>
+              {label}
+            </div>
           </div>
         ))}
       </div>

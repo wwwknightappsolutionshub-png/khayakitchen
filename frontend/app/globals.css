@@ -661,7 +661,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Public signup wizard — matches KitchenSignupSplash palette */
+/* Public signup / marketing shell — dark default; light via data-marketing-theme */
 .marketing-app {
   --background: #0a0806;
   --foreground: #ffffff;
@@ -670,4 +670,16 @@ h1, h2, h3, h4, h5, h6 {
   --primary: #e07a5f;
   --primary-hover: #e89078;
   --border: rgba(255, 255, 255, 0.1);
+  --muted: #a1a1aa;
+}
+
+.marketing-app[data-marketing-theme="light"] {
+  --background: #f6f1ea;
+  --foreground: #18181b;
+  --surface: #ffffff;
+  --surface-elevated: #efe8df;
+  --primary: #e07a5f;
+  --primary-hover: #d4684e;
+  --border: rgba(28, 25, 23, 0.12);
+  --muted: #57534e;
 }

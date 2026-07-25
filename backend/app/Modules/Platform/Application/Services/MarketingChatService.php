@@ -147,7 +147,7 @@ class MarketingChatService
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'You are a warm, natural KhayaOS guide (not a corporate bot). KhayaOS is a kitchen operating system for food businesses: orders, kitchen display, inventory, loyalty, campaigns, revenue recovery. Contrast gently with marketplaces (Uber Eats, Just Eat, Deliveroo) as demand channels vs an OS you own. Sound human: short sentences, conversational. Never invent exact prices. If you are not confident, reply with exactly: HANDOFF| followed by one friendly sentence asking for their email so you can pass the chat to WhatsApp '.self::WHATSAPP_DISPLAY.'.',
+                'content' => 'You are a warm, natural KhayaOS guide (not a corporate bot). KhayaOS is a kitchen operating system for food businesses: orders, kitchen display, inventory, loyalty, campaigns, revenue recovery. Contrast gently with marketplaces (Uber Eats, Just Eat, Deliveroo) as demand channels vs an OS you own. Sound human: short sentences, conversational. Greetings like hi/hello should get a friendly welcome and invite a KhayaOS topic — never jump to WhatsApp. Never invent exact prices. If the user is clearly off-topic, steer back to kitchen OS topics without demanding email. Only reply with exactly: HANDOFF| followed by one friendly sentence asking for their email when they explicitly want a human/sales call or you truly cannot help after trying to steer.',
             ],
         ];
 
@@ -213,7 +213,18 @@ class MarketingChatService
      */
     private function knowledgeReply(string $message): array
     {
-        $lower = Str::lower($message);
+        $lower = Str::lower(trim($message));
+        $normalized = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $lower) ?? $lower;
+        $normalized = trim(preg_replace('/\s+/', ' ', $normalized) ?? $normalized);
+
+        if ($this->isGreeting($normalized)) {
+            return [
+                'reply' => "Hey! Good to meet you. I'm here to help with KhayaOS — the kitchen operating system for food businesses (orders, prep, inventory, loyalty, and growth). What are you curious about first: owning customers vs marketplaces, kitchen ops, or getting started free?",
+                'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'confident' => true,
+            ];
+        }
 
         if (Str::contains($lower, ['price', 'pricing', 'cost', 'plan', 'subscription', 'fee'])) {
             return [
@@ -251,7 +262,7 @@ class MarketingChatService
             ];
         }
 
-        if (Str::contains($lower, ['kitchen', 'order', 'inventory', 'loyalty', 'campaign', 'kds', 'prep'])) {
+        if (Str::contains($lower, ['kitchen', 'order', 'inventory', 'loyalty', 'campaign', 'kds', 'prep', 'khaya'])) {
             return [
                 'reply' => "In short: orders and kitchen display, inventory and recipes, loyalty, campaigns, and revenue recovery — one workspace instead of a pile of tools. Which part are you most curious about?",
                 'suggest_whatsapp' => false,
@@ -260,11 +271,34 @@ class MarketingChatService
             ];
         }
 
+        // Off-topic / unclear — steer back to specialty instead of immediate WhatsApp handoff.
         return [
-            'reply' => "Hmm — I don't want to guess on that. Share your email and I'll pass this chat to the team on WhatsApp ".self::WHATSAPP_DISPLAY.' so a human can help properly.',
-            'suggest_whatsapp' => true,
-            'needs_email' => true,
-            'confident' => false,
+            'reply' => "I might be off-track there — my specialty is KhayaOS for food kitchens. Think orders, kitchen display, inventory, loyalty, and keeping customers off marketplace rent. Want to dig into how that works, or how to start a free workspace?",
+            'suggest_whatsapp' => false,
+            'needs_email' => false,
+            'confident' => true,
         ];
+    }
+
+    private function isGreeting(string $normalized): bool
+    {
+        if ($normalized === '') {
+            return false;
+        }
+
+        $exact = [
+            'hi', 'hello', 'hey', 'hiya', 'howdy', 'yo', 'sup', 'hola', 'good morning',
+            'good afternoon', 'good evening', 'morning', 'afternoon', 'evening',
+            'hi there', 'hello there', 'hey there', 'hi khayaos', 'hello khayaos', 'hey khayaos',
+        ];
+
+        if (in_array($normalized, $exact, true)) {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '/^(hi|hello|hey|hiya|howdy|yo|hola|good\s+(morning|afternoon|evening))(\s+(there|team|folks|khayaos))?$/',
+            $normalized,
+        );
     }
 }

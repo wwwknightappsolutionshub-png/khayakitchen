@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { marketingService } from "@/services/marketing.service";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
 
 const START = 200;
-const STEP = 10;
-const CYCLE_MS = 10_000;
+const CYCLE_MS = 20_000;
 const VISIBLE_MS = 5_000;
 
+function randomStep(): number {
+  return 1 + Math.floor(Math.random() * 10);
+}
+
 /**
- * Social-proof toast: +10 every 10s, appears with new value,
+ * Social-proof toast: +1..10 every 20s, appears with new value,
  * shakes for 5s, then hides until the next tick.
  */
 export function MarketingVisitorRotator() {
+  const { theme } = useMarketingTheme();
   const [count, setCount] = useState(START);
   const [visible, setVisible] = useState(false);
   const [ready, setReady] = useState(false);
@@ -54,7 +58,7 @@ export function MarketingVisitorRotator() {
     if (!ready) return;
 
     const id = window.setInterval(() => {
-      const next = countRef.current + STEP;
+      const next = countRef.current + randomStep();
       countRef.current = next;
       setCount(next);
       setVisible(true);
@@ -73,19 +77,19 @@ export function MarketingVisitorRotator() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed bottom-24 left-4 z-40 max-w-[17rem] rounded-2xl border px-3.5 py-2.5 shadow-lg backdrop-blur-md sm:left-6",
-        marketingTheme.surfaceBorder,
-        "bg-[#14100c]/95 visitor-rotator-shake",
+        "pointer-events-none fixed bottom-24 left-4 z-40 max-w-[17rem] rounded-2xl border px-3.5 py-2.5 shadow-lg backdrop-blur-md sm:left-6 visitor-rotator-shake",
+        theme.surfaceBorder,
+        theme.toastSurface,
       )}
       aria-live="polite"
     >
-      <p className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", marketingTheme.eyebrow)}>
+      <p className={cn("text-[11px] font-semibold uppercase tracking-[0.16em]", theme.eyebrow)}>
         Now We Have
       </p>
-      <p className="mt-1 text-sm font-semibold tabular-nums text-white">
+      <p className={cn("mt-1 text-sm font-semibold tabular-nums", theme.heading)}>
         {count.toLocaleString()}
       </p>
-      <p className="mt-0.5 text-xs text-zinc-400">who just joined us</p>
+      <p className={cn("mt-0.5 text-xs", theme.muted)}>who just joined us</p>
     </div>
   );
 }
