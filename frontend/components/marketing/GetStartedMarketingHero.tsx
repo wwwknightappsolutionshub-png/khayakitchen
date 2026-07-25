@@ -302,16 +302,19 @@ export function GetStartedMarketingHero({
         </div>
       </section>
 
-      <section id="start" className="max-w-2xl scroll-mt-28 pb-4">
+      <section
+        id="start"
+        className="mx-auto max-w-2xl scroll-mt-28 pb-4 text-center"
+      >
         <h2 className={cn("text-2xl font-semibold tracking-tight md:text-3xl", theme.heading)}>
           Start your kitchen workspace
         </h2>
-        <p className={cn("mt-3 text-base", theme.muted)}>
+        <p className={cn("mx-auto mt-3 max-w-xl text-base", theme.muted)}>
           Provision your tenant free — then grow with the tools your plan unlocks. This window
           resets at midnight.
         </p>
         <MarketingUrgencyCountdown />
-        <div className="mt-8">
+        <div className="mt-8 flex justify-center">
           <Link
             href={signupHref}
             className={cn(

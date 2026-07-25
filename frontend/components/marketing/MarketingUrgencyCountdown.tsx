@@ -35,11 +35,11 @@ export function MarketingUrgencyCountdown() {
   const parts = useMemo(() => formatRemaining(remaining), [remaining]);
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 flex flex-col items-center">
       <p className={cn("text-xs font-semibold uppercase tracking-[0.18em]", theme.eyebrow)}>
         Free workspace window closes in
       </p>
-      <div className="mt-3 flex gap-2" aria-label="Countdown to midnight">
+      <div className="mt-3 flex justify-center gap-2" aria-label="Countdown to midnight">
         {(
           [
             ["Hours", parts.h],
