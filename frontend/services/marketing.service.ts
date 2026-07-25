@@ -1,5 +1,14 @@
 import { api } from "@/lib/api-client";
 
+export type MarketingChatResponse = {
+  reply: string;
+  suggest_whatsapp: boolean;
+  needs_email: boolean;
+  handoff: boolean;
+  confident: boolean;
+  whatsapp_url: string;
+};
+
 export const marketingService = {
   async visitorHit(): Promise<{
     display_count: number;
@@ -12,14 +21,11 @@ export const marketingService = {
   async chat(
     message: string,
     history: { role: "user" | "assistant"; content: string }[] = [],
-  ): Promise<{
-    reply: string;
-    suggest_whatsapp: boolean;
-    whatsapp_url: string;
-  }> {
+    email?: string,
+  ): Promise<MarketingChatResponse> {
     return api.post(
       "/marketing/chat",
-      { message, history },
+      { message, history, email: email || undefined },
       { skipAuth: true },
     );
   },

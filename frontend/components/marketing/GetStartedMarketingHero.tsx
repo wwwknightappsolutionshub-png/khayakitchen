@@ -93,9 +93,9 @@ export function GetStartedMarketingHero({
   signupHref: string;
 }) {
   return (
-    <div className="space-y-20 md:space-y-28">
+    <div className="space-y-10 md:space-y-14">
       <section className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-10 w-screen">
-        <div className="relative min-h-[78vh] overflow-hidden md:min-h-[85vh]">
+        <div className="relative min-h-[72vh] overflow-hidden md:min-h-[78vh]">
           <Image
             src="/get-started-hero.jpg"
             alt="Busy restaurant kitchen pass during service"
@@ -114,7 +114,7 @@ export function GetStartedMarketingHero({
             aria-hidden
           />
 
-          <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-6 pb-16 pt-24 md:min-h-[85vh] md:pb-24 md:pt-32">
+          <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-6 pb-10 pt-20 md:min-h-[78vh] md:pb-14 md:pt-28">
             <p className="get-started-fade-up text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
               KhayaOS
             </p>

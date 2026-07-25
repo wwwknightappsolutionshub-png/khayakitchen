@@ -1,6 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="96" fill="#0F0F10"/>
-  <circle cx="256" cy="256" r="140" fill="#E07A5F" opacity="0.15"/>
-  <path d="M256 140c-48 0-88 36-88 80 0 28 14 52 36 68v84h104v-84c22-16 36-40 36-68 0-44-40-80-88-80z" fill="#E07A5F"/>
-  <ellipse cx="256" cy="380" rx="72" ry="16" fill="#81B29A" opacity="0.4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KhayaOS">
+  <defs>
+    <linearGradient id="kFill" x1="80" y1="80" x2="420" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2A08A"/>
+      <stop offset="0.55" stop-color="#E07A5F"/>
+      <stop offset="1" stop-color="#C45D45"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0F0F10"/>
+  <circle cx="256" cy="248" r="168" fill="#E07A5F" opacity="0.12"/>
+  <!-- Cloche dome -->
+  <path d="M128 268c0-78 57-140 128-140s128 62 128 140H128z" fill="url(#kFill)"/>
+  <rect x="118" y="268" width="276" height="28" rx="10" fill="#E07A5F"/>
+  <rect x="232" y="112" width="48" height="28" rx="10" fill="#F2A08A"/>
+  <!-- Pass plate -->
+  <ellipse cx="256" cy="348" rx="118" ry="22" fill="#81B29A" opacity="0.55"/>
+  <ellipse cx="256" cy="340" rx="96" ry="14" fill="#0F0F10" opacity="0.35"/>
+  <!-- K mark -->
+  <path d="M196 196h36v120h-36V196zm92 0 52 48-52 48h44l40-40 40 40h44l-52-48 52-48h-44l-40 40-40-40h-44z" fill="#0F0F10" opacity="0.22"/>
 </svg>

@@ -14,35 +14,66 @@ class MarketingChatService
 
     /**
      * @param  array<int, array{role: string, content: string}>  $history
-     * @return array{reply: string, suggest_whatsapp: bool, whatsapp_url: string}
+     * @return array{
+     *   reply: string,
+     *   suggest_whatsapp: bool,
+     *   needs_email: bool,
+     *   handoff: bool,
+     *   confident: bool,
+     *   whatsapp_url: string
+     * }
      */
-    public function reply(string $message, array $history = []): array
+    public function reply(string $message, array $history = [], ?string $email = null): array
     {
         $message = trim($message);
+        $email = $email ? strtolower(trim($email)) : null;
+
+        if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->buildHandoff($history, $email, $message);
+        }
+
+        // Visitor replied with an email as the message after we asked for one.
+        if (filter_var($message, FILTER_VALIDATE_EMAIL)) {
+            return $this->buildHandoff($history, strtolower($message), null);
+        }
+
         $whatsappUrl = $this->whatsappUrl($message);
 
         if ($message === '') {
             return [
-                'reply' => 'Ask anything about KhayaOS — kitchen ops, pricing plans, or getting started. I can also connect you to a human on WhatsApp.',
+                'reply' => "Hey — I'm here if you want a quick take on KhayaOS. Ask about kitchens, marketplaces, or getting set up. If you'd rather talk to a person, I can pass you to WhatsApp.",
                 'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'handoff' => false,
+                'confident' => true,
+                'whatsapp_url' => $whatsappUrl,
+            ];
+        }
+
+        if ($this->wantsHuman($message)) {
+            return [
+                'reply' => "Totally — happy to connect you with the team on WhatsApp. Drop your email first so we can send the chat history across, then I'll open WhatsApp for you.",
+                'suggest_whatsapp' => true,
+                'needs_email' => true,
+                'handoff' => false,
+                'confident' => true,
                 'whatsapp_url' => $whatsappUrl,
             ];
         }
 
         $ai = $this->tryOpenAi($message, $history);
-        if ($ai !== null) {
-            return [
-                'reply' => $ai,
-                'suggest_whatsapp' => $this->wantsHuman($message),
-                'whatsapp_url' => $whatsappUrl,
-            ];
+        if (is_array($ai)) {
+            return $ai + ['whatsapp_url' => $whatsappUrl];
         }
 
         $fallback = $this->knowledgeReply($message);
 
         return [
             'reply' => $fallback['reply'],
-            'suggest_whatsapp' => $fallback['suggest_whatsapp'] || $this->wantsHuman($message),
+            'suggest_whatsapp' => $fallback['suggest_whatsapp'],
+            'needs_email' => $fallback['needs_email'],
+            'handoff' => false,
+            'confident' => $fallback['confident'],
             'whatsapp_url' => $whatsappUrl,
         ];
     }
@@ -50,10 +81,47 @@ class MarketingChatService
     public function whatsappUrl(?string $prefill = null): string
     {
         $text = $prefill
-            ? 'Hi KhayaOS — '.$prefill
+            ? $prefill
             : 'Hi KhayaOS — I have a question about getting started.';
 
         return 'https://wa.me/'.self::WHATSAPP_E164.'?text='.rawurlencode($text);
+    }
+
+    /**
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @return array{
+     *   reply: string,
+     *   suggest_whatsapp: bool,
+     *   needs_email: bool,
+     *   handoff: bool,
+     *   confident: bool,
+     *   whatsapp_url: string
+     * }
+     */
+    private function buildHandoff(array $history, string $email, ?string $extraMessage): array
+    {
+        $lines = ['Hi KhayaOS team — please continue this chat.', 'Visitor email: '.$email, '', 'Chat history:'];
+        foreach (array_slice($history, -10) as $turn) {
+            $role = ($turn['role'] ?? '') === 'assistant' ? 'Assistant' : 'Visitor';
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content !== '') {
+                $lines[] = $role.': '.Str::limit($content, 400);
+            }
+        }
+        if ($extraMessage && ! filter_var($extraMessage, FILTER_VALIDATE_EMAIL)) {
+            $lines[] = 'Visitor: '.Str::limit($extraMessage, 400);
+        }
+
+        $url = $this->whatsappUrl(implode("\n", $lines));
+
+        return [
+            'reply' => "Perfect — thanks. I'm opening WhatsApp so a teammate can pick this up. I've included your email ($email) and our chat so nothing gets lost.",
+            'suggest_whatsapp' => true,
+            'needs_email' => false,
+            'handoff' => true,
+            'confident' => true,
+            'whatsapp_url' => $url,
+        ];
     }
 
     private function wantsHuman(string $message): bool
@@ -61,14 +129,15 @@ class MarketingChatService
         $lower = Str::lower($message);
 
         return Str::contains($lower, [
-            'human', 'agent', 'speak to', 'talk to', 'call me', 'whatsapp', 'sales', 'demo', 'urgent',
+            'human', 'agent', 'speak to', 'talk to', 'call me', 'whatsapp', 'sales', 'demo', 'urgent', 'real person',
         ]);
     }
 
     /**
      * @param  array<int, array{role: string, content: string}>  $history
+     * @return array{reply: string, suggest_whatsapp: bool, needs_email: bool, handoff: bool, confident: bool}|null
      */
-    private function tryOpenAi(string $message, array $history): ?string
+    private function tryOpenAi(string $message, array $history): ?array
     {
         $key = config('services.openai.api_key');
         if (! is_string($key) || $key === '') {
@@ -78,7 +147,7 @@ class MarketingChatService
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'You are the KhayaOS marketing assistant. KhayaOS is a kitchen operating system for food businesses: orders, kitchen display, inventory, loyalty, campaigns, and revenue recovery. Position it as an OS the restaurant owns versus marketplace demand channels (Uber Eats, Just Eat, Deliveroo). Be concise (2–4 short sentences). Never invent pricing numbers. If unsure, suggest WhatsApp '.self::WHATSAPP_DISPLAY.'.',
+                'content' => 'You are a warm, natural KhayaOS guide (not a corporate bot). KhayaOS is a kitchen operating system for food businesses: orders, kitchen display, inventory, loyalty, campaigns, revenue recovery. Contrast gently with marketplaces (Uber Eats, Just Eat, Deliveroo) as demand channels vs an OS you own. Sound human: short sentences, conversational. Never invent exact prices. If you are not confident, reply with exactly: HANDOFF| followed by one friendly sentence asking for their email so you can pass the chat to WhatsApp '.self::WHATSAPP_DISPLAY.'.',
             ],
         ];
 
@@ -97,7 +166,7 @@ class MarketingChatService
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => config('services.openai.model', 'gpt-4o-mini'),
                     'messages' => $messages,
-                    'temperature' => 0.4,
+                    'temperature' => 0.7,
                     'max_tokens' => 280,
                 ]);
 
@@ -108,8 +177,30 @@ class MarketingChatService
             }
 
             $text = data_get($response->json(), 'choices.0.message.content');
+            if (! is_string($text) || trim($text) === '') {
+                return null;
+            }
 
-            return is_string($text) && trim($text) !== '' ? trim($text) : null;
+            $text = trim($text);
+            if (Str::startsWith($text, 'HANDOFF|')) {
+                $ask = trim(Str::after($text, 'HANDOFF|')) ?: "I'm not fully sure on that one — share your email and I'll pass our chat to the team on WhatsApp.";
+
+                return [
+                    'reply' => $ask,
+                    'suggest_whatsapp' => true,
+                    'needs_email' => true,
+                    'handoff' => false,
+                    'confident' => false,
+                ];
+            }
+
+            return [
+                'reply' => $text,
+                'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'handoff' => false,
+                'confident' => true,
+            ];
         } catch (\Throwable $e) {
             Log::warning('marketing.chat.openai_exception', ['error' => $e->getMessage()]);
 
@@ -118,7 +209,7 @@ class MarketingChatService
     }
 
     /**
-     * @return array{reply: string, suggest_whatsapp: bool}
+     * @return array{reply: string, suggest_whatsapp: bool, needs_email: bool, confident: bool}
      */
     private function knowledgeReply(string $message): array
     {
@@ -126,42 +217,54 @@ class MarketingChatService
 
         if (Str::contains($lower, ['price', 'pricing', 'cost', 'plan', 'subscription', 'fee'])) {
             return [
-                'reply' => 'KhayaOS has Starter through Enterprise plans with a free start path. Features unlock by plan (kitchen, loyalty, campaigns, revenue recovery). For a tailored quote, continue on WhatsApp '.self::WHATSAPP_DISPLAY.'.',
+                'reply' => "Good question. Plans run from Starter up to Enterprise, and you can start free. What unlocks (kitchen, loyalty, campaigns, recovery) depends on the plan — I don't want to guess a quote. Want me to pass you to WhatsApp for exact numbers?",
                 'suggest_whatsapp' => true,
+                'needs_email' => false,
+                'confident' => true,
             ];
         }
 
         if (Str::contains($lower, ['uber', 'deliveroo', 'just eat', 'marketplace', 'commission'])) {
             return [
-                'reply' => 'Marketplaces are demand channels that rent you customers and take commission. KhayaOS is your kitchen OS — your PWA, menu, ops, loyalty, and recovery — so you own the relationship after the order. Many kitchens keep marketplaces as one channel and run everything else in KhayaOS.',
+                'reply' => "Those apps are great for demand, but they rent you the diner and take a cut. KhayaOS is the kitchen OS underneath — your PWA, menu, prep, loyalty, and recovery — so the relationship stays yours. Plenty of kitchens keep Uber Eats as one channel and run everything else here.",
                 'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'confident' => true,
             ];
         }
 
-        if (Str::contains($lower, ['pwa', 'install', 'app', 'phone'])) {
+        if (Str::contains($lower, ['pwa', 'install', 'app', 'phone', 'home screen'])) {
             return [
-                'reply' => 'KhayaOS is installable as a PWA on staff and customer devices. After you create a workspace, your ordering link and admin app can be added to the home screen for fast daily use.',
+                'reply' => "Yep — KhayaOS installs as a PWA. After you create a workspace, staff and customers can add it to the home screen for that app-speed feel without an app-store wait.",
                 'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'confident' => true,
             ];
         }
 
-        if (Str::contains($lower, ['start', 'signup', 'sign up', 'onboard', 'trial', 'free'])) {
+        if (Str::contains($lower, ['start', 'signup', 'sign up', 'onboard', 'trial', 'free', 'get started'])) {
             return [
-                'reply' => 'Tap Start free on this page to provision your KhayaOS workspace. Enterprise onboarding walks you through kitchen setup in minutes. Need a guided demo? Jump to WhatsApp and we will help.',
+                'reply' => "Hit Start free on this page and you'll provision a workspace in a few steps. If you'd like someone walking you through it live, I can hand you to WhatsApp.",
                 'suggest_whatsapp' => true,
+                'needs_email' => false,
+                'confident' => true,
             ];
         }
 
-        if (Str::contains($lower, ['kitchen', 'order', 'inventory', 'loyalty', 'campaign', 'kds'])) {
+        if (Str::contains($lower, ['kitchen', 'order', 'inventory', 'loyalty', 'campaign', 'kds', 'prep'])) {
             return [
-                'reply' => 'KhayaOS covers orders and kitchen display, inventory and recipes, loyalty packages, campaigns, and revenue recovery — one modular workspace instead of stitching separate tools together.',
+                'reply' => "In short: orders and kitchen display, inventory and recipes, loyalty, campaigns, and revenue recovery — one workspace instead of a pile of tools. Which part are you most curious about?",
                 'suggest_whatsapp' => false,
+                'needs_email' => false,
+                'confident' => true,
             ];
         }
 
         return [
-            'reply' => 'I can help with KhayaOS features, how we differ from marketplaces, and getting started. Ask a specific question, or continue on WhatsApp '.self::WHATSAPP_DISPLAY.' for a human.',
+            'reply' => "Hmm — I don't want to guess on that. Share your email and I'll pass this chat to the team on WhatsApp ".self::WHATSAPP_DISPLAY.' so a human can help properly.',
             'suggest_whatsapp' => true,
+            'needs_email' => true,
+            'confident' => false,
         ];
     }
 }

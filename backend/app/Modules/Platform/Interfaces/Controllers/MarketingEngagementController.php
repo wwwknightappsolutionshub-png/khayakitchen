@@ -31,6 +31,7 @@ class MarketingEngagementController extends Controller
     {
         $data = $request->validate([
             'message' => ['required', 'string', 'max:1000'],
+            'email' => ['nullable', 'email', 'max:190'],
             'history' => ['nullable', 'array', 'max:8'],
             'history.*.role' => ['required_with:history', 'in:user,assistant'],
             'history.*.content' => ['required_with:history', 'string', 'max:1000'],
@@ -39,6 +40,7 @@ class MarketingEngagementController extends Controller
         $result = $this->chatService->reply(
             $data['message'],
             $data['history'] ?? [],
+            $data['email'] ?? null,
         );
 
         return ApiResponse::success($result);

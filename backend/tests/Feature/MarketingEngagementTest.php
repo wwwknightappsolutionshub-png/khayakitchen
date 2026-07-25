@@ -41,5 +41,28 @@ class MarketingEngagementTest extends TestCase
         $response->assertOk();
         $this->assertNotEmpty($response->json('reply'));
         $this->assertStringContainsString('447756183484', (string) $response->json('whatsapp_url'));
+        $response->assertJsonPath('confident', true);
+    }
+
+    public function test_marketing_chat_asks_email_then_handoffs_to_whatsapp(): void
+    {
+        $unsure = $this->postJson('/api/v1/marketing/chat', [
+            'message' => 'What is the capital of Atlantis?',
+        ]);
+        $unsure->assertOk();
+        $unsure->assertJsonPath('needs_email', true);
+        $unsure->assertJsonPath('confident', false);
+
+        $handoff = $this->postJson('/api/v1/marketing/chat', [
+            'message' => 'owner@kitchen.test',
+            'email' => 'owner@kitchen.test',
+            'history' => [
+                ['role' => 'user', 'content' => 'What is the capital of Atlantis for kitchens?'],
+                ['role' => 'assistant', 'content' => 'Need email'],
+            ],
+        ]);
+        $handoff->assertOk();
+        $handoff->assertJsonPath('handoff', true);
+        $this->assertStringContainsString('owner%40kitchen.test', (string) $handoff->json('whatsapp_url'));
     }
 }
