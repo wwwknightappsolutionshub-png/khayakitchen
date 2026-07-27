@@ -7,6 +7,7 @@ use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Engagement\Domain\Models\ChatMessage;
 use App\Modules\Engagement\Domain\Models\ChatThread;
 use App\Modules\NotificationsCampaign\Application\Services\PushNotificationService;
+use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Realtime\Infrastructure\WebSocketGateway;
 use App\Shared\Auth\PermissionService;
@@ -21,6 +22,9 @@ class ChatService
     public const FEATURE_PLATFORM_TENANT = 'platform_tenant_chat';
 
     public const FEATURE_TENANT_CUSTOMER = 'tenant_customer_chat';
+
+    /** Order statuses treated as “in session” for kitchen↔customer chat. */
+    public const IN_SESSION_ORDER_STATUSES = ['pending', 'accepted', 'preparing', 'ready'];
 
     public function __construct(
         private FeatureAccessService $featureAccessService,
@@ -56,18 +60,36 @@ class ChatService
             ->map(fn (ChatThread $thread) => $this->decorateThreadForList($thread));
     }
 
-    public function listTenantCustomerThreads(array $permissions): Collection
+    public function listTenantCustomerThreads(array $permissions, bool $activeOrdersOnly = false): Collection
     {
         $this->permissionService->authorize($permissions, 'crm.view');
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
 
-        return ChatThread::where('type', 'tenant_customer')
+        $query = ChatThread::where('type', 'tenant_customer')
             ->orderByDesc('updated_at')
             ->with([
                 'customer',
+                'order',
                 'messages' => fn ($q) => $q->orderByDesc('created_at')->limit(1),
-            ])
-            ->get()
+            ]);
+
+        if ($activeOrdersOnly) {
+            $activeOrderIds = Order::query()
+                ->whereIn('status', self::IN_SESSION_ORDER_STATUSES)
+                ->pluck('id');
+            $activeCustomerIds = Order::query()
+                ->whereIn('status', self::IN_SESSION_ORDER_STATUSES)
+                ->whereNotNull('customer_id')
+                ->distinct()
+                ->pluck('customer_id');
+
+            $query->where(function ($q) use ($activeOrderIds, $activeCustomerIds) {
+                $q->whereIn('order_id', $activeOrderIds)
+                    ->orWhereIn('customer_id', $activeCustomerIds);
+            });
+        }
+
+        return $query->get()
             ->map(fn (ChatThread $thread) => $this->decorateThreadForList($thread, true));
     }
 
@@ -99,18 +121,81 @@ class ChatService
         return $thread;
     }
 
-    public function openTenantCustomerThread(array $permissions, string $customerId, ?string $subject = null): ChatThread
-    {
+    /**
+     * Open (or reuse) a tenant↔customer thread.
+     * When $orderId is set, the order must be in-session and belong to that customer.
+     */
+    public function openTenantCustomerThread(
+        array $permissions,
+        string $customerId,
+        ?string $subject = null,
+        ?string $orderId = null,
+    ): ChatThread {
         $this->permissionService->authorize($permissions, 'crm.manage');
         $this->assertTenantFeature(self::FEATURE_TENANT_CUSTOMER);
 
         $customer = Customer::findOrFail($customerId);
         $user = $this->tenantContext->user();
+        $order = null;
+
+        if ($orderId) {
+            $order = Order::query()->findOrFail($orderId);
+            if ($order->customer_id !== $customer->id) {
+                throw ValidationException::withMessages([
+                    'order_id' => ['Order does not belong to this customer.'],
+                ]);
+            }
+            if (! in_array($order->status, self::IN_SESSION_ORDER_STATUSES, true)) {
+                throw ValidationException::withMessages([
+                    'order_id' => ['Chat from order is only available while the order is in session (pending, accepted, preparing, or ready).'],
+                ]);
+            }
+
+            $thread = ChatThread::where('type', 'tenant_customer')
+                ->where('customer_id', $customer->id)
+                ->where('order_id', $order->id)
+                ->orderByDesc('updated_at')
+                ->first();
+
+            if ($thread) {
+                return $this->decorateThreadForList($thread->load(['customer', 'order']), true);
+            }
+
+            $short = strtoupper(substr(str_replace('-', '', $order->id), 0, 8));
+            $thread = ChatThread::create([
+                'type' => 'tenant_customer',
+                'tenant_id' => $this->tenantContext->id(),
+                'subject' => $subject ?: ('Order '.$short),
+                'created_by_user_id' => $user?->id,
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+            ]);
+
+            $this->auditLogService->log(
+                'engagement.order_chat.opened',
+                $this->tenantContext->id(),
+                $user?->id,
+                'chat_thread',
+                $thread->id,
+                ['order_id' => $order->id, 'customer_id' => $customer->id],
+            );
+
+            return $this->decorateThreadForList($thread->load(['customer', 'order']), true);
+        }
 
         $thread = ChatThread::where('type', 'tenant_customer')
             ->where('customer_id', $customer->id)
+            ->whereNull('order_id')
             ->orderByDesc('updated_at')
             ->first();
+
+        if (! $thread) {
+            // Fall back to any existing customer thread (legacy) before creating a new general one.
+            $thread = ChatThread::where('type', 'tenant_customer')
+                ->where('customer_id', $customer->id)
+                ->orderByDesc('updated_at')
+                ->first();
+        }
 
         if (! $thread) {
             $thread = ChatThread::create([
@@ -122,7 +207,27 @@ class ChatService
             ]);
         }
 
-        return $thread;
+        return $this->decorateThreadForList($thread->load(['customer', 'order']), true);
+    }
+
+    /**
+     * Convenience: open chat from an in-session order id.
+     */
+    public function openTenantCustomerThreadForOrder(array $permissions, string $orderId): ChatThread
+    {
+        $order = Order::query()->findOrFail($orderId);
+        if (! $order->customer_id) {
+            throw ValidationException::withMessages([
+                'order_id' => ['This order has no linked customer to chat with.'],
+            ]);
+        }
+
+        return $this->openTenantCustomerThread(
+            $permissions,
+            $order->customer_id,
+            null,
+            $order->id,
+        );
     }
 
     public function openCustomerThread(?string $phone, string $name, ?string $subject = null, ?string $guestKey = null): ChatThread
@@ -637,6 +742,14 @@ class ChatService
             $thread->customer?->name ?? ($thread->type === 'platform_tenant' ? 'Platform' : 'Guest'),
         );
         $thread->setAttribute('customer_phone', $thread->customer?->phone);
+        $thread->setAttribute('order_id', $thread->order_id);
+        $thread->setAttribute('order_status', $thread->order?->status);
+        $thread->setAttribute(
+            'in_session',
+            $thread->order_id
+                ? in_array($thread->order?->status, self::IN_SESSION_ORDER_STATUSES, true)
+                : false,
+        );
 
         if ($includeUnread) {
             $thread->setAttribute(

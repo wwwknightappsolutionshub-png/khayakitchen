@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +12,9 @@ import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
 import { ordersService } from "@/services/orders.service";
+import { engagementService } from "@/services/engagement.service";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import {
   dayKeyFromIso,
@@ -36,10 +39,15 @@ const statusFilters = [
 const OPEN = new Set(["pending", "accepted", "preparing", "ready"]);
 
 export default function OrdersPage() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { isEnabled } = useFeatureFlags();
+  const chatEnabled = isEnabled("tenant_customer_chat");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
+  const [chatBusyId, setChatBusyId] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -95,6 +103,20 @@ export default function OrdersPage() {
     }));
   };
 
+  const openOrderChat = async (order: Order) => {
+    if (!order.customer_id || !OPEN.has(order.status)) return;
+    setChatError(null);
+    setChatBusyId(order.id);
+    try {
+      const res = await engagementService.openTenantCustomerThreadForOrder(order.id);
+      router.push(`/inbox?thread=${encodeURIComponent(res.thread.id)}`);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Could not open chat");
+    } finally {
+      setChatBusyId(null);
+    }
+  };
+
   const orderActions = (order: Order) => (
     <div className="flex flex-wrap gap-2">
       {order.status === "pending" && isFloor && (
@@ -142,6 +164,18 @@ export default function OrdersPage() {
           disabled={updateMutation.isPending}
         >
           Complete
+        </Button>
+      )}
+      {chatEnabled && order.customer_id && OPEN.has(order.status) && isFloor && (
+        <Button
+          size="sm"
+          variant="secondary"
+          className="gap-1.5"
+          disabled={chatBusyId === order.id}
+          onClick={() => void openOrderChat(order)}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          {chatBusyId === order.id ? "Opening…" : "Chat"}
         </Button>
       )}
     </div>
@@ -201,6 +235,11 @@ export default function OrdersPage() {
           <button type="button" className="mt-2 underline" onClick={() => void refetch()}>
             Retry
           </button>
+        </div>
+      )}
+      {chatError && (
+        <div className="mb-4 rounded-[var(--radius)] border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {chatError}
         </div>
       )}
 

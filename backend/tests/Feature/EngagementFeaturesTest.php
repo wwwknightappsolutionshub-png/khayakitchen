@@ -7,6 +7,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Engagement\Domain\Models\KitchenReview;
 use App\Modules\Menu\Domain\Models\Meal;
+use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Pricing\Domain\Models\Feature;
 use App\Modules\Pricing\Domain\Models\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -313,5 +314,104 @@ class EngagementFeaturesTest extends TestCase
             'user_id' => $owner->id,
             'platform' => 'web',
         ]);
+    }
+
+    public function test_open_chat_from_in_session_order_and_reject_completed(): void
+    {
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->enableFeature($tenant->id, 'tenant_customer_chat');
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Order Chatter',
+            'phone' => '+15551234001',
+            'email' => 'order.chat@example.com',
+        ]);
+
+        $live = Order::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'status' => 'preparing',
+            'order_type' => 'pickup',
+            'total_amount' => 20,
+            'discount_total' => 0,
+        ]);
+
+        $done = Order::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'status' => 'completed',
+            'order_type' => 'pickup',
+            'total_amount' => 15,
+            'discount_total' => 0,
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($owner, 'sanctum');
+
+        $ok = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->postJson('/api/v1/engagement/customer-chat/threads', [
+                'order_id' => $live->id,
+            ]);
+        $ok->assertCreated();
+        $ok->assertJsonPath('thread.order_id', $live->id);
+        $ok->assertJsonPath('thread.customer_id', $customer->id);
+        $threadId = $ok->json('thread.id');
+
+        $again = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->postJson('/api/v1/engagement/customer-chat/threads', [
+                'order_id' => $live->id,
+            ]);
+        $again->assertCreated();
+        $this->assertSame($threadId, $again->json('thread.id'));
+
+        $blocked = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->postJson('/api/v1/engagement/customer-chat/threads', [
+                'order_id' => $done->id,
+            ]);
+        $blocked->assertStatus(422);
+
+        $active = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->getJson('/api/v1/engagement/customer-chat/threads?active_orders=1');
+        $active->assertOk();
+        $ids = collect($active->json('threads'))->pluck('id')->all();
+        $this->assertContains($threadId, $ids);
+    }
+
+    public function test_order_chat_is_tenant_isolated(): void
+    {
+        $tenantA = Tenant::where('slug', 'pilot')->firstOrFail();
+        $this->enableFeature($tenantA->id, 'tenant_customer_chat');
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+
+        $tenantB = Tenant::withoutGlobalScopes()->create([
+            'name' => 'Other Chat Kitchen',
+            'slug' => 'other-chat-kitchen',
+            'status' => 'active',
+            'currency' => 'GBP',
+        ]);
+        $this->enableFeature($tenantB->id, 'tenant_customer_chat');
+
+        $customerB = Customer::withoutGlobalScopes()->create([
+            'tenant_id' => $tenantB->id,
+            'name' => 'Other Guest',
+            'phone' => '+15551234999',
+        ]);
+        $orderB = Order::withoutGlobalScopes()->create([
+            'tenant_id' => $tenantB->id,
+            'customer_id' => $customerB->id,
+            'status' => 'accepted',
+            'order_type' => 'pickup',
+            'total_amount' => 12,
+            'discount_total' => 0,
+        ]);
+
+        $this->actingAs($owner, 'sanctum');
+        $denied = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->postJson('/api/v1/engagement/customer-chat/threads', [
+                'order_id' => $orderB->id,
+            ]);
+        $denied->assertNotFound();
     }
 }

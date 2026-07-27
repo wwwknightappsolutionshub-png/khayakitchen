@@ -41,7 +41,7 @@ class SendEmailOrderNotifications
             'accepted' => 'Order accepted',
             'preparing' => 'Order being prepared',
             'ready' => 'Order ready',
-            'completed' => 'Order completed',
+            'completed' => 'Thanks for ordering!',
             default => 'Order update',
         };
 

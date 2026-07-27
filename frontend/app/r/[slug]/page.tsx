@@ -30,11 +30,18 @@ export default function OrderingEntryPage() {
     }
 
     const meal = searchParams.get("meal");
+    const review = searchParams.get("review");
     void queryClient.removeQueries({ queryKey: ["storefront"] });
     void queryClient.removeQueries({ queryKey: ["menu"] });
 
-    if (meal) {
-      router.replace(`/menu?meal=${encodeURIComponent(meal)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`);
+    const qs = new URLSearchParams();
+    if (meal) qs.set("meal", meal);
+    if (ref) qs.set("ref", ref);
+    if (review === "1") qs.set("review", "1");
+    const query = qs.toString();
+
+    if (meal || review === "1") {
+      router.replace(query ? `/menu?${query}` : "/menu");
     } else {
       router.replace(ref ? `/?ref=${encodeURIComponent(ref)}` : "/");
     }

@@ -43,7 +43,7 @@ export function KitchenReviewForm() {
   });
 
   return (
-    <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <div id="kitchen-review" className="mt-6 scroll-mt-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <h2 className="text-base font-semibold">Leave a kitchen review</h2>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Approved reviews appear in the menu footer. Keep it to 5 sentences or 200 words.

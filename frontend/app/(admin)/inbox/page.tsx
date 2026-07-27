@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -91,6 +92,9 @@ function ThreadRow({
     fallbackLabel;
   const preview = thread.last_message_preview?.trim() || "No messages yet";
   const unread = thread.unread_count ?? 0;
+  const orderHint = thread.order_id
+    ? `Order · ${thread.order_status ?? "linked"}${thread.in_session ? " · live" : ""}`
+    : null;
 
   return (
     <button
@@ -118,6 +122,12 @@ function ThreadRow({
             {formatShortTime(thread.last_message_at || thread.updated_at)}
           </span>
         </span>
+        {orderHint && (
+          <span className="mt-0.5 block truncate text-[10px] font-medium text-amber-600 dark:text-amber-400">
+            {orderHint}
+            {thread.subject ? ` · ${thread.subject}` : ""}
+          </span>
+        )}
         <span className="mt-0.5 flex items-center justify-between gap-2">
           <span className="line-clamp-1 text-xs text-muted">{preview}</span>
           {unread > 0 && (
@@ -166,14 +176,30 @@ function MessageBubble({
 }
 
 export default function TenantInboxPage() {
+  return (
+    <Suspense fallback={<BackendPage><p className="text-sm text-muted">Loading inbox…</p></BackendPage>}>
+      <TenantInboxInner />
+    </Suspense>
+  );
+}
+
+function TenantInboxInner() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [activeOrdersOnly, setActiveOrdersOnly] = useState(false);
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const listPoll = useHybridInterval(4_000, 10_000);
   const threadPoll = useHybridInterval(2_500, 8_000);
   const remoteTyping = useChatTyping(activeThreadId, ["tenant_user"]);
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const thread = searchParams.get("thread");
+    if (thread) setActiveThreadId(thread);
+    if (searchParams.get("active_orders") === "1") setActiveOrdersOnly(true);
+  }, [searchParams]);
 
   const publishTyping = useCallback(
     (isTyping: boolean) => {
@@ -197,8 +223,8 @@ export default function TenantInboxPage() {
   });
 
   const customerThreads = useQuery({
-    queryKey: ["engagement", "customer-threads"],
-    queryFn: () => engagementService.listTenantCustomerThreads(),
+    queryKey: ["engagement", "customer-threads", activeOrdersOnly],
+    queryFn: () => engagementService.listTenantCustomerThreads(activeOrdersOnly),
     refetchInterval: listPoll,
   });
 
@@ -345,9 +371,23 @@ export default function TenantInboxPage() {
               </div>
             </div>
             <div>
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
-                With customers
-              </p>
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  With customers
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveOrdersOnly((v) => !v)}
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                    activeOrdersOnly
+                      ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : "border-border text-muted hover:text-foreground",
+                  )}
+                >
+                  {activeOrdersOnly ? "Active orders" : "All chats"}
+                </button>
+              </div>
               <div className="space-y-2">
                 {(customerThreads.data?.threads ?? []).map((t) => (
                   <ThreadRow
@@ -359,7 +399,11 @@ export default function TenantInboxPage() {
                   />
                 ))}
                 {(customerThreads.data?.threads ?? []).length === 0 && (
-                  <p className="px-1 text-xs text-muted">No customer chats yet</p>
+                  <p className="px-1 text-xs text-muted">
+                    {activeOrdersOnly
+                      ? "No chats for in-session orders"
+                      : "No customer chats yet"}
+                  </p>
                 )}
               </div>
             </div>

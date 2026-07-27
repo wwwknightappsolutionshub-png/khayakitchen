@@ -58,6 +58,14 @@ export default function MenuPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (searchParams.get("review") !== "1") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById("kitchen-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
     if (!hash.startsWith("meal-")) return;

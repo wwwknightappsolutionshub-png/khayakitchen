@@ -198,4 +198,83 @@ class MultiChannelNotificationsAndMealShareTest extends TestCase
 
         Mail::assertSent(CustomerOrderStatusMail::class);
     }
+
+    public function test_completed_order_thanks_email_includes_ctas_once(): void
+    {
+        Mail::fake();
+        Queue::fake();
+
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+        $owner = User::where('email', 'owner@khayaos.com')->firstOrFail();
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Thanks User',
+            'phone' => '+15559870044',
+            'email' => 'thanks-user@example.com',
+        ]);
+        $order = Order::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'status' => 'ready',
+            'order_type' => 'pickup',
+            'discount_total' => 0,
+            'total_amount' => 18,
+        ]);
+
+        CustomerNotificationPreference::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'push_enabled' => false,
+            'whatsapp_enabled' => false,
+            'email_enabled' => true,
+        ]);
+
+        $this->actingAs($owner, 'sanctum');
+        $complete = $this->withHeaders(['X-Tenant-Slug' => 'pilot'])
+            ->patchJson("/api/v1/orders/{$order->id}/status", ['status' => 'completed']);
+        $complete->assertOk();
+
+        Queue::assertPushed(SendOrderEmailNotificationJob::class, function (SendOrderEmailNotificationJob $job) use ($order) {
+            return $job->eventKey === 'OrderCompleted' && $job->orderId === $order->id;
+        });
+
+        Mail::fake();
+        (new SendOrderEmailNotificationJob(
+            $tenant->id,
+            $customer->id,
+            $order->id,
+            'OrderCompleted',
+            'Thanks for ordering!',
+            'Thank you for ordering with us!',
+        ))->handle(
+            app(\App\Shared\Tenancy\TenantContextRunner::class),
+            app(\App\Modules\NotificationsCampaign\Application\Services\CustomerNotificationPreferenceService::class),
+        );
+
+        Mail::assertSent(CustomerOrderStatusMail::class, function (CustomerOrderStatusMail $mail) {
+            return is_array($mail->ctas)
+                && count($mail->ctas) >= 4
+                && str_contains($mail->ctas[0]['url'] ?? '', 'review=1');
+        });
+
+        $noEmailCustomer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'No Email',
+            'phone' => '+15559870055',
+            'email' => null,
+        ]);
+        Mail::fake();
+        (new SendOrderEmailNotificationJob(
+            $tenant->id,
+            $noEmailCustomer->id,
+            $order->id,
+            'OrderCompleted',
+            'Thanks',
+            'Body',
+        ))->handle(
+            app(\App\Shared\Tenancy\TenantContextRunner::class),
+            app(\App\Modules\NotificationsCampaign\Application\Services\CustomerNotificationPreferenceService::class),
+        );
+        Mail::assertNothingSent();
+    }
 }

@@ -68,14 +68,22 @@ export const engagementService = {
     return api.get<{ threads: ChatThread[] }>("/engagement/platform-chat/threads");
   },
 
-  listTenantCustomerThreads() {
-    return api.get<{ threads: ChatThread[] }>("/engagement/customer-chat/threads");
+  listTenantCustomerThreads(activeOrdersOnly = false) {
+    const qs = activeOrdersOnly ? "?active_orders=1" : "";
+    return api.get<{ threads: ChatThread[] }>(`/engagement/customer-chat/threads${qs}`);
   },
 
-  openTenantCustomerThread(customerId: string, subject?: string) {
+  openTenantCustomerThread(customerId: string, subject?: string, orderId?: string) {
     return api.post<{ thread: ChatThread }>("/engagement/customer-chat/threads", {
       customer_id: customerId,
       subject,
+      order_id: orderId,
+    });
+  },
+
+  openTenantCustomerThreadForOrder(orderId: string) {
+    return api.post<{ thread: ChatThread }>("/engagement/customer-chat/threads", {
+      order_id: orderId,
     });
   },
 

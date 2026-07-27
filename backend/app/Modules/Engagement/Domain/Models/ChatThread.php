@@ -6,6 +6,7 @@ use App\Shared\Database\Traits\BelongsToTenant;
 use App\Shared\Database\Traits\HasTenant;
 use App\Shared\Database\Traits\HasUuid;
 use App\Modules\CRM\Domain\Models\Customer;
+use App\Modules\Orders\Domain\Models\Order;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,7 @@ class ChatThread extends Model
         'subject',
         'created_by_user_id',
         'customer_id',
+        'order_id',
     ];
 
     public function messages(): HasMany
@@ -30,5 +32,10 @@ class ChatThread extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'order_id');
     }
 }

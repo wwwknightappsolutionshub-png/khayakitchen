@@ -59,15 +59,26 @@ class SendOrderEmailNotificationJob implements ShouldQueue
                 return;
             }
 
+            $brand = $this->branding();
+            $isThanks = $this->eventKey === 'OrderCompleted';
+            $subject = $isThanks
+                ? ('Thanks for ordering from '.$brand['name'].'!')
+                : $this->subject;
+            $body = $isThanks
+                ? "Thank you for ordering with {$brand['name']}. We hope everything was delicious — here's how to stay close to the kitchen."
+                : $this->body;
+
             try {
                 Mail::to($customer->email)->send(new CustomerOrderStatusMail(
                     $customer->name ?: 'there',
-                    $this->restaurantName(),
-                    $this->subject,
-                    $this->body,
+                    $brand['name'],
+                    $subject,
+                    $body,
+                    $brand['logo'],
+                    $isThanks ? $this->thanksCtas($brand['slug']) : null,
                 ));
 
-                $this->logActivity('order.email.sent', [
+                $this->logActivity($isThanks ? 'order.email.thanks_sent' : 'order.email.sent', [
                     'event' => $this->eventKey,
                     'email' => $customer->email,
                 ]);
@@ -90,17 +101,54 @@ class SendOrderEmailNotificationJob implements ShouldQueue
         ]);
     }
 
-    private function restaurantName(): string
+    /**
+     * @return array{name: string, logo: ?string, slug: string}
+     */
+    private function branding(): array
     {
+        $tenant = Tenant::withoutGlobalScopes()->find($this->tenantId);
         $brand = TenantBranding::withoutGlobalScopes()
             ->where('tenant_id', $this->tenantId)
-            ->value('restaurant_name');
+            ->first();
 
-        if ($brand) {
-            return $brand;
-        }
+        return [
+            'name' => $brand?->restaurant_name ?: ($tenant?->name ?? 'Your kitchen'),
+            'logo' => $brand?->platform_override_logo_url ?: $brand?->logo_url,
+            'slug' => $tenant?->slug ?? '',
+        ];
+    }
 
-        return Tenant::withoutGlobalScopes()->where('id', $this->tenantId)->value('name') ?? 'Your kitchen';
+    /**
+     * @return list<array{label: string, url: string, hint?: string}>
+     */
+    private function thanksCtas(string $slug): array
+    {
+        $frontend = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+        $entry = $slug !== '' ? "{$frontend}/r/{$slug}" : $frontend;
+        $account = $slug !== '' ? "{$frontend}/r/{$slug}" : "{$frontend}/account";
+
+        return [
+            [
+                'label' => 'Leave a review',
+                'url' => $entry.(str_contains($entry, '?') ? '&' : '?').'review=1',
+                'hint' => 'Tell the kitchen how service went — it helps them improve.',
+            ],
+            [
+                'label' => 'Open your account',
+                'url' => $account,
+                'hint' => 'Register or sign in to save addresses and reorder faster.',
+            ],
+            [
+                'label' => 'Install the app (PWA)',
+                'url' => $entry,
+                'hint' => 'Add to your home screen for one-tap ordering next time.',
+            ],
+            [
+                'label' => 'Loyalty & rewards',
+                'url' => $account,
+                'hint' => 'Check stamps, points, and rewards in your Account.',
+            ],
+        ];
     }
 
     /**

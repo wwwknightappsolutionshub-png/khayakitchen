@@ -41,23 +41,37 @@ class TenantEngagementController extends Controller
 
     public function customerThreads(Request $request)
     {
+        $activeOnly = filter_var($request->query('active_orders', false), FILTER_VALIDATE_BOOLEAN);
+
         return ApiResponse::success([
-            'threads' => $this->chatService->listTenantCustomerThreads($request->get('permissions', [])),
+            'threads' => $this->chatService->listTenantCustomerThreads(
+                $request->get('permissions', []),
+                $activeOnly,
+            ),
         ]);
     }
 
     public function openCustomerThread(Request $request)
     {
         $data = $request->validate([
-            'customer_id' => ['required', 'uuid'],
+            'customer_id' => ['required_without:order_id', 'nullable', 'uuid'],
+            'order_id' => ['nullable', 'uuid'],
             'subject' => ['nullable', 'string', 'max:200'],
         ]);
 
-        $thread = $this->chatService->openTenantCustomerThread(
-            $request->get('permissions', []),
-            $data['customer_id'],
-            $data['subject'] ?? null,
-        );
+        if (! empty($data['order_id']) && empty($data['customer_id'])) {
+            $thread = $this->chatService->openTenantCustomerThreadForOrder(
+                $request->get('permissions', []),
+                $data['order_id'],
+            );
+        } else {
+            $thread = $this->chatService->openTenantCustomerThread(
+                $request->get('permissions', []),
+                $data['customer_id'],
+                $data['subject'] ?? null,
+                $data['order_id'] ?? null,
+            );
+        }
 
         return ApiResponse::success(['thread' => $thread], 201);
     }

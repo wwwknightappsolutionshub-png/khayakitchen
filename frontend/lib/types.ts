@@ -772,6 +772,9 @@ export interface ChatThread {
   customer_id?: string | null;
   customer_name?: string | null;
   customer_phone?: string | null;
+  order_id?: string | null;
+  order_status?: string | null;
+  in_session?: boolean;
   last_message_preview?: string | null;
   last_message_at?: string | null;
   unread_count?: number;
