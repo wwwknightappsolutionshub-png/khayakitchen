@@ -6,6 +6,7 @@ use App\Modules\CRM\Application\Services\CrmService;
 use App\Modules\Delivery\Application\Services\DeliveryService;
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Modules\Menu\Domain\Models\MealOption;
+use App\Modules\Orders\Application\Services\PaymentAccountsService;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderItem;
 use App\Modules\Orders\Domain\Models\OrderItemOption;
@@ -47,6 +48,7 @@ class OrderService
         private RevenueRecoveryCampaignService $revenueRecoveryCampaignService,
         private CrmService $crmService,
         private DeliveryService $deliveryService,
+        private PaymentAccountsService $paymentAccountsService,
     ) {}
 
     public function createOrder(array $data, array $permissions): array
@@ -92,7 +94,7 @@ class OrderService
             $data,
             $customer->id,
             null,
-            $data['payment_method'] ?? 'cash',
+            $data['payment_method'] ?? 'card',
         );
 
         $loyaltyProgram = app(\App\Modules\Loyalty\Application\Services\LoyaltyProgramService::class);
@@ -195,12 +197,14 @@ class OrderService
             }
 
             if ($paymentMethod) {
+                $isTransfer = $paymentMethod === 'transfer';
                 Payment::create([
                     'tenant_id' => $order->tenant_id,
                     'order_id' => $order->id,
                     'provider' => $paymentMethod,
-                    'status' => 'paid',
+                    'status' => $isTransfer ? 'pending' : 'paid',
                     'amount' => $total,
+                    'proof_wait_started_at' => $isTransfer ? now() : null,
                     'created_at' => now(),
                 ]);
             }
@@ -273,6 +277,10 @@ class OrderService
         $previous = $order->status;
         $user = $this->tenantContext->user() ?? auth('sanctum')->user();
         $this->assertStatusTransitionAllowed($previous, $status, $user?->role);
+
+        if ($status === 'accepted' && $previous === 'pending') {
+            $this->paymentAccountsService->assertTransferAcceptable($order);
+        }
 
         $actorId = $user?->id;
         $updates = [
@@ -452,10 +460,12 @@ class OrderService
     {
         $customer = \App\Modules\CRM\Domain\Models\Customer::where('phone', $phone)->firstOrFail();
 
-        return Order::where('customer_id', $customer->id)
+        $order = Order::where('customer_id', $customer->id)
             ->where('id', $id)
-            ->with(['items.meal', 'items.options.option'])
+            ->with(['items.meal', 'items.options.option', 'payments'])
             ->firstOrFail();
+
+        return $this->paymentAccountsService->enrichOrderPaymentAttributes($order);
     }
 
     public function showOrder(string $id, array $permissions): Order

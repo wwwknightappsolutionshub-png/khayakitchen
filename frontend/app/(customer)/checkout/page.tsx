@@ -43,7 +43,7 @@ const checkoutSchema = z
     order_type: z.enum(["pickup", "delivery"]),
     address: z.string().optional(),
     scheduled_time: z.string().optional(),
-    payment_method: z.enum(["cash", "card", "transfer"]),
+    payment_method: z.enum(["card", "transfer"]),
     whatsapp_opt_in: z.boolean().optional(),
   })
   .refine((data) => data.order_type !== "delivery" || (data.address && data.address.length > 0), {
@@ -61,6 +61,10 @@ export default function CheckoutPage() {
   const total = getTotal();
   const { data: storefront } = useStorefront();
   const isClosed = storefront?.status?.is_accepting_orders === false;
+  const bank = storefront?.branding;
+  const hasBankDetails = Boolean(
+    bank?.bank_name && bank?.bank_account_name && bank?.bank_account_number,
+  );
 
   const stored = readCheckoutDefaults();
   const {
@@ -78,7 +82,7 @@ export default function CheckoutPage() {
       order_type: "pickup",
       address: stored.address,
       scheduled_time: "",
-      payment_method: "cash",
+      payment_method: "transfer",
       whatsapp_opt_in: true,
     },
   });
@@ -123,6 +127,10 @@ export default function CheckoutPage() {
 
   const onSubmit = async (data: CheckoutForm) => {
     setError(null);
+    if (data.payment_method === "transfer" && !hasBankDetails) {
+      setError("This kitchen has not set bank transfer details yet. Please pay by card or try again later.");
+      return;
+    }
     try {
       if (data.whatsapp_opt_in || data.phone) {
         await customerNotificationsService.upsertPreferences({
@@ -178,7 +186,11 @@ export default function CheckoutPage() {
       }
       setActiveOrderId(response.order_id);
       clearCart();
-      router.push(`/tracking?id=${response.order_id}`);
+      if (data.payment_method === "transfer") {
+        router.push(`/payment-confirmation?id=${response.order_id}`);
+      } else {
+        router.push(`/tracking?id=${response.order_id}`);
+      }
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -257,24 +269,55 @@ export default function CheckoutPage() {
 
         <section>
           <p className="mb-3 text-sm font-medium">Payment method</p>
-          <div className="grid grid-cols-3 gap-2">
-            {(["cash", "card", "transfer"] as const).map((method) => (
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { id: "transfer" as const, label: "Bank transfer" },
+                { id: "card" as const, label: "Card (coming soon)" },
+              ] as const
+            ).map((method) => (
               <button
-                key={method}
+                key={method.id}
                 type="button"
-                onClick={() => setValue("payment_method", method)}
+                onClick={() => setValue("payment_method", method.id)}
                 className={cn(
-                  "customer-press rounded-xl border px-2 py-3 text-xs font-medium capitalize transition-colors duration-200 sm:text-sm",
-                  paymentMethod === method
+                  "customer-press rounded-xl border px-2 py-3 text-xs font-medium transition-colors duration-200 sm:text-sm",
+                  paymentMethod === method.id
                     ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
                     : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--primary)]/30",
                 )}
               >
-                {method}
+                {method.label}
               </button>
             ))}
           </div>
         </section>
+
+        {paymentMethod === "transfer" && (
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <h2 className="mb-3 text-sm font-semibold">Transfer to</h2>
+            {hasBankDetails ? (
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--muted)]">Bank Name</dt>
+                  <dd className="font-medium text-right">{bank?.bank_name}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--muted)]">Account Name</dt>
+                  <dd className="font-medium text-right">{bank?.bank_account_name}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--muted)]">Account Number</dt>
+                  <dd className="font-mono font-medium text-right">{bank?.bank_account_number}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">
+                Bank details are not configured for this kitchen yet.
+              </p>
+            )}
+          </section>
+        )}
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <input
@@ -326,7 +369,7 @@ export default function CheckoutPage() {
           className="w-full"
           size="lg"
           isLoading={placeOrder.isPending}
-          disabled={isClosed}
+          disabled={isClosed || (paymentMethod === "transfer" && !hasBankDetails)}
         >
           {isClosed ? "Currently closed" : `Place Order — ${formatCurrency(total)}`}
         </CustomerButton>

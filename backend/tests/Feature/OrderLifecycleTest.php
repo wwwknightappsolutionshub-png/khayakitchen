@@ -29,7 +29,7 @@ class OrderLifecycleTest extends TestCase
             'name' => 'Lifecycle Test',
             'phone' => '+2348099990001',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
 
@@ -60,7 +60,7 @@ class OrderLifecycleTest extends TestCase
             'name' => 'Lifecycle Test',
             'phone' => '+2348099990001',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $create2->assertCreated();
@@ -95,7 +95,7 @@ class OrderLifecycleTest extends TestCase
             'name' => 'Overnight Guest',
             'phone' => '+2348099990002',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $create->assertCreated();
@@ -144,7 +144,7 @@ class OrderLifecycleTest extends TestCase
             'name' => 'Flow Guest',
             'phone' => '+2348099990003',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $create->assertCreated();

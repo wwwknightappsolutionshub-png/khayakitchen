@@ -132,7 +132,7 @@ class MultiChannelNotificationsAndMealShareTest extends TestCase
             'phone' => $customer->phone,
             'email' => $customer->email,
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
 

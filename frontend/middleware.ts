@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const NO_STORE_PATHS = /^\/($|menu|cart|account|checkout|tracking|reset-app|home|login|forgot-password|reset-password|verify-email|admin|orders|kitchen|inventory|crm|loyalty|inbox|reviews|seasonal-promo|marketing|revenue-recovery|branding|reports|staff-performance|settings|platform)/;
+const NO_STORE_PATHS = /^\/($|menu|cart|account|checkout|payment-confirmation|tracking|reset-app|home|login|forgot-password|reset-password|verify-email|admin|orders|accounts|kitchen|inventory|crm|loyalty|inbox|reviews|seasonal-promo|marketing|revenue-recovery|branding|reports|staff-performance|settings|platform)/;
 
 export function middleware(request: NextRequest) {
   if (!NO_STORE_PATHS.test(request.nextUrl.pathname)) {
@@ -22,6 +22,7 @@ export const config = {
     "/cart",
     "/account",
     "/checkout",
+    "/payment-confirmation",
     "/tracking",
     "/reset-app",
     "/home",
@@ -31,6 +32,7 @@ export const config = {
     "/verify-email",
     "/admin/:path*",
     "/orders",
+    "/accounts",
     "/kitchen",
     "/inventory",
     "/crm",

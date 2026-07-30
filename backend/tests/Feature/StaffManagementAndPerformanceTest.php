@@ -119,7 +119,7 @@ class StaffManagementAndPerformanceTest extends TestCase
             'name' => 'Perf Guest',
             'phone' => '+2348090001111',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1, 'options' => []]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $customerOrder->assertCreated();

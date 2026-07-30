@@ -1,10 +1,10 @@
 import { api } from "@/lib/api-client";
-import type { CreateOrderPayload, CreateOrderResponse, Order } from "@/lib/types";
+import type { CreateOrderPayload, CreateOrderResponse, CustomerPaymentInfo, Order } from "@/lib/types";
 
 export type CustomerOrderPayload = CreateOrderPayload & {
   name: string;
   phone: string;
-  payment_method?: "cash" | "card" | "transfer";
+  payment_method?: "card" | "transfer";
   email?: string;
   referral_token?: string;
 };
@@ -28,5 +28,20 @@ export const customerOrdersService = {
       params: { phone },
       skipAuth: true,
     });
+  },
+
+  async uploadPaymentProof(
+    orderId: string,
+    phone: string,
+    file: File,
+  ): Promise<{ payment: CustomerPaymentInfo }> {
+    const formData = new FormData();
+    formData.append("phone", phone);
+    formData.append("proof", file);
+    return api.upload<{ payment: CustomerPaymentInfo }>(
+      `/customer/orders/${orderId}/payment-proof`,
+      formData,
+      { skipAuth: true },
+    );
   },
 };

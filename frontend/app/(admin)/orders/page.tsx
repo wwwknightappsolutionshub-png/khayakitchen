@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -124,7 +125,12 @@ export default function OrdersPage() {
           <Button
             size="sm"
             onClick={() => updateMutation.mutate({ id: order.id, status: "accepted" })}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || !!order.payment_accept_blocked}
+            title={
+              order.payment_accept_blocked
+                ? "Verify bank transfer in Accounts before accepting"
+                : undefined
+            }
           >
             Accept
           </Button>
@@ -136,6 +142,13 @@ export default function OrdersPage() {
           >
             Reject
           </Button>
+          {order.payment_accept_blocked && (
+            <Link href={`/accounts`}>
+              <Button size="sm" variant="secondary">
+                {order.payment_awaiting_verification ? "Verify in Accounts" : "Awaiting payment"}
+              </Button>
+            </Link>
+          )}
         </>
       )}
       {order.status === "accepted" && isManager && (
@@ -196,6 +209,11 @@ export default function OrdersPage() {
           <p className="text-sm text-muted">
             Floor accept → kitchen cook → floor complete · today stays open
           </p>
+        </div>
+        <div className="backend-header-actions">
+          <Link href="/accounts">
+            <Button variant="secondary">Accounts</Button>
+          </Link>
         </div>
       </header>
 
@@ -343,7 +361,12 @@ export default function OrdersPage() {
                                   ),
                               },
                               { label: "Total", value: formatCurrency(order.total_amount) },
-                              { label: "Payment", value: order.payment_channel || "—" },
+                              {
+                                label: "Payment",
+                                value: order.payment_accept_blocked
+                                  ? `${order.payment_channel || "transfer"} · awaiting verify`
+                                  : order.payment_channel || "—",
+                              },
                               { label: "Type", value: order.order_type },
                               { label: "Created", value: formatDate(order.created_at) },
                             ]}
@@ -423,7 +446,9 @@ export default function OrdersPage() {
                                 {formatCurrency(order.total_amount)}
                               </td>
                               <td className="px-4 py-3 capitalize text-muted">
-                                {order.payment_channel || "—"}
+                                {order.payment_accept_blocked
+                                  ? `${order.payment_channel || "transfer"} · awaiting verify`
+                                  : order.payment_channel || "—"}
                               </td>
                               <td className="px-4 py-3 capitalize">{order.order_type}</td>
                               <td className="px-4 py-3">

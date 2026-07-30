@@ -3,13 +3,17 @@
 namespace App\Modules\Orders\Interfaces\Controllers;
 
 use App\Modules\Orders\Application\Services\OrderService;
+use App\Modules\Orders\Application\Services\PaymentAccountsService;
 use App\Shared\Utils\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class CustomerOrderController extends Controller
 {
-    public function __construct(private OrderService $orderService) {}
+    public function __construct(
+        private OrderService $orderService,
+        private PaymentAccountsService $paymentAccountsService,
+    ) {}
 
     public function store(Request $request)
     {
@@ -19,7 +23,7 @@ class CustomerOrderController extends Controller
             'order_type' => ['required', 'in:pickup,delivery'],
             'address' => ['required_if:order_type,delivery', 'nullable', 'string', 'max:500'],
             'scheduled_time' => ['nullable', 'date'],
-            'payment_method' => ['nullable', 'in:cash,card,transfer'],
+            'payment_method' => ['nullable', 'in:card,transfer'],
             'email' => ['nullable', 'email', 'max:255'],
             'referral_token' => ['nullable', 'string', 'max:80'],
             'items' => ['required', 'array', 'min:1'],
@@ -53,5 +57,21 @@ class CustomerOrderController extends Controller
         $order = $this->orderService->showCustomerOrder($id, $data['phone']);
 
         return ApiResponse::success(['order' => $order]);
+    }
+
+    public function uploadPaymentProof(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:50'],
+            'proof' => ['required', 'file', 'mimes:png,jpg,jpeg,pdf', 'max:'.PaymentAccountsService::PROOF_MAX_KB],
+        ]);
+
+        $payment = $this->paymentAccountsService->uploadProof(
+            $id,
+            $data['phone'],
+            $request->file('proof'),
+        );
+
+        return ApiResponse::success(['payment' => $payment]);
     }
 }

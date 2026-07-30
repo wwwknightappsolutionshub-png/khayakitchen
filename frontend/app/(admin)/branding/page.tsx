@@ -31,7 +31,7 @@ const STATUS_OPTIONS: {
 export default function BrandingPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
-  const canManage = role === "owner" || role === "super_admin";
+  const canManage = role === "owner" || role === "manager" || role === "super_admin";
 
   const { data: brandingData, isLoading: brandingLoading } = useQuery({
     queryKey: ["branding"],
@@ -194,6 +194,9 @@ export default function BrandingPage() {
                     secondary_color: String(formData.get("secondary_color") ?? "") || null,
                     ticker_enabled: formData.get("ticker_enabled") === "on",
                     ticker_text: String(formData.get("ticker_text") ?? "") || null,
+                    bank_name: String(formData.get("bank_name") ?? "") || null,
+                    bank_account_name: String(formData.get("bank_account_name") ?? "") || null,
+                    bank_account_number: String(formData.get("bank_account_number") ?? "") || null,
                   });
                 }}
               >
@@ -296,6 +299,36 @@ export default function BrandingPage() {
                     disabled={!canManage}
                     placeholder="Welcome message | Place your order now | Special offers"
                     className="mt-3 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="rounded-[var(--radius)] border border-border p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">Bank transfer details</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Shown to customers who pay by bank transfer at checkout.
+                    </p>
+                  </div>
+                  <Input
+                    name="bank_name"
+                    label="Bank Name"
+                    defaultValue={branding.bank_name ?? ""}
+                    disabled={!canManage}
+                    placeholder="e.g. First Bank"
+                  />
+                  <Input
+                    name="bank_account_name"
+                    label="Account Name"
+                    defaultValue={branding.bank_account_name ?? ""}
+                    disabled={!canManage}
+                    placeholder="e.g. Mama's Kitchen Ltd"
+                  />
+                  <Input
+                    name="bank_account_number"
+                    label="Account Number"
+                    defaultValue={branding.bank_account_number ?? ""}
+                    disabled={!canManage}
+                    placeholder="0123456789"
                   />
                 </div>
 

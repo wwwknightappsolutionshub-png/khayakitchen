@@ -22,7 +22,7 @@ class CustomerOrderTest extends TestCase
             'name' => 'Ada Customer',
             'phone' => '+2348012345678',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [
                 [
                     'meal_id' => $meal->id,
@@ -50,7 +50,7 @@ class CustomerOrderTest extends TestCase
 
         $this->assertDatabaseHas('payments', [
             'tenant_id' => $tenant->id,
-            'provider' => 'cash',
+            'provider' => 'card',
             'status' => 'paid',
         ]);
     }
@@ -67,7 +67,7 @@ class CustomerOrderTest extends TestCase
             'phone' => '+2348012345679',
             'order_type' => 'delivery',
             'address' => '12 Victoria Island, Lagos',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [
                 [
                     'meal_id' => $meal->id,

@@ -28,5 +28,8 @@ class TenantBranding extends Model
         'platform_override_ticker_text',
         'ticker_enabled',
         'ticker_text',
+        'bank_name',
+        'bank_account_name',
+        'bank_account_number',
     ];
 }

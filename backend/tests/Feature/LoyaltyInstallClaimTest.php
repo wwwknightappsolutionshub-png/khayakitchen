@@ -30,6 +30,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'phone' => '+15551112222',
             'email' => 'newguest@example.com',
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
 
@@ -56,6 +57,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'phone' => '+15553334444',
             'email' => 'claimer@example.com',
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $order->assertCreated();
@@ -117,6 +119,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'phone' => '+15556667777',
             'email' => 'template@example.com',
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $order->assertCreated();
@@ -143,6 +146,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'name' => 'Late Email',
             'phone' => '+15558889999',
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $order->assertCreated();
@@ -176,6 +180,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'name' => 'Returner',
             'phone' => $phone,
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $first->assertCreated();
@@ -185,6 +190,7 @@ class LoyaltyInstallClaimTest extends TestCase
             'name' => 'Returner',
             'phone' => $phone,
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $second->assertCreated();

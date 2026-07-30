@@ -21,6 +21,7 @@ import {
   Star,
   Activity,
   Sparkles,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,7 @@ import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, flag: "dashboard", badge: "dashboard" as const },
   { href: "/orders", label: "Orders", icon: ShoppingBag, flag: "orders", badge: "orders" as const },
+  { href: "/accounts", label: "Accounts", icon: Landmark, flag: "orders" },
   { href: "/kitchen", label: "Kitchen", icon: ChefHat, flag: "kitchen", badge: "kitchen" as const },
   { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, flag: "menu" },
   { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },

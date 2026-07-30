@@ -107,6 +107,12 @@ export interface Order {
   customer_name?: string | null;
   customer_phone?: string | null;
   payment_channel?: string | null;
+  payment_status?: string | null;
+  payment_verified?: boolean;
+  payment_proof_uploaded?: boolean;
+  payment_awaiting_verification?: boolean;
+  payment_accept_blocked?: boolean;
+  payment?: CustomerPaymentInfo | null;
   status: string;
   order_type: string;
   scheduled_time?: string;
@@ -114,6 +120,44 @@ export interface Order {
   discount_total?: number;
   created_at: string;
   items?: OrderItem[];
+}
+
+export interface CustomerPaymentInfo {
+  id: string;
+  provider: string;
+  status: string;
+  amount: number;
+  proof_uploaded: boolean;
+  proof_uploaded_at?: string | null;
+  verified: boolean;
+  verified_at?: string | null;
+  wait_seconds: number;
+  wait_remaining_seconds: number;
+  can_upload_proof: boolean;
+  proof_url?: string | null;
+}
+
+export interface AccountRow {
+  order_id: string;
+  order_no: string;
+  status: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  meals: { name: string; quantity: number; line_total: number }[];
+  total_amount: number;
+  ordered_at: string;
+  payment_channel?: string | null;
+  payment_status?: string | null;
+  payment_verified: boolean;
+  verified_at?: string | null;
+  attachment?: {
+    url: string;
+    mime?: string | null;
+    name?: string | null;
+    size?: number | null;
+    uploaded_at?: string | null;
+  } | null;
+  orders_path?: string;
 }
 
 export interface OrderItem {
@@ -651,6 +695,9 @@ export interface TenantBranding {
   banner_image?: string | null;
   ticker_enabled?: boolean;
   ticker_text?: string | null;
+  bank_name?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
   has_platform_override?: boolean;
 }
 

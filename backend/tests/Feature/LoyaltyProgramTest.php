@@ -104,6 +104,7 @@ class LoyaltyProgramTest extends TestCase
             'name' => 'Friend',
             'phone' => $friendPhone,
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'referral_token' => $token,
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
@@ -143,6 +144,7 @@ class LoyaltyProgramTest extends TestCase
             'name' => $customer->name,
             'phone' => $customer->phone,
             'order_type' => 'pickup',
+            'payment_method' => 'card',
             'items' => [['meal_id' => $meal->id, 'quantity' => 1]],
         ], ['X-Tenant-Slug' => 'pilot']);
         $created->assertCreated();

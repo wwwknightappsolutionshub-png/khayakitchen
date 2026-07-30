@@ -30,6 +30,20 @@ class OrderRepository extends BaseRepository
                 ->sortByDesc(fn ($payment) => $payment->created_at?->timestamp ?? 0)
                 ->first();
             $order->setAttribute('payment_channel', $latestPayment?->provider);
+            $order->setAttribute('payment_status', $latestPayment?->status);
+            $order->setAttribute('payment_verified', (bool) ($latestPayment?->verified_at));
+            $order->setAttribute('payment_proof_uploaded', (bool) ($latestPayment?->proof_path));
+            $order->setAttribute(
+                'payment_awaiting_verification',
+                $latestPayment?->provider === 'transfer'
+                    && $latestPayment?->status !== 'paid'
+                    && (bool) $latestPayment?->proof_path,
+            );
+            $order->setAttribute(
+                'payment_accept_blocked',
+                $latestPayment?->provider === 'transfer'
+                    && (! $latestPayment?->verified_at || $latestPayment?->status !== 'paid'),
+            );
 
             return $order;
         });

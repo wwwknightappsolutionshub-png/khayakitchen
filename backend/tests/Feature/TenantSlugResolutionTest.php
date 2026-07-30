@@ -34,7 +34,7 @@ class TenantSlugResolutionTest extends TestCase
             'name' => 'QR Customer',
             'phone' => '+2348099998888',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [
                 [
                     'meal_id' => $meal->id,

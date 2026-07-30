@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { CreateOrderPayload, CreateOrderResponse, Order } from "@/lib/types";
+import type { AccountRow, CreateOrderPayload, CreateOrderResponse, Order } from "@/lib/types";
 
 export const ordersService = {
   async getOrders(status?: string): Promise<{ orders: Order[] }> {
@@ -16,5 +16,13 @@ export const ordersService = {
 
   async cancelOrder(id: string): Promise<{ order: Order }> {
     return api.post<{ order: Order }>(`/orders/${id}/cancel`);
+  },
+
+  async getAccounts(): Promise<{ accounts: AccountRow[] }> {
+    return api.get<{ accounts: AccountRow[] }>("/accounts");
+  },
+
+  async verifyAccountPayment(orderId: string): Promise<{ account: AccountRow }> {
+    return api.post<{ account: AccountRow }>(`/accounts/${orderId}/verify`);
   },
 };

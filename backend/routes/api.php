@@ -30,6 +30,7 @@ use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CustomerNotificationController;
 use App\Modules\Orders\Interfaces\Controllers\CustomerOrderController;
 use App\Modules\Orders\Interfaces\Controllers\OrderController;
+use App\Modules\Orders\Interfaces\Controllers\PaymentAccountsController;
 use App\Modules\Platform\Interfaces\Controllers\MarketingEngagementController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformAuditLogController;
 use App\Modules\Platform\Interfaces\Controllers\PlatformDashboardController;
@@ -160,6 +161,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/customer/orders', [CustomerOrderController::class, 'store']);
         Route::get('/customer/orders', [CustomerOrderController::class, 'index']);
         Route::get('/customer/orders/{id}', [CustomerOrderController::class, 'show']);
+        Route::post('/customer/orders/{id}/payment-proof', [CustomerOrderController::class, 'uploadPaymentProof']);
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'feature:loyalty'])->group(function () {
@@ -189,6 +191,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/orders', [OrderController::class, 'store']);
             Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
             Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+            Route::get('/accounts', [PaymentAccountsController::class, 'index']);
+            Route::post('/accounts/{orderId}/verify', [PaymentAccountsController::class, 'verify']);
             Route::get('/custom-meal-requests', [CustomMealRequestController::class, 'index']);
             Route::patch('/custom-meal-requests/{id}', [CustomMealRequestController::class, 'updateStatus']);
         });

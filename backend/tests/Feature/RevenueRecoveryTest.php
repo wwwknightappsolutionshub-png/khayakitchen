@@ -86,7 +86,7 @@ class RevenueRecoveryTest extends TestCase
             'name' => 'Recovery Customer',
             'phone' => '+2348099990001',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [
                 [
                     'meal_id' => $meal->id,
@@ -213,7 +213,7 @@ class RevenueRecoveryTest extends TestCase
             'name' => 'Metrics Customer',
             'phone' => '+2348099990002',
             'order_type' => 'pickup',
-            'payment_method' => 'cash',
+            'payment_method' => 'card',
             'items' => [
                 ['meal_id' => $meal->id, 'quantity' => 3, 'options' => []],
             ],

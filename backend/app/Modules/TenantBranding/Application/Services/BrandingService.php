@@ -54,6 +54,9 @@ class BrandingService
             'banner_image' => $branding->platform_override_banner_image ?? $branding->banner_image,
             'ticker_enabled' => $this->resolveTickerEnabled($branding, $platformSettings),
             'ticker_text' => $this->resolveTickerText($branding, $platformSettings),
+            'bank_name' => $branding->bank_name,
+            'bank_account_name' => $branding->bank_account_name,
+            'bank_account_number' => $branding->bank_account_number,
             'has_platform_override' => $this->hasPlatformOverride($branding),
         ];
     }

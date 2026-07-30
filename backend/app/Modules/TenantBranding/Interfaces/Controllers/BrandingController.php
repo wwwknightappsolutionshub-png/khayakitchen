@@ -28,6 +28,9 @@ class BrandingController extends Controller
             'banner_image' => ['nullable', 'string', 'max:2048'],
             'ticker_enabled' => ['sometimes', 'boolean'],
             'ticker_text' => ['nullable', 'string', 'max:2000'],
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'bank_account_name' => ['nullable', 'string', 'max:120'],
+            'bank_account_number' => ['nullable', 'string', 'max:64'],
         ]);
 
         $branding = $this->brandingService->update($data, $request->get('permissions', []));
