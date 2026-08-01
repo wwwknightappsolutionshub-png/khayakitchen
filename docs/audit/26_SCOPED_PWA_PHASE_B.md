@@ -3,6 +3,7 @@
 **Date:** 2026-07-31  
 **Status:** Complete (P0–P2 partials closed)  
 **Post-fix audit:** 2026-08-01 — PASS  
+**Commit:** `9680ba9`  
 **Depends on:** Phase A (`docs/audit/25_SCOPED_PWA_SPLIT.md`)
 
 ## Goal
@@ -47,7 +48,7 @@ Browser-enforced Ops isolation on one origin (no dual hosts):
 
 | Pri | Gap | Resolution |
 |-----|-----|------------|
-| P0 | Uncommitted Phase A+B | Commit on `main` |
+| P0 | Uncommitted Phase A+B | Commit `9680ba9` on `main` (push/deploy separately) |
 | P1 | Thin deep-link/SW/redirect tests | `OpsPhaseBContractTest` |
 | P1 | Unsafe rewrite script | Deleted `scripts/rewrite-ops-paths.mjs` |
 | P1 | SW overlap | Ops register forces update; documented residual |
