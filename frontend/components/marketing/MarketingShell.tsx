@@ -9,11 +9,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const SECTION_LINKS = [
-  { href: "/get-started#why", label: "Why" },
-  { href: "/get-started#benefits", label: "Benefits" },
-  { href: "/get-started#proof", label: "Proof" },
-  { href: "/get-started#capabilities", label: "Capabilities" },
-  { href: "/get-started#start", label: "Start" },
+  { href: "/ops/get-started#why", label: "Why" },
+  { href: "/ops/get-started#benefits", label: "Benefits" },
+  { href: "/ops/get-started#proof", label: "Proof" },
+  { href: "/ops/get-started#capabilities", label: "Capabilities" },
+  { href: "/ops/get-started#start", label: "Start" },
 ] as const;
 
 function MarketingShellInner({ children }: { children: React.ReactNode }) {
@@ -45,12 +45,12 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <Link
-            href="/get-started"
+            href="/ops/get-started"
             className="flex shrink-0 items-center gap-2.5 text-lg font-semibold tracking-tight"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icon-192.png"
+              src="/icon-ops-192.png"
               alt=""
               width={32}
               height={32}
@@ -67,11 +67,11 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="flex items-center gap-2 sm:gap-3 text-sm">
             <MarketingThemeToggle />
-            <Link href="/login" className={theme.link}>
+            <Link href="/ops/login" className={theme.link}>
               Sign in
             </Link>
             <Link
-              href="/get-started?signup=1"
+              href="/ops/get-started?signup=1"
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm font-semibold text-white",
                 theme.primaryButton,
@@ -115,7 +115,7 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-start gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/icon-192.png"
+              src="/icon-ops-192.png"
               alt=""
               width={36}
               height={36}
@@ -134,10 +134,10 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
                 {link.label}
               </a>
             ))}
-            <Link href="/login" className={theme.navLink}>
+            <Link href="/ops/login" className={theme.navLink}>
               Sign in
             </Link>
-            <Link href="/get-started?signup=1" className={theme.navLink}>
+            <Link href="/ops/get-started?signup=1" className={theme.navLink}>
               Sign up
             </Link>
             <a

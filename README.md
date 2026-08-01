@@ -50,9 +50,10 @@ npm run dev
 
 App: `http://localhost:3000`
 
-- **Admin:** `/login` → dashboard
-- **Platform (Super Admin):** `/login` → `/platform/dashboard`
+- **Admin:** `/ops/login` → `/ops/orders` (or `/ops/kitchen`)
+- **Platform (Super Admin):** `/ops/login` → `/ops/platform/dashboard`
 - **Customer:** `/menu` → order flow
+- Legacy `/login`, `/orders`, `/platform/*`, `/get-started`, `/pricing` permanently redirect under `/ops/*`
 
 ### 3. Docker (optional)
 

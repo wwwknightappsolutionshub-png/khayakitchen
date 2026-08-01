@@ -40,7 +40,7 @@ function buildSignupHref(searchParams: URLSearchParams): string {
   const next = new URLSearchParams(searchParams.toString());
   next.set("signup", "1");
   const qs = next.toString();
-  return qs ? `/get-started?${qs}` : "/get-started?signup=1";
+  return qs ? `/ops/get-started?${qs}` : "/ops/get-started?signup=1";
 }
 
 function GetStartedClient() {
@@ -81,7 +81,7 @@ function GetStartedClient() {
 
 export function GetStartedClientShell() {
   return (
-    <Suspense fallback={<GetStartedMarketingHero signupHref="/get-started?signup=1" />}>
+    <Suspense fallback={<GetStartedMarketingHero signupHref="/ops/get-started?signup=1" />}>
       <GetStartedClient />
     </Suspense>
   );

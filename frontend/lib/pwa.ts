@@ -62,11 +62,38 @@ export async function fetchServerBuildId(): Promise<string | null> {
   return null;
 }
 
-/** Register network-only SW required for installability and push. */
-export async function registerNetworkOnlyServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+/**
+ * Register network-only SW required for installability and push.
+ *
+ * Phase B: Ops uses `/ops/sw.js` (scope `/ops/`). Customer uses `/sw.js` (scope `/`).
+ * When both are registered, the more-specific `/ops/` scope controls Ops URLs.
+ * On Ops routes we force an update so the Ops worker activates promptly.
+ *
+ * Residual: customer `scope: "/"` can still observe `/ops/*` until Ops SW claims
+ * those clients — network-only fetch means no stale shells; push chrome may still
+ * follow whichever registration delivers the event. Installed Ops chrome is
+ * browser-limited by manifest `scope: "/ops/"`.
+ */
+export async function registerNetworkOnlyServiceWorker(
+  surface: "customer" | "ops" = "customer",
+): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
   try {
-    return await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    if (surface === "ops") {
+      const reg = await navigator.serviceWorker.register("/ops/sw.js", {
+        scope: "/ops/",
+        updateViaCache: "none",
+      });
+      await reg.update().catch(() => undefined);
+      return reg;
+    }
+
+    const reg = await navigator.serviceWorker.register("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    await reg.update().catch(() => undefined);
+    return reg;
   } catch {
     return null;
   }

@@ -139,7 +139,7 @@ export function MarketingChatbot() {
           <div className={cn("flex items-center justify-between border-b px-4 py-3", theme.surfaceBorder)}>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon-192.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
+              <img src="/icon-ops-192.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
               <div>
                 <p className={cn("text-sm font-semibold", theme.heading)}>KhayaOS assistant</p>
                 <p className={cn("text-[11px]", theme.subtle)}>Usually replies in a few seconds</p>

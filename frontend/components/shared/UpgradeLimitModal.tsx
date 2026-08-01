@@ -160,7 +160,7 @@ export function UpgradeLimitModal({ open, onClose, limitError }: UpgradeLimitMod
 
             <p className="text-center text-xs text-violet-300/40">
               Or browse{" "}
-              <Link href="/pricing" className="text-violet-300 hover:underline" onClick={onClose}>
+              <Link href="/ops/pricing" className="text-violet-300 hover:underline" onClick={onClose}>
                 public pricing
               </Link>
             </p>

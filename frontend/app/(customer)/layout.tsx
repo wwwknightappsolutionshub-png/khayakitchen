@@ -21,12 +21,12 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Order",
-  description: "Order from Khaya Kitchen",
-  manifest: "/manifest.json",
+  description: "Order from your kitchen",
+  // Tenant Order app manifest is injected by TenantPwaManifestLink (never Ops /manifest.json).
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Khaya Kitchen",
+    title: "Order",
   },
   icons: {
     icon: [

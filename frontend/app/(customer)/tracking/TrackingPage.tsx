@@ -62,7 +62,7 @@ export default function TrackingPage() {
 
   useEffect(() => {
     void (async () => {
-      if (await detectPwaInstalled()) {
+      if (await detectPwaInstalled("customer")) {
         await tryClaimPwaInstallReward();
       }
     })();

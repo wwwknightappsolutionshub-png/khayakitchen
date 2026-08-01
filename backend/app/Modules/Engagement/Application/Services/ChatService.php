@@ -487,7 +487,7 @@ class ChatService
                                     'thread_id' => $thread->id,
                                     'urgency' => 'high',
                                     'kind' => 'customer_chat',
-                                    'url' => '/inbox',
+                                    'url' => '/ops/inbox',
                                 ],
                             );
                         } catch (\Throwable $e) {
@@ -808,7 +808,7 @@ class ChatService
                         'thread_id' => $thread->id,
                         'urgency' => 'high',
                         'kind' => 'customer_chat',
-                        'url' => '/inbox',
+                        'url' => '/ops/inbox',
                     ],
                 );
             } catch (\Throwable $e) {

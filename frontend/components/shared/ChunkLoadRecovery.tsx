@@ -34,16 +34,16 @@ export function ChunkLoadRecovery() {
       } catch {
         // still attempt recovery
       }
-      const pathname = window.location.pathname || "/login";
+      const pathname = window.location.pathname || "/ops/login";
       // Avoid bouncing auth forms with ?_v=… mid-login.
       if (
-        pathname === "/login" ||
-        pathname === "/reset-app" ||
-        pathname === "/forgot-password" ||
-        pathname === "/reset-password" ||
-        pathname.startsWith("/verify-email")
+        pathname === "/ops/login" ||
+        pathname === "/ops/reset-app" ||
+        pathname === "/ops/forgot-password" ||
+        pathname === "/ops/reset-password" ||
+        pathname.startsWith("/ops/verify-email")
       ) {
-        void hardResetPwa(undefined, "/login");
+        void hardResetPwa(undefined, "/ops/login");
         return;
       }
       void hardResetPwa(undefined, pathname);

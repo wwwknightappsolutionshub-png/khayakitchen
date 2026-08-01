@@ -162,7 +162,7 @@ class EmailVerificationService
   {
     $base = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
 
-  return $base.'/verify-email?'.http_build_query(array_filter([
+  return $base.'/ops/verify-email?'.http_build_query(array_filter([
       'token' => $plainToken,
       'email' => $email,
       'tenant' => $tenantSlug,
@@ -191,7 +191,7 @@ class EmailVerificationService
       ->where('tenant_id', $tenant->id)
       ->first();
 
-    $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/login?'.http_build_query([
+    $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/ops/login?'.http_build_query([
       'email' => $user->email,
       'tenant' => $tenant->slug,
       'welcome' => '1',

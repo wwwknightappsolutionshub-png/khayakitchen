@@ -23,23 +23,25 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
+import { OPS_ROUTES } from "@/lib/ops-paths";
 
 const allNavItems = [
-  { href: "/platform/dashboard", label: "Dashboard", icon: LayoutDashboard, superOnly: true },
-  { href: "/platform/inbox", label: "Inbox", icon: MessageSquare, superOnly: false },
-  { href: "/platform/leads", label: "Leads", icon: UserPlus, superOnly: true },
-  { href: "/platform/staff", label: "Platform Staff", icon: Users, superOnly: true },
-  { href: "/platform/tenants", label: "Tenants", icon: Building2, superOnly: true },
-  { href: "/platform/modules", label: "Modules", icon: Boxes, superOnly: true },
-  { href: "/platform/feature-flags", label: "Feature Flags", icon: Flag, superOnly: true },
-  { href: "/platform/revenue-recovery", label: "Revenue Recovery", icon: Radar, superOnly: true },
-  { href: "/platform/pricing", label: "Plans & Pricing", icon: CreditCard, superOnly: true },
-  { href: "/platform/features", label: "Feature Library", icon: Layers, superOnly: true },
-  { href: "/platform/feature-assignments", label: "Feature Assignments", icon: Grid3X3, superOnly: true },
-  { href: "/platform/billing", label: "Billing", icon: Receipt, superOnly: true },
-  { href: "/platform/audit", label: "Audit", icon: ClipboardList, superOnly: true },
-  { href: "/platform/settings", label: "Settings", icon: Settings, superOnly: true },
+  { href: OPS_ROUTES.platformDashboard, label: "Dashboard", icon: LayoutDashboard, superOnly: true },
+  { href: OPS_ROUTES.platformInbox, label: "Inbox", icon: MessageSquare, superOnly: false },
+  { href: OPS_ROUTES.platformLeads, label: "Leads", icon: UserPlus, superOnly: true },
+  { href: OPS_ROUTES.platformStaff, label: "Platform Staff", icon: Users, superOnly: true },
+  { href: OPS_ROUTES.platformTenants, label: "Tenants", icon: Building2, superOnly: true },
+  { href: OPS_ROUTES.platformModules, label: "Modules", icon: Boxes, superOnly: true },
+  { href: OPS_ROUTES.platformFeatureFlags, label: "Feature Flags", icon: Flag, superOnly: true },
+  { href: OPS_ROUTES.platformRevenueRecovery, label: "Revenue Recovery", icon: Radar, superOnly: true },
+  { href: OPS_ROUTES.platformPricing, label: "Plans & Pricing", icon: CreditCard, superOnly: true },
+  { href: OPS_ROUTES.platformFeatures, label: "Feature Library", icon: Layers, superOnly: true },
+  { href: OPS_ROUTES.platformFeatureAssignments, label: "Feature Assignments", icon: Grid3X3, superOnly: true },
+  { href: OPS_ROUTES.platformBilling, label: "Billing", icon: Receipt, superOnly: true },
+  { href: OPS_ROUTES.platformAudit, label: "Audit", icon: ClipboardList, superOnly: true },
+  { href: OPS_ROUTES.platformSettings, label: "Settings", icon: Settings, superOnly: true },
 ];
 
 export function PlatformSidebar({ mobileOpen = false, onMobileClose }: MobileNavProps) {
@@ -105,6 +107,10 @@ export function PlatformSidebar({ mobileOpen = false, onMobileClose }: MobileNav
       </nav>
 
       <div className="border-t border-violet-500/20 p-3">
+        <AdminPwaInstallNav
+          onNavigate={onMobileClose}
+          className="mb-1 text-violet-200/70 hover:bg-violet-500/10 hover:text-violet-100"
+        />
         <div className="mb-2 px-3">
           <p className="truncate text-sm font-medium text-violet-100">
             {user?.name ?? "Platform user"}

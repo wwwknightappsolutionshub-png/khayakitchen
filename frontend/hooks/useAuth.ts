@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth-store";
+import { OPS_ROUTES } from "@/lib/ops-paths";
 
 export function useAuth() {
   const router = useRouter();
@@ -36,14 +37,16 @@ export function useAuth() {
       // Soft router.push after login raced with boot-gate / chunk recovery reloads.
       let destination = "/";
       if (data.user.role === "super_admin") {
-        destination = "/platform/dashboard";
+        destination = OPS_ROUTES.platformDashboard;
       } else if (
         data.user.role === "platform_admin" ||
         data.user.role === "platform_support"
       ) {
-        destination = "/platform/inbox";
-      } else if (["owner", "manager", "kitchen", "staff"].includes(data.user.role)) {
-        destination = "/admin/dashboard";
+        destination = OPS_ROUTES.platformInbox;
+      } else if (data.user.role === "kitchen") {
+        destination = OPS_ROUTES.kitchen;
+      } else if (["owner", "manager", "staff"].includes(data.user.role)) {
+        destination = OPS_ROUTES.orders;
       }
 
       if (typeof window !== "undefined") {
@@ -76,7 +79,7 @@ export function useAuth() {
     onSettled: () => {
       clearAuth();
       queryClient.clear();
-      router.push("/login");
+      router.push(OPS_ROUTES.login);
     },
   });
 

@@ -7,9 +7,10 @@ import {
   useAuthPersistReady,
   useAuthSessionRecovery,
 } from "@/hooks/useAuthPersistReady";
+import { OPS_ROUTES } from "@/lib/ops-paths";
 
 function redirectToLogin() {
-  window.location.replace(`/login?from=admin&_t=${Date.now()}`);
+  window.location.replace(`${OPS_ROUTES.login}?from=admin&_t=${Date.now()}`);
 }
 
 function redirectPlatform(path: string) {
@@ -58,7 +59,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
-      window.location.replace(`/login?from=admin&stuck=1&_t=${Date.now()}`);
+      window.location.replace(`${OPS_ROUTES.login}?from=admin&stuck=1&_t=${Date.now()}`);
     }, 7000);
     return () => window.clearTimeout(timer);
   }, [isAuthenticated]);
@@ -67,12 +68,12 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     if (!canDecide || !isAuthenticated) return;
 
     if (user?.role === "super_admin") {
-      redirectPlatform("/platform/dashboard");
+      redirectPlatform(OPS_ROUTES.platformDashboard);
       return;
     }
 
     if (user?.role === "platform_admin" || user?.role === "platform_support") {
-      redirectPlatform("/platform/inbox");
+      redirectPlatform(OPS_ROUTES.platformInbox);
     }
   }, [canDecide, isAuthenticated, user?.role]);
 
@@ -81,7 +82,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background px-6 text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         {showManualLink ? (
-          <a href={`/login?from=admin&_t=${Date.now()}`} className="text-sm font-medium text-primary underline">
+          <a href={`${OPS_ROUTES.login}?from=admin&_t=${Date.now()}`} className="text-sm font-medium text-primary underline">
             Continue to sign in
           </a>
         ) : null}
@@ -94,7 +95,7 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background px-6 text-center">
         <p className="text-sm text-muted">Redirecting to sign in…</p>
         {showManualLink ? (
-          <a href={`/login?from=admin&_t=${Date.now()}`} className="text-sm font-medium text-primary underline">
+          <a href={`${OPS_ROUTES.login}?from=admin&_t=${Date.now()}`} className="text-sm font-medium text-primary underline">
             Continue to sign in
           </a>
         ) : (

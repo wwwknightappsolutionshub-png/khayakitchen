@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useStorefront } from "@/hooks/useStorefront";
 
 const MANIFEST_LINK_ID = "khayaos-tenant-manifest";
+const OPS_MANIFEST_LINK_ID = "khayaos-ops-manifest";
 
 export function TenantPwaManifestLink() {
   const { data } = useStorefront();
@@ -13,6 +14,17 @@ export function TenantPwaManifestLink() {
 
   useEffect(() => {
     if (!manifestPath) return;
+
+    // Customer Order app must not advertise the Ops manifest.
+    document.getElementById(OPS_MANIFEST_LINK_ID)?.remove();
+    document
+      .querySelectorAll('link[rel="manifest"]')
+      .forEach((node) => {
+        const href = (node as HTMLLinkElement).href || "";
+        if (href.includes("manifest-ops") || href.endsWith("/manifest.json")) {
+          node.remove();
+        }
+      });
 
     let link = document.getElementById(MANIFEST_LINK_ID) as HTMLLinkElement | null;
     if (!link) {

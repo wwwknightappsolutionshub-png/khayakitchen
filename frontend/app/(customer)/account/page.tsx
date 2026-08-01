@@ -497,7 +497,7 @@ export default function AccountPage() {
 
         <p className="mt-8 text-center text-xs text-[var(--muted)]">
           Business owner?{" "}
-          <Link href="/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
+          <Link href="/ops/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
             Admin login
           </Link>
         </p>
@@ -1134,7 +1134,7 @@ export default function AccountPage() {
 
       <p className="mt-8 text-center text-xs text-[var(--muted)]">
         Business owner?{" "}
-        <Link href="/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
+        <Link href="/ops/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
           Admin login
         </Link>
       </p>

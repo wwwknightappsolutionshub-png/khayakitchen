@@ -2,16 +2,23 @@ import { engagementService } from "@/services/engagement.service";
 import { customerNotificationsService } from "@/services/customer-notifications.service";
 import { realtimeService } from "@/services/realtime.service";
 import { registerNetworkOnlyServiceWorker } from "@/lib/pwa";
+import { isOpsPath } from "@/lib/ops-paths";
 
 export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+export type PwaSurface = "customer" | "ops";
+
 type InstallPromptListener = (event: BeforeInstallPromptEvent | null) => void;
 type InstallUiListener = (open: boolean) => void;
 
-const PWA_INSTALLED_KEY = "khayaos_pwa_installed";
+/** @deprecated Prefer surface-specific keys via markPwaInstalled(surface). */
+export const LEGACY_PWA_INSTALLED_KEY = "khayaos_pwa_installed";
+export const CUSTOMER_PWA_INSTALLED_KEY = "khayaos_customer_pwa_installed";
+export const OPS_PWA_INSTALLED_KEY = "khayaos_ops_pwa_installed";
+
 export const PWA_INSTALL_UI_EVENT = "khayaos-pwa-install-ui";
 /** Ask PwaInstallPrompt to open (toast CTA / claim flow). */
 export const PWA_INSTALL_REQUEST_EVENT = "khayaos-pwa-install-request";
@@ -29,20 +36,48 @@ function notifyInstallPromptListeners(): void {
   }
 }
 
-export function markPwaInstalled(): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(PWA_INSTALLED_KEY, "1");
+function installedKeyFor(surface: PwaSurface): string {
+  return surface === "ops" ? OPS_PWA_INSTALLED_KEY : CUSTOMER_PWA_INSTALLED_KEY;
 }
 
-export function clearPwaInstalledMark(): void {
+/** Infer which PWA surface the current path belongs to. */
+export function inferPwaSurface(pathname?: string): PwaSurface {
+  if (typeof window === "undefined" && !pathname) return "customer";
+  const path = pathname ?? window.location.pathname;
+  return isOpsPath(path) ? "ops" : "customer";
+}
+
+function migrateLegacyInstallMark(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(PWA_INSTALLED_KEY);
+  if (localStorage.getItem(LEGACY_PWA_INSTALLED_KEY) !== "1") return;
+  // Credit only the surface for the current path so the other app can still be installed.
+  const surface = inferPwaSurface();
+  localStorage.setItem(installedKeyFor(surface), "1");
+  localStorage.removeItem(LEGACY_PWA_INSTALLED_KEY);
+}
+
+export function markPwaInstalled(surface: PwaSurface = inferPwaSurface()): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(installedKeyFor(surface), "1");
+  localStorage.removeItem(LEGACY_PWA_INSTALLED_KEY);
+}
+
+export function clearPwaInstalledMark(surface?: PwaSurface): void {
+  if (typeof window === "undefined") return;
+  if (surface) {
+    localStorage.removeItem(installedKeyFor(surface));
+    return;
+  }
+  localStorage.removeItem(CUSTOMER_PWA_INSTALLED_KEY);
+  localStorage.removeItem(OPS_PWA_INSTALLED_KEY);
+  localStorage.removeItem(LEGACY_PWA_INSTALLED_KEY);
 }
 
 /** Capture beforeinstallprompt as early as possible (once per page load). */
 export function bindPwaInstallPromptCapture(): void {
   if (typeof window === "undefined" || captureBound) return;
   captureBound = true;
+  migrateLegacyInstallMark();
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -51,10 +86,13 @@ export function bindPwaInstallPromptCapture(): void {
   });
 
   window.addEventListener("appinstalled", () => {
-    markPwaInstalled();
+    const surface = inferPwaSurface();
+    markPwaInstalled(surface);
     deferredInstallPrompt = null;
     notifyInstallPromptListeners();
-    void tryClaimPwaInstallReward();
+    if (surface === "customer") {
+      void tryClaimPwaInstallReward();
+    }
   });
 }
 
@@ -144,7 +182,7 @@ export async function tryClaimPwaInstallReward(): Promise<boolean> {
   if (!customerId || !phone) return false;
 
   const email = localStorage.getItem("khayaos-customer-email") ?? undefined;
-  markPwaInstalled();
+  markPwaInstalled("customer");
 
   try {
     const { loyaltyService } = await import("@/services/loyalty.service");
@@ -173,7 +211,7 @@ export async function requestGuestWebPushAfterInstall(): Promise<"granted" | "de
 
   const reg =
     (await navigator.serviceWorker.ready.catch(() => null)) ??
-    (await registerNetworkOnlyServiceWorker());
+    (await registerNetworkOnlyServiceWorker("customer"));
   if (!reg) return "granted";
 
   const publicConfig = await realtimeService.getPublicConfig().catch(() => null);
@@ -215,14 +253,20 @@ export function isStandaloneDisplay(): boolean {
   return standalone || fullscreen || minimalUi || iosStandalone;
 }
 
-/** True when running as installed app, or when install was completed on this device. */
-export async function detectPwaInstalled(): Promise<boolean> {
+/** True when running as installed app for this surface, or install completed on this device. */
+export async function detectPwaInstalled(
+  surface: PwaSurface = inferPwaSurface(),
+): Promise<boolean> {
   if (typeof window === "undefined") return false;
+  migrateLegacyInstallMark();
+
   if (isStandaloneDisplay()) {
-    markPwaInstalled();
-    return true;
+    const current = inferPwaSurface();
+    markPwaInstalled(current);
+    return current === surface || localStorage.getItem(installedKeyFor(surface)) === "1";
   }
-  if (localStorage.getItem(PWA_INSTALLED_KEY) === "1") {
+
+  if (localStorage.getItem(installedKeyFor(surface)) === "1") {
     return true;
   }
 
@@ -232,8 +276,10 @@ export async function detectPwaInstalled(): Promise<boolean> {
   if (typeof nav.getInstalledRelatedApps === "function") {
     try {
       const related = await nav.getInstalledRelatedApps();
-      if (related.length > 0) {
-        markPwaInstalled();
+      const needle = surface === "ops" ? "manifest-ops" : "pwa-manifest";
+      const match = related.some((app) => (app.url ?? "").includes(needle));
+      if (match) {
+        markPwaInstalled(surface);
         return true;
       }
     } catch {
@@ -263,12 +309,13 @@ export function notificationPermission(): NotificationPermission | "unsupported"
   return Notification.permission;
 }
 
-export function notificationBlockedHelp(): string {
+export function notificationBlockedHelp(surface: PwaSurface = inferPwaSurface()): string {
+  const appLabel = surface === "ops" ? "KhayaOS Ops" : "this kitchen app";
   if (isIosDevice()) {
-    return "Notifications are blocked. On iPhone: Settings → Notifications → find KhayaOS or Safari → Allow Notifications.";
+    return `Notifications are blocked. On iPhone: Settings → Notifications → find ${appLabel} or Safari → Allow Notifications.`;
   }
   if (isAndroidDevice()) {
-    return "Notifications are blocked. On Android: Settings → Apps → Chrome (or KhayaOS) → Notifications → Allow, then try again.";
+    return `Notifications are blocked. On Android: Settings → Apps → Chrome (or ${appLabel}) → Notifications → Allow, then try again.`;
   }
   return "Notifications are blocked in this browser. Allow notifications for this site in browser settings, then try again.";
 }
@@ -300,7 +347,7 @@ export async function registerStaffWebPush(options?: {
 
   const reg =
     (await navigator.serviceWorker.ready.catch(() => null)) ??
-    (await registerNetworkOnlyServiceWorker());
+    (await registerNetworkOnlyServiceWorker("ops"));
   if (!reg) return false;
 
   const publicConfig = await realtimeService.getPublicConfig().catch(() => null);

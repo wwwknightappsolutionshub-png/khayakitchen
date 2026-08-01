@@ -1,5 +1,5 @@
-// Network-only service worker for installability and push.
-// Does not cache app shells — avoids stale Next.js bundles.
+// Customer Order network-only service worker (Phase B).
+// Root scope "/" covers storefront routes (/ , /r/{slug}, /menu, /cart, …).
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -21,7 +21,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let payload = { title: "KhayaOS", body: "You have a new update" };
+  let payload = { title: "KhayaOS", body: "You have a new update", surface: "customer" };
   try {
     if (event.data) {
       payload = { ...payload, ...event.data.json() };
@@ -30,19 +30,22 @@ self.addEventListener("push", (event) => {
     // keep defaults
   }
 
+  const title = payload.title || "KhayaOS";
+  const icon = payload.icon || "/icon-192.png";
+
   event.waitUntil(
-    self.registration.showNotification(payload.title || "KhayaOS", {
+    self.registration.showNotification(title, {
       body: payload.body || "",
-      data: payload.data || {},
-      icon: payload.icon || "/icon-192.png",
+      data: { ...(payload.data || {}), surface: "customer" },
+      icon,
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl =
-    (event.notification.data && event.notification.data.url) || "/";
+  const data = event.notification.data || {};
+  const targetUrl = data.url || "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsArr) => {
       for (const client of clientsArr) {

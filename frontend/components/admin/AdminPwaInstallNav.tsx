@@ -37,7 +37,7 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
   const [status, setStatus] = useState<string | null>(null);
 
   const resolveMode = async () => {
-    const installed = await detectPwaInstalled();
+    const installed = await detectPwaInstalled("ops");
     const permission = notificationPermission();
 
     if (installed) {
@@ -96,14 +96,14 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
     setStatus(null);
     try {
       if (notificationPermission() === "denied") {
-        setError(notificationBlockedHelp());
+        setError(notificationBlockedHelp("ops"));
         return false;
       }
 
       const ok = await registerStaffWebPush({ requestPermission: true });
       if (!ok) {
         if (notificationPermission() === "denied") {
-          setError(notificationBlockedHelp());
+          setError(notificationBlockedHelp("ops"));
         } else {
           setError("Could not enable push alerts on this device. Try again after allowing notifications.");
         }
@@ -137,7 +137,7 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
         return;
       }
 
-      markPwaInstalled();
+      markPwaInstalled("ops");
       setMode("notify");
       setStatus("App install started. Next, enable notifications so platform push can reach you.");
 
@@ -153,7 +153,7 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
         setStatus("Installed and registered for push alerts. You can close this.");
         setMode("hidden");
       } else if (notificationPermission() === "denied") {
-        setError(notificationBlockedHelp());
+        setError(notificationBlockedHelp("ops"));
       }
     } catch {
       setError("Install was cancelled or failed. You can try again.");
@@ -193,14 +193,14 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
               ) : (
                 <Download className="h-5 w-5 text-primary" />
               )}
-              {notifyOnly ? "Enable notifications" : "Install KhayaOS"}
+              {notifyOnly ? "Enable notifications" : "Install KhayaOS Ops"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {notifyOnly ? (
               <>
                 <p className="text-sm text-muted">
-                  KhayaOS is already installed on this device. Enable notifications to receive
+                  KhayaOS Ops is already installed on this device. Enable notifications to receive
                   platform push alerts.
                 </p>
                 {android ? (
@@ -223,33 +223,33 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
             ) : (
               <>
                 <p className="text-sm text-muted">
-                  Install the admin app for faster access, then enable notifications for platform
-                  push alerts.
+                  Install KhayaOS Ops for faster kitchen access, then enable notifications for
+                  platform push alerts.
                 </p>
                 {canNativeInstall ? (
                   <p className="text-sm text-foreground">
-                    Tap <span className="font-semibold">Install</span> to add KhayaOS to your home
-                    screen.
+                    Tap <span className="font-semibold">Install</span> to add KhayaOS Ops to your
+                    home screen.
                   </p>
                 ) : ios ? (
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
                     <li>Tap Share in Safari</li>
                     <li>Choose Add to Home Screen</li>
-                    <li>Open KhayaOS from your home screen</li>
+                    <li>Open KhayaOS Ops from your home screen</li>
                     <li>Come back here and enable notifications</li>
                   </ol>
                 ) : android ? (
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
                     <li>Tap the Chrome menu (⋮)</li>
                     <li>Choose Install app or Add to Home screen</li>
-                    <li>Open KhayaOS from your home screen</li>
+                    <li>Open KhayaOS Ops from your home screen</li>
                     <li>Tap Enable notifications when it appears</li>
                   </ol>
                 ) : (
                   <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
                     <li>Open your browser menu</li>
                     <li>Choose Install app or Add to Home screen</li>
-                    <li>Open the installed app, then enable notifications</li>
+                    <li>Open KhayaOS Ops, then enable notifications</li>
                   </ol>
                 )}
               </>

@@ -29,25 +29,26 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEngagementBadges } from "@/hooks/useEngagementBadges";
 import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
+import { OPS_ROUTES } from "@/lib/ops-paths";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, flag: "dashboard", badge: "dashboard" as const },
-  { href: "/orders", label: "Orders", icon: ShoppingBag, flag: "orders", badge: "orders" as const },
-  { href: "/accounts", label: "Accounts", icon: Landmark, flag: "orders" },
-  { href: "/kitchen", label: "Kitchen", icon: ChefHat, flag: "kitchen", badge: "kitchen" as const },
-  { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed, flag: "menu" },
-  { href: "/inventory", label: "Inventory", icon: Package, flag: "inventory" },
-  { href: "/crm", label: "CRM", icon: Users, flag: "crm", badge: "crm" as const },
-  { href: "/loyalty", label: "Loyalty", icon: Gift, flag: "loyalty" },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare, flag: null, badge: "chat" as const },
-  { href: "/reviews", label: "Reviews", icon: Star, flag: "kitchen_reviews", badge: "reviews" as const },
-  { href: "/seasonal-promo", label: "Seasonal Promo", icon: Sparkles, flag: "seasonal_promo" },
-  { href: "/marketing", label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
-  { href: "/revenue-recovery", label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
-  { href: "/branding", label: "Branding", icon: Store, flag: null },
-  { href: "/reports", label: "Reports", icon: BarChart3, flag: "reporting" },
-  { href: "/staff-performance", label: "Staff performance", icon: Activity, flag: "staff_performance" },
-  { href: "/settings", label: "Settings", icon: Settings, flag: null },
+  { href: OPS_ROUTES.adminDashboard, label: "Dashboard", icon: LayoutDashboard, flag: "dashboard", badge: "dashboard" as const },
+  { href: OPS_ROUTES.orders, label: "Orders", icon: ShoppingBag, flag: "orders", badge: "orders" as const },
+  { href: OPS_ROUTES.accounts, label: "Accounts", icon: Landmark, flag: "orders" },
+  { href: OPS_ROUTES.kitchen, label: "Kitchen", icon: ChefHat, flag: "kitchen", badge: "kitchen" as const },
+  { href: OPS_ROUTES.adminMenu, label: "Menu", icon: UtensilsCrossed, flag: "menu" },
+  { href: OPS_ROUTES.inventory, label: "Inventory", icon: Package, flag: "inventory" },
+  { href: OPS_ROUTES.crm, label: "CRM", icon: Users, flag: "crm", badge: "crm" as const },
+  { href: OPS_ROUTES.loyalty, label: "Loyalty", icon: Gift, flag: "loyalty" },
+  { href: OPS_ROUTES.inbox, label: "Inbox", icon: MessageSquare, flag: null, badge: "chat" as const },
+  { href: OPS_ROUTES.reviews, label: "Reviews", icon: Star, flag: "kitchen_reviews", badge: "reviews" as const },
+  { href: OPS_ROUTES.seasonalPromo, label: "Seasonal Promo", icon: Sparkles, flag: "seasonal_promo" },
+  { href: OPS_ROUTES.marketing, label: "Marketing", icon: Megaphone, flag: "notifications.campaigns" },
+  { href: OPS_ROUTES.revenueRecovery, label: "Revenue Recovery", icon: Leaf, flag: "revenue_recovery" },
+  { href: OPS_ROUTES.branding, label: "Branding", icon: Store, flag: null },
+  { href: OPS_ROUTES.reports, label: "Reports", icon: BarChart3, flag: "reporting" },
+  { href: OPS_ROUTES.staffPerformance, label: "Staff performance", icon: Activity, flag: "staff_performance" },
+  { href: OPS_ROUTES.settings, label: "Settings", icon: Settings, flag: null },
 ];
 
 interface SidebarProps extends MobileNavProps {}
@@ -66,7 +67,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   } = useEngagementBadges();
 
   const visibleItems = navItems.filter((item) => {
-    if (item.href === "/staff-performance" || item.href === "/seasonal-promo") {
+    if (item.href === OPS_ROUTES.staffPerformance || item.href === OPS_ROUTES.seasonalPromo) {
       return (
         (user?.role === "owner" || user?.role === "manager") &&
         (!item.flag || isEnabled(item.flag))

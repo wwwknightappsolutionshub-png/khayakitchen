@@ -39,7 +39,7 @@ export function MarketingPwaInstallGate() {
 
     void (async () => {
       if (typeof window === "undefined") return;
-      if (isStandaloneDisplay() || (await detectPwaInstalled())) return;
+      if (isStandaloneDisplay() || (await detectPwaInstalled("ops"))) return;
       if (sessionStorage.getItem(DISMISS_KEY) === "1") return;
 
       timer = window.setTimeout(() => {
@@ -84,7 +84,7 @@ export function MarketingPwaInstallGate() {
       await prompt.prompt();
       const choice = await prompt.userChoice;
       if (choice.outcome === "accepted") {
-        markPwaInstalled();
+        markPwaInstalled("ops");
         clearDeferredInstallPrompt();
         setOpen(false);
       } else {
@@ -117,10 +117,10 @@ export function MarketingPwaInstallGate() {
         <div className={cn("mb-4 flex h-12 w-12 items-center justify-center rounded-2xl", theme.iconBox)}>
           <Download className="h-6 w-6" />
         </div>
-        <h2 className={cn("text-xl font-semibold", theme.heading)}>Install KhayaOS</h2>
+        <h2 className={cn("text-xl font-semibold", theme.heading)}>Install KhayaOS Ops</h2>
         <p className={cn("mt-2 text-sm leading-relaxed", theme.muted)}>
-          Add KhayaOS to your home screen for one-tap access to your kitchen workspace — faster than
-          the browser tab.
+          Add KhayaOS Ops to your home screen for one-tap access to your kitchen workspace — faster
+          than the browser tab.
         </p>
         {ios ? (
           <ol className={cn("mt-4 list-decimal space-y-2 pl-5 text-sm", theme.body)}>

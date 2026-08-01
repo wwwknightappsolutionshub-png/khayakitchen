@@ -61,7 +61,7 @@ class StaffUserService
         ]);
 
         $tenant = Tenant::withoutGlobalScopes()->find($tenantId);
-        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/login';
+        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/ops/login';
 
         try {
             Mail::to($user->email)->send(new StaffInviteMail(

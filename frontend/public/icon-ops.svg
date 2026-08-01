@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KhayaOS Ops">
+  <defs>
+    <linearGradient id="opsFill" x1="80" y1="80" x2="420" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#52B788"/>
+      <stop offset="0.55" stop-color="#2D6A4F"/>
+      <stop offset="1" stop-color="#1B4332"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0F0F10"/>
+  <circle cx="256" cy="248" r="168" fill="#2D6A4F" opacity="0.18"/>
+  <!-- Ops shield -->
+  <path d="M256 96c72 28 128 36 128 36v120c0 88-56 148-128 176-72-28-128-88-128-176V132s56-8 128-36z" fill="url(#opsFill)"/>
+  <text x="256" y="280" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="700" fill="#F7F6F3">K</text>
+  <text x="256" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="600" fill="#D8F3DC" letter-spacing="4">OPS</text>
+</svg>

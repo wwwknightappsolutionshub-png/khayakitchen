@@ -63,7 +63,7 @@ export function KitchenSignupSplash({ onComplete }: KitchenSignupSplashProps) {
         <div className="signup-splash-logo-ring relative mb-8 flex h-36 w-36 items-center justify-center rounded-[2rem] border border-amber-500/25 bg-[#14100c]/80 shadow-[0_0_80px_rgba(224,122,95,0.25)] backdrop-blur-sm">
           <div className="signup-splash-logo-pulse absolute inset-0 rounded-[2rem]" />
           <Image
-            src="/icon.svg"
+            src="/icon-ops.svg"
             alt="KhayaOS"
             width={96}
             height={96}

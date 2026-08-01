@@ -255,7 +255,7 @@ class PaymentAccountsService
                 'size' => $payment->proof_size,
                 'uploaded_at' => $payment->proof_uploaded_at?->toIso8601String(),
             ] : null,
-            'orders_path' => '/orders',
+            'orders_path' => '/ops/orders',
         ];
     }
 

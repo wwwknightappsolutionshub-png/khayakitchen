@@ -38,7 +38,7 @@ class TenantPwaManifestService
         );
         $workspace = $this->workspaceService->getPublicStorefrontConfig($tenant->id);
         $orderingPath = (string) ($workspace['ordering_path'] ?? ('/r/'.$tenant->slug));
-        $name = (string) ($branding['restaurant_name'] ?: $tenant->name ?: 'KhayaOS');
+        $name = (string) ($branding['restaurant_name'] ?: $tenant->name ?: 'Kitchen');
         $shortName = mb_substr($name, 0, 12);
         $themeColor = (string) ($branding['primary_color'] ?: '#E07A5F');
         $logoUrl = $this->absoluteIconUrl($branding['logo_url'] ?? null);
@@ -83,6 +83,13 @@ class TenantPwaManifestService
             'background_color' => '#F7F6F3',
             'theme_color' => $themeColor,
             'orientation' => 'portrait-primary',
+            'prefer_related_applications' => false,
+            'related_applications' => [
+                [
+                    'platform' => 'webapp',
+                    'url' => '/pwa-manifest/'.$tenant->slug,
+                ],
+            ],
             'icons' => $icons,
         ];
     }

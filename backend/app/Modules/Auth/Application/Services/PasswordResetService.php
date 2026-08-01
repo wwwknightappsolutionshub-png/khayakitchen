@@ -139,7 +139,7 @@ class PasswordResetService
     {
         $base = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
 
-        return $base.'/reset-password?'.http_build_query(array_filter([
+        return $base.'/ops/reset-password?'.http_build_query(array_filter([
             'token' => $plainToken,
             'email' => $email,
             'tenant' => $tenantSlug,

@@ -1,5 +1,5 @@
 export const APP_BUILD_STORAGE_KEY = "khayaos_app_build";
-export const PWA_CACHE_EPOCH = "14";
+export const PWA_CACHE_EPOCH = "16";
 export const PWA_CACHE_EPOCH_KEY = "khayaos_cache_epoch";
 export const BOOT_RELOAD_KEY = "khayaos_boot_reload";
 export const RESET_COUNT_KEY = "khayaos_reset_count";
@@ -93,11 +93,11 @@ export function getPwaBootGateScript(pageBuild: string): string {
   function isAuthSurface(){
     try{
       var p=window.location.pathname||"";
-      return p==="/login"
-        ||p==="/reset-app"
-        ||p==="/forgot-password"
-        ||p==="/reset-password"
-        ||p.indexOf("/verify-email")===0;
+      return p==="/ops/login"
+        ||p==="/ops/reset-app"
+        ||p==="/ops/forgot-password"
+        ||p==="/ops/reset-password"
+        ||p.indexOf("/ops/verify-email")===0;
     }catch(e){
       return false;
     }

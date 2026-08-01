@@ -7,6 +7,7 @@ import { ThemeBoot } from "@/components/shared/ThemeBoot";
 import { AuthHydration } from "@/components/shared/AuthHydration";
 import { PwaBootGate } from "@/components/shared/PwaBootGate";
 import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
+import { WrongSurfaceBanner } from "@/components/shared/WrongSurfaceBanner";
 import { ChunkLoadRecovery } from "@/components/shared/ChunkLoadRecovery";
 import { getBuildId } from "@/lib/build-id";
 import "./globals.css";
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
     template: "%s | KhayaOS",
   },
   description: "Business Operating System for Food Businesses",
-  manifest: "/manifest.json",
+  // Neutral defaults — route groups override with Order vs Ops identity.
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -94,6 +95,7 @@ export default function RootLayout({
           <ToastProvider>
             <ThemeBoot />
             <PwaLifecycle />
+            <WrongSurfaceBanner />
             <ChunkLoadRecovery />
             <AuthHydration>{children}</AuthHydration>
           </ToastProvider>

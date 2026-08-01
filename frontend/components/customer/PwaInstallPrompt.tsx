@@ -9,9 +9,11 @@ import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
 import {
   type BeforeInstallPromptEvent,
   clearDeferredInstallPrompt,
+  detectPwaInstalled,
   getDeferredInstallPrompt,
   isIosDevice,
   isStandaloneDisplay,
+  markPwaInstalled,
   PWA_INSTALL_REQUEST_EVENT,
   requestGuestWebPushAfterInstall,
   setPwaInstallUiOpen,
@@ -34,11 +36,19 @@ export function PwaInstallPrompt() {
   const readyToPromptRef = useRef(false);
   const scheduledInitialRef = useRef(false);
   const openRef = useRef(false);
+  const installedRef = useRef(false);
   const repromptTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    void detectPwaInstalled("customer").then((installed) => {
+      installedRef.current = installed;
+    });
+  }, [slug]);
 
   const canShow = () => {
     if (!slug) return false;
     if (isStandaloneDisplay()) return false;
+    if (installedRef.current) return false;
     return true;
   };
 
@@ -158,6 +168,8 @@ export function PwaInstallPrompt() {
       setDeferredPrompt(null);
 
       if (choice.outcome === "accepted") {
+        markPwaInstalled("customer");
+        installedRef.current = true;
         // Install started — request notifications next, claim loyalty, then close immediately.
         await requestGuestWebPushAfterInstall();
         await tryClaimPwaInstallReward();

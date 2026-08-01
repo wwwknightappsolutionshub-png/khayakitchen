@@ -62,7 +62,7 @@ class TenantReferralService
             ->count();
 
         $frontend = rtrim((string) config('app.frontend_url', config('app.url')), '/');
-        $link = $frontend.'/get-started?ref='.urlencode($code->code);
+        $link = $frontend.'/ops/get-started?ref='.urlencode($code->code);
 
         return [
             'code' => $code->code,
@@ -112,7 +112,7 @@ class TenantReferralService
         $code = $this->ensureCodeForTenant($tenantId);
         $tenant = Tenant::withoutGlobalScopes()->findOrFail($tenantId);
         $frontend = rtrim((string) config('app.frontend_url', config('app.url')), '/');
-        $link = $frontend.'/get-started?ref='.urlencode($code->code);
+        $link = $frontend.'/ops/get-started?ref='.urlencode($code->code);
 
         $lead = TenantReferralLead::create([
             'referral_code_id' => $code->id,

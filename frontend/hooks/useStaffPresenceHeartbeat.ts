@@ -34,7 +34,7 @@ export function useStaffPresenceHeartbeat(enabled = true) {
 
     const claimPwaIfInstalled = async () => {
       if (claimedPwa.current) return;
-      const installed = await detectPwaInstalled();
+      const installed = await detectPwaInstalled("ops");
       if (!installed || cancelled) return;
       claimedPwa.current = true;
       void presenceService.claimStaffPwa().catch(() => {

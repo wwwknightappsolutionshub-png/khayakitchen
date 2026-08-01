@@ -80,7 +80,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
           email: response.owner_email,
           tenant: response.tenant.slug,
         });
-        router.push(`/verify-email-pending?${params.toString()}`);
+        router.push(`/ops/verify-email-pending?${params.toString()}`);
       }, 1200);
     },
     onError: (error) => {
