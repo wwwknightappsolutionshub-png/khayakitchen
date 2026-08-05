@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -34,11 +34,49 @@ export default function PlatformSettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [splashUploading, setSplashUploading] = useState(false);
   const [splashSaveSuccess, setSplashSaveSuccess] = useState<string | null>(null);
+  const [whatsappError, setWhatsappError] = useState<string | null>(null);
+  const [whatsappSuccess, setWhatsappSuccess] = useState<string | null>(null);
+  const [whatsappForm, setWhatsappForm] = useState({
+    enabled: false,
+    provider: "genius" as "genius" | "meta" | "twilio",
+    api_key: "",
+    session_id: "",
+    base_url: "https://restapi.geniusdevel.com",
+    meta_phone_number_id: "",
+    meta_access_token: "",
+    twilio_account_sid: "",
+    twilio_auth_token: "",
+    twilio_from: "",
+  });
 
   const { data: settingsData, isLoading: settingsLoading } = useQuery({
     queryKey: ["platform", "settings"],
     queryFn: () => platformSettingsService.getSettings(),
   });
+
+  const { data: whatsappData, isLoading: whatsappLoading } = useQuery({
+    queryKey: ["platform", "whatsapp"],
+    queryFn: () => platformSettingsService.getWhatsApp(),
+  });
+
+  useEffect(() => {
+    const wa = whatsappData?.whatsapp;
+    if (!wa) return;
+    setWhatsappForm((prev) => ({
+      ...prev,
+      enabled: wa.enabled,
+      provider: wa.provider,
+      session_id: wa.session_id ?? "",
+      base_url: wa.base_url ?? "https://restapi.geniusdevel.com",
+      meta_phone_number_id: wa.meta_phone_number_id ?? "",
+      twilio_account_sid: wa.twilio_account_sid ?? "",
+      twilio_from: wa.twilio_from ?? "",
+      // Keep secret fields blank unless user types new values
+      api_key: "",
+      meta_access_token: "",
+      twilio_auth_token: "",
+    }));
+  }, [whatsappData?.whatsapp]);
 
   const settings = settingsData?.settings;
   const displayedEmail = emailForm.email || user?.email || "";
@@ -87,6 +125,33 @@ export default function PlatformSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["platform", "public-config"] });
       setSplashForm({});
       setSplashSaveSuccess("Splash screen settings saved.");
+    },
+  });
+
+  const updateWhatsAppMutation = useMutation({
+    mutationFn: () =>
+      platformSettingsService.updateWhatsApp({
+        enabled: whatsappForm.enabled,
+        provider: whatsappForm.provider,
+        api_key: whatsappForm.api_key.trim() || null,
+        session_id: whatsappForm.session_id.trim() || null,
+        base_url: whatsappForm.base_url.trim() || null,
+        meta_phone_number_id: whatsappForm.meta_phone_number_id.trim() || null,
+        meta_access_token: whatsappForm.meta_access_token.trim() || null,
+        twilio_account_sid: whatsappForm.twilio_account_sid.trim() || null,
+        twilio_auth_token: whatsappForm.twilio_auth_token.trim() || null,
+        twilio_from: whatsappForm.twilio_from.trim() || null,
+      }),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["platform", "whatsapp"], response);
+      setWhatsappError(null);
+      setWhatsappSuccess("WhatsApp platform sender saved.");
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(
+        err instanceof ApiClientError ? err.message : "Failed to update WhatsApp settings.",
+      );
     },
   });
 
@@ -458,6 +523,176 @@ export default function PlatformSettingsPage() {
                   />
                   <p className="mt-1 text-xs text-muted">Separate messages with | . Saved with splash settings above.</p>
                 </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/15 bg-[#0f1117] lg:col-span-2">
+          <CardHeader>
+            <CardTitle>WhatsApp platform sender</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {whatsappLoading ? (
+              <p className="text-sm text-muted">Loading WhatsApp settings…</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted">
+                  Platform fallback for OTPs, order updates, and campaigns when a tenant has not
+                  connected their own WhatsApp Business credentials. Genius API is the default
+                  provider (`POST /api/send` with `x-api-key`).
+                </p>
+                {whatsappData?.whatsapp?.configured ? (
+                  <Badge variant="primary">
+                    Active · {whatsappData.whatsapp.active_provider}
+                  </Badge>
+                ) : (
+                  <Badge variant="warning">Not configured</Badge>
+                )}
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="accent-primary"
+                    checked={whatsappForm.enabled}
+                    onChange={(e) =>
+                      setWhatsappForm((f) => ({ ...f, enabled: e.target.checked }))
+                    }
+                  />
+                  <span className="text-sm font-medium">Enable platform WhatsApp sender</span>
+                </label>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Provider</label>
+                  <select
+                    value={whatsappForm.provider}
+                    onChange={(e) =>
+                      setWhatsappForm((f) => ({
+                        ...f,
+                        provider: e.target.value as "genius" | "meta" | "twilio",
+                      }))
+                    }
+                    className="h-10 w-full rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-sm"
+                  >
+                    <option value="genius">Genius API</option>
+                    <option value="meta">Meta Cloud API</option>
+                    <option value="twilio">Twilio</option>
+                  </select>
+                </div>
+                {whatsappForm.provider === "genius" ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label={
+                        whatsappData?.whatsapp?.has_api_key
+                          ? "API key (leave blank to keep)"
+                          : "API key"
+                      }
+                      type="password"
+                      autoComplete="off"
+                      value={whatsappForm.api_key}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, api_key: e.target.value }))
+                      }
+                      placeholder="api-…"
+                    />
+                    <Input
+                      label="Session ID"
+                      value={whatsappForm.session_id}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, session_id: e.target.value }))
+                      }
+                      placeholder="session_…"
+                    />
+                    <div className="md:col-span-2">
+                      <Input
+                        label="Base URL"
+                        value={whatsappForm.base_url}
+                        onChange={(e) =>
+                          setWhatsappForm((f) => ({ ...f, base_url: e.target.value }))
+                        }
+                        placeholder="https://restapi.geniusdevel.com"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                {whatsappForm.provider === "meta" ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Phone number ID"
+                      value={whatsappForm.meta_phone_number_id}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({
+                          ...f,
+                          meta_phone_number_id: e.target.value,
+                        }))
+                      }
+                    />
+                    <Input
+                      label={
+                        whatsappData?.whatsapp?.has_meta_access_token
+                          ? "Access token (leave blank to keep)"
+                          : "Access token"
+                      }
+                      type="password"
+                      autoComplete="off"
+                      value={whatsappForm.meta_access_token}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({
+                          ...f,
+                          meta_access_token: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ) : null}
+                {whatsappForm.provider === "twilio" ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Account SID"
+                      value={whatsappForm.twilio_account_sid}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({
+                          ...f,
+                          twilio_account_sid: e.target.value,
+                        }))
+                      }
+                    />
+                    <Input
+                      label={
+                        whatsappData?.whatsapp?.has_twilio_auth_token
+                          ? "Auth token (leave blank to keep)"
+                          : "Auth token"
+                      }
+                      type="password"
+                      autoComplete="off"
+                      value={whatsappForm.twilio_auth_token}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({
+                          ...f,
+                          twilio_auth_token: e.target.value,
+                        }))
+                      }
+                    />
+                    <Input
+                      label="From number"
+                      value={whatsappForm.twilio_from}
+                      onChange={(e) =>
+                        setWhatsappForm((f) => ({ ...f, twilio_from: e.target.value }))
+                      }
+                      placeholder="whatsapp:+1415..."
+                    />
+                  </div>
+                ) : null}
+                {whatsappError ? (
+                  <p className="text-sm text-danger">{whatsappError}</p>
+                ) : null}
+                {whatsappSuccess ? (
+                  <p className="text-sm text-emerald-400">{whatsappSuccess}</p>
+                ) : null}
+                <Button
+                  onClick={() => updateWhatsAppMutation.mutate()}
+                  isLoading={updateWhatsAppMutation.isPending}
+                >
+                  Save WhatsApp
+                </Button>
               </>
             )}
           </CardContent>

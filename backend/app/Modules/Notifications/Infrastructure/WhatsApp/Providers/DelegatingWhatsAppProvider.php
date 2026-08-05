@@ -11,19 +11,32 @@ class DelegatingWhatsAppProvider implements WhatsAppProviderInterface
         private WhatsAppCredentialResolver $credentialResolver,
         private MetaCloudWhatsAppProvider $metaProvider,
         private TwilioWhatsAppProvider $twilioProvider,
+        private GeniusWhatsAppProvider $geniusProvider,
     ) {}
 
     public function send(string $toPhone, string $message, array $context = []): void
     {
         $tenantId = isset($context['tenant_id']) ? (string) $context['tenant_id'] : null;
         $resolved = $this->credentialResolver->resolve($tenantId);
+        $merged = array_merge($context, ['credential_source' => $resolved['source']]);
+
+        if ($resolved['provider'] === 'genius') {
+            $this->geniusProvider->sendWithCredentials(
+                $toPhone,
+                $message,
+                $resolved['genius'],
+                $merged,
+            );
+
+            return;
+        }
 
         if ($resolved['provider'] === 'twilio') {
             $this->twilioProvider->sendWithCredentials(
                 $toPhone,
                 $message,
                 $resolved['twilio'],
-                array_merge($context, ['credential_source' => $resolved['source']]),
+                $merged,
             );
 
             return;
@@ -33,7 +46,7 @@ class DelegatingWhatsAppProvider implements WhatsAppProviderInterface
             $toPhone,
             $message,
             $resolved['meta'],
-            array_merge($context, ['credential_source' => $resolved['source']]),
+            $merged,
         );
     }
 }

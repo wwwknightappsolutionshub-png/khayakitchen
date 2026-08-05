@@ -756,6 +756,22 @@ export interface TenantWhatsAppSettings {
   platform_configured: boolean;
 }
 
+export interface PlatformWhatsAppSettings {
+  enabled: boolean;
+  provider: "genius" | "meta" | "twilio";
+  has_api_key: boolean;
+  session_id?: string | null;
+  base_url?: string | null;
+  meta_phone_number_id?: string | null;
+  has_meta_access_token: boolean;
+  twilio_account_sid?: string | null;
+  has_twilio_auth_token: boolean;
+  twilio_from?: string | null;
+  configured: boolean;
+  active_provider: string;
+  active_source: "platform";
+}
+
 export interface StorefrontWorkspace {
   tenant_id: string;
   slug: string;

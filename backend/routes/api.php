@@ -25,6 +25,7 @@ use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyController;
 use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyProgramController;
 use App\Modules\Menu\Interfaces\Controllers\MenuController;
 use App\Modules\Notifications\Interfaces\Controllers\NotificationController;
+use App\Modules\Notifications\Interfaces\Controllers\PlatformWhatsAppSettingsController;
 use App\Modules\Notifications\Interfaces\Controllers\TenantWhatsAppSettingsController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CustomerNotificationController;
@@ -349,6 +350,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/settings/logo', [PlatformSettingsController::class, 'uploadLogo']);
             Route::post('/settings/splash-image', [PlatformSettingsController::class, 'uploadSplashImage']);
             Route::post('/settings/og-image', [PlatformSettingsController::class, 'uploadOgImage']);
+            Route::get('/whatsapp', [PlatformWhatsAppSettingsController::class, 'show']);
+            Route::patch('/whatsapp', [PlatformWhatsAppSettingsController::class, 'update']);
 
             Route::prefix('pricing')->group(function () {
                 Route::get('/plans', [PlatformPlanController::class, 'index']);

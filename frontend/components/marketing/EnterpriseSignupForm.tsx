@@ -539,16 +539,27 @@ export function EnterpriseSignupForm({
                   onChange={applyStateSelection}
                 />
               ) : null}
-              <SearchableSelect
-                label="City"
-                tooltip="City or town of your main operating location."
-                placeholder={countryIso ? "Select city" : "Select a country first"}
-                value={watch("city")}
-                options={cityOptions}
-                disabled={!countryIso || (states.length > 0 && !stateCode)}
-                error={errors.city?.message}
-                onChange={(value) => setValue("city", value, { shouldValidate: true })}
-              />
+              {postalRequired ? (
+                <Input
+                  label="City"
+                  tooltip="Type your city or town. Required for UK, Canada, and European countries that use postal codes."
+                  placeholder={countryIso ? "Enter city" : "Select a country first"}
+                  disabled={!countryIso}
+                  error={errors.city?.message}
+                  {...register("city")}
+                />
+              ) : (
+                <SearchableSelect
+                  label="City"
+                  tooltip="City or town of your main operating location."
+                  placeholder={countryIso ? "Select city" : "Select a country first"}
+                  value={watch("city")}
+                  options={cityOptions}
+                  disabled={!countryIso || (states.length > 0 && !stateCode)}
+                  error={errors.city?.message}
+                  onChange={(value) => setValue("city", value, { shouldValidate: true })}
+                />
+              )}
               <Input
                 label="Street address"
                 className="md:col-span-2"

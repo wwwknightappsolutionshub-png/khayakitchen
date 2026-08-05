@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { PlatformSettings } from "@/lib/types";
+import type { PlatformSettings, PlatformWhatsAppSettings } from "@/lib/types";
 
 export const platformSettingsService = {
   async getPublicConfig(): Promise<PlatformSettings> {
@@ -30,5 +30,24 @@ export const platformSettingsService = {
     const formData = new FormData();
     formData.append("image", file);
     return api.upload<{ settings: PlatformSettings }>("/platform/settings/og-image", formData);
+  },
+
+  async getWhatsApp(): Promise<{ whatsapp: PlatformWhatsAppSettings }> {
+    return api.get<{ whatsapp: PlatformWhatsAppSettings }>("/platform/whatsapp");
+  },
+
+  async updateWhatsApp(payload: {
+    enabled?: boolean;
+    provider?: "genius" | "meta" | "twilio";
+    api_key?: string | null;
+    session_id?: string | null;
+    base_url?: string | null;
+    meta_phone_number_id?: string | null;
+    meta_access_token?: string | null;
+    twilio_account_sid?: string | null;
+    twilio_auth_token?: string | null;
+    twilio_from?: string | null;
+  }): Promise<{ whatsapp: PlatformWhatsAppSettings }> {
+    return api.patch<{ whatsapp: PlatformWhatsAppSettings }>("/platform/whatsapp", payload);
   },
 };

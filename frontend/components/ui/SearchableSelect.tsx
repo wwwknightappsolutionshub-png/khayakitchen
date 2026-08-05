@@ -84,8 +84,8 @@ export function SearchableSelect({
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-[var(--radius)] border border-border bg-[#14100c] shadow-xl">
-          <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-[var(--radius)] border border-border bg-surface-elevated text-foreground shadow-xl">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <Search className="h-4 w-4 text-muted" />
             <input
               autoFocus
@@ -104,8 +104,8 @@ export function SearchableSelect({
                   <button
                     type="button"
                     className={cn(
-                      "flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-white/5",
-                      option.value === value && "bg-amber-500/10 text-amber-100",
+                      "flex w-full flex-col px-3 py-2 text-left text-sm text-foreground hover:bg-primary/10",
+                      option.value === value && "bg-primary/15 font-medium",
                     )}
                     onClick={() => {
                       onChange(option.value);

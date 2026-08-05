@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Modules\Notifications\Interfaces\Controllers;
+
+use App\Modules\Notifications\Application\Services\PlatformWhatsAppSettingsService;
+use App\Shared\Utils\ApiResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+
+class PlatformWhatsAppSettingsController extends Controller
+{
+    public function __construct(private PlatformWhatsAppSettingsService $settingsService) {}
+
+    public function show()
+    {
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->get(),
+        ]);
+    }
+
+    public function update(Request $request)
+    {
+        $data = $request->validate([
+            'enabled' => ['sometimes', 'boolean'],
+            'provider' => ['sometimes', 'in:genius,meta,twilio'],
+            'api_key' => ['nullable', 'string', 'max:2000'],
+            'session_id' => ['nullable', 'string', 'max:255'],
+            'base_url' => ['nullable', 'string', 'max:255', 'url'],
+            'meta_phone_number_id' => ['nullable', 'string', 'max:120'],
+            'meta_access_token' => ['nullable', 'string', 'max:2000'],
+            'twilio_account_sid' => ['nullable', 'string', 'max:120'],
+            'twilio_auth_token' => ['nullable', 'string', 'max:2000'],
+            'twilio_from' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->update($data),
+        ]);
+    }
+}
