@@ -15,12 +15,15 @@ interface ResponsiveAppShellProps {
   mobileTitle: string;
   mobileSubtitle: string;
   mobileLeading?: React.ReactNode;
+  headerTrailing?: React.ReactNode;
   renderSidebar: (props: MobileNavProps) => React.ReactNode;
   className?: string;
   headerClassName?: string;
   menuButtonClassName?: string;
   contentClassName?: string;
   mobileSubtitleClassName?: string;
+  /** Optional root data attribute for scoped theming (e.g. platform light/dark). */
+  "data-platform-theme"?: string;
 }
 
 export function ResponsiveAppShell({
@@ -28,12 +31,14 @@ export function ResponsiveAppShell({
   mobileTitle,
   mobileSubtitle,
   mobileLeading,
+  headerTrailing,
   renderSidebar,
   className,
   headerClassName,
   menuButtonClassName,
   contentClassName,
   mobileSubtitleClassName,
+  "data-platform-theme": dataPlatformTheme,
 }: ResponsiveAppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,7 +57,10 @@ export function ResponsiveAppShell({
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <div className={cn("relative flex h-screen w-full overflow-hidden bg-background", className)}>
+    <div
+      className={cn("relative flex h-screen w-full overflow-hidden bg-background", className)}
+      data-platform-theme={dataPlatformTheme}
+    >
       {mobileOpen ? (
         <button
           type="button"
@@ -90,12 +98,13 @@ export function ResponsiveAppShell({
             <Menu className="h-5 w-5" />
           </button>
           {mobileLeading}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{mobileTitle}</p>
             <p className={cn("truncate text-xs text-muted", mobileSubtitleClassName)}>
               {mobileSubtitle}
             </p>
           </div>
+          {headerTrailing}
         </header>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">

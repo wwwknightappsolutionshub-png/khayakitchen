@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PlatformAuthGuard } from "@/components/platform/PlatformAuthGuard";
 import { PlatformShell } from "@/components/platform/PlatformShell";
 import { OpsPwaManifestLink } from "@/components/admin/OpsPwaManifestLink";
+import { PlatformThemeProvider } from "@/providers/PlatformThemeProvider";
 
 export const metadata: Metadata = {
   title: "KhayaOS Platform",
@@ -23,9 +24,11 @@ export const metadata: Metadata = {
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   return (
-    <PlatformAuthGuard>
-      <OpsPwaManifestLink />
-      <PlatformShell>{children}</PlatformShell>
-    </PlatformAuthGuard>
+    <PlatformThemeProvider>
+      <PlatformAuthGuard>
+        <OpsPwaManifestLink />
+        <PlatformShell>{children}</PlatformShell>
+      </PlatformAuthGuard>
+    </PlatformThemeProvider>
   );
 }

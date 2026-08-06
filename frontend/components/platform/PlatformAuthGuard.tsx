@@ -8,11 +8,27 @@ import {
   useAuthSessionRecovery,
 } from "@/hooks/useAuthPersistReady";
 import { OPS_ROUTES } from "@/lib/ops-paths";
+import { cn } from "@/lib/utils";
+import { usePlatformTheme } from "@/providers/PlatformThemeProvider";
 
 const PLATFORM_ROLES = new Set(["super_admin", "platform_admin", "platform_support"]);
 
 function redirectToLogin() {
   window.location.replace(`${OPS_ROUTES.login}?from=platform&_t=${Date.now()}`);
+}
+
+function PlatformGateScreen({ children }: { children?: React.ReactNode }) {
+  const { chrome } = usePlatformTheme();
+  return (
+    <div
+      className={cn(
+        "flex h-screen flex-col items-center justify-center gap-3 px-6 text-center",
+        chrome.pageBg,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
@@ -74,37 +90,43 @@ export function PlatformAuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!canDecide) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-[#0a0c10] px-6 text-center">
+      <PlatformGateScreen>
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
         {showManualLink ? (
-          <a href={`${OPS_ROUTES.login}?from=platform&_t=${Date.now()}`} className="text-sm font-medium text-violet-400 underline">
+          <a
+            href={`${OPS_ROUTES.login}?from=platform&_t=${Date.now()}`}
+            className="text-sm font-medium text-violet-600 underline"
+          >
             Continue to sign in
           </a>
         ) : null}
-      </div>
+      </PlatformGateScreen>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-[#0a0c10] px-6 text-center">
-        <p className="text-sm text-zinc-400">Redirecting to sign in…</p>
+      <PlatformGateScreen>
+        <p className="text-sm text-muted">Redirecting to sign in…</p>
         {showManualLink ? (
-          <a href={`${OPS_ROUTES.login}?from=platform&_t=${Date.now()}`} className="text-sm font-medium text-violet-400 underline">
+          <a
+            href={`${OPS_ROUTES.login}?from=platform&_t=${Date.now()}`}
+            className="text-sm font-medium text-violet-600 underline"
+          >
             Continue to sign in
           </a>
         ) : (
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
         )}
-      </div>
+      </PlatformGateScreen>
     );
   }
 
   if (!isPlatformStaff) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0a0c10]">
+      <PlatformGateScreen>
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
-      </div>
+      </PlatformGateScreen>
     );
   }
 

@@ -108,7 +108,7 @@ h1, h2, h3, h4, h5, h6 {
   animation: fade-in 0.2s ease-out;
 }
 
-/* Super Admin / platform — dark tokens for tables, cards, muted copy */
+/* Super Admin / platform — theme tokens (default dark; light via data-platform-theme) */
 .platform-app {
   --background: #0a0c10;
   --foreground: #f0f2f5;
@@ -119,12 +119,86 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--foreground);
 }
 
+.platform-app[data-platform-theme="light"],
+html[data-platform-theme="light"] .platform-app {
+  --background: #f7f8fb;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-elevated: #f1f5f9;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  color: var(--foreground);
+}
+
 .platform-app table {
   color: var(--foreground);
 }
 
 .platform-app thead {
   color: var(--muted);
+}
+
+/*
+ * Light remaps for hardcoded platform page utilities (cards, titles, inputs).
+ * Keeps pages themeable without rewriting every route.
+ */
+.platform-app[data-platform-theme="light"] :is(
+  .bg-\[\#0a0c10\],
+  .bg-\[\#0f1117\],
+  .bg-\[\#0f1118\],
+  .bg-\[\#0f1218\]
+) {
+  background-color: var(--surface) !important;
+}
+
+.platform-app[data-platform-theme="light"] :is(
+  .text-violet-50,
+  .text-violet-100,
+  .text-violet-200
+) {
+  color: #0f172a !important;
+}
+
+.platform-app[data-platform-theme="light"] :is(
+  .text-violet-200\/70,
+  .text-violet-300\/60,
+  .text-violet-300\/70
+) {
+  color: #64748b !important;
+}
+
+.platform-app[data-platform-theme="light"] :is(
+  .border-violet-500\/10,
+  .border-violet-500\/15,
+  .border-violet-500\/20,
+  .border-violet-500\/30,
+  .border-violet-500\/40
+) {
+  border-color: #e2e8f0 !important;
+}
+
+.platform-app[data-platform-theme="light"] :is(
+  .hover\:bg-violet-500\/10:hover,
+  .hover\:text-violet-100:hover
+) {
+  background-color: rgb(237 233 254 / 0.9);
+  color: #4c1d95;
+}
+
+.platform-app[data-platform-theme="light"] .bg-violet-600\/20,
+.platform-app[data-platform-theme="light"] .bg-violet-600\/15,
+.platform-app[data-platform-theme="light"] .bg-violet-600\/30,
+.platform-app[data-platform-theme="light"] .bg-violet-500\/10 {
+  background-color: #ede9fe !important;
+  color: #4c1d95;
+}
+
+.platform-app[data-platform-theme="light"] .text-violet-300\/50 {
+  color: #94a3b8 !important;
+}
+
+.platform-app[data-platform-theme="light"] .placeholder\:text-zinc-600::placeholder {
+  color: #94a3b8;
 }
 
 /* Admin + platform backend pages */
