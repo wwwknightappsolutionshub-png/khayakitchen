@@ -18,6 +18,8 @@ import { CURRENCIES } from "@/lib/currencies";
 import { isPostalCodeRequired } from "@/lib/postal-code-policy";
 import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
+import { signupService } from "@/services/signup.service";
+import { ApiClientError } from "@/lib/api-client";
 
 const signupSchema = z
   .object({
@@ -350,6 +352,7 @@ export function EnterpriseSignupForm({
     setValue,
     trigger,
     setFocus,
+    setError,
     formState: { errors },
   } = useForm<EnterpriseSignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -551,6 +554,8 @@ export function EnterpriseSignupForm({
     [setFocus],
   );
 
+  const [availabilityChecking, setAvailabilityChecking] = useState(false);
+
   const goNext = async () => {
     setSubmitValidationError(null);
     if (isFeatureStep) {
@@ -559,6 +564,40 @@ export function EnterpriseSignupForm({
     }
     const valid = await trigger(PHASE_FIELDS[phase]);
     if (!valid) return;
+
+    // Progressive server checks: slug on Business, email on Account.
+    try {
+      if (phase === 0) {
+        setAvailabilityChecking(true);
+        const slug = (watch("slug") || "").trim().toLowerCase();
+        const result = await signupService.checkSlug(slug);
+        if (!result.available) {
+          setError("slug", { type: "manual", message: result.message });
+          setSubmitValidationError(result.message);
+          return;
+        }
+      }
+      if (phase === 2) {
+        setAvailabilityChecking(true);
+        const email = (watch("owner_email") || "").trim().toLowerCase();
+        const result = await signupService.checkEmail(email);
+        if (!result.available) {
+          setError("owner_email", { type: "manual", message: result.message });
+          setSubmitValidationError(result.message);
+          return;
+        }
+      }
+    } catch (err) {
+      setSubmitValidationError(
+        err instanceof ApiClientError
+          ? err.message
+          : "Could not verify availability. Check your connection and try again.",
+      );
+      return;
+    } finally {
+      setAvailabilityChecking(false);
+    }
+
     setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1));
   };
 
@@ -995,7 +1034,14 @@ export function EnterpriseSignupForm({
             {isSubmitting ? "Preparing your kitchen…" : "Create my KhayaOS workspace"}
           </Button>
         ) : (
-          <Button type="button" className={theme.primaryButton} size="lg" onClick={goNext}>
+          <Button
+            type="button"
+            className={theme.primaryButton}
+            size="lg"
+            onClick={goNext}
+            isLoading={availabilityChecking}
+            disabled={availabilityChecking}
+          >
             {isFeatureStep ? "Continue" : "Next"}
             <ArrowRight className="h-4 w-4" />
           </Button>

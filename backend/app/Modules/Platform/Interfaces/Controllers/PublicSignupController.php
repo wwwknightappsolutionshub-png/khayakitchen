@@ -2,6 +2,8 @@
 
 namespace App\Modules\Platform\Interfaces\Controllers;
 
+use App\Modules\Auth\Domain\Models\Tenant;
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Platform\Application\Services\PublicSignupService;
 use App\Modules\Platform\Support\PostalCodePolicy;
 use App\Shared\Utils\ApiResponse;
@@ -13,6 +15,42 @@ use Illuminate\Validation\Rules\Password;
 class PublicSignupController extends Controller
 {
     public function __construct(private PublicSignupService $signupService) {}
+
+    public function checkSlug(Request $request)
+    {
+        $data = $request->validate([
+            'slug' => ['required', 'string', 'max:100', 'alpha_dash'],
+        ]);
+
+        $slug = strtolower(trim($data['slug']));
+        $available = ! Tenant::withoutGlobalScopes()->where('slug', $slug)->exists();
+
+        return ApiResponse::success([
+            'slug' => $slug,
+            'available' => $available,
+            'message' => $available
+                ? 'Slug is available.'
+                : 'This workspace slug is already taken.',
+        ]);
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $email = strtolower(trim($data['email']));
+        $available = ! User::withoutGlobalScopes()->where('email', $email)->exists();
+
+        return ApiResponse::success([
+            'email' => $email,
+            'available' => $available,
+            'message' => $available
+                ? 'Email is available.'
+                : 'An account with this email already exists.',
+        ]);
+    }
 
     public function store(Request $request)
     {

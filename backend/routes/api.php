@@ -70,6 +70,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
     Route::post('/signup', [PublicSignupController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/signup/check-slug', [PublicSignupController::class, 'checkSlug'])->middleware('throttle:30,1');
+    Route::get('/signup/check-email', [PublicSignupController::class, 'checkEmail'])->middleware('throttle:30,1');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
     Route::post('/marketing/visitor-hit', [MarketingEngagementController::class, 'visitorHit'])
@@ -339,6 +341,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/tenants', [PlatformTenantController::class, 'store']);
             Route::put('/tenants/{tenantId}', [PlatformTenantController::class, 'update']);
             Route::delete('/tenants/{tenantId}', [PlatformTenantController::class, 'destroy']);
+            Route::post('/tenants/{tenantId}/purge', [PlatformTenantController::class, 'purge']);
             Route::post('/tenants/{tenantId}/poke', [PlatformTenantController::class, 'poke']);
             Route::get('/audit-logs', [PlatformAuditLogController::class, 'index']);
             Route::patch('/tenants/{tenantId}/restaurant-status', [PlatformRestaurantStatusController::class, 'update']);

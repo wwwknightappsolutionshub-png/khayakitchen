@@ -25,6 +25,26 @@ class PublicSignupTest extends TestCase
         $this->seed();
     }
 
+    public function test_signup_check_slug_and_email_availability(): void
+    {
+        $takenSlug = $this->getJson('/api/v1/signup/check-slug?slug=pilot');
+        $takenSlug->assertOk();
+        $takenSlug->assertJsonPath('available', false);
+
+        $freeSlug = $this->getJson('/api/v1/signup/check-slug?slug=brand-new-kitchen-xyz');
+        $freeSlug->assertOk();
+        $freeSlug->assertJsonPath('available', true);
+
+        $takenEmail = $this->getJson('/api/v1/signup/check-email?email=owner@khayaos.com');
+        $takenEmail->assertOk();
+        $takenEmail->assertJsonPath('available', false);
+        $takenEmail->assertJsonPath('message', 'An account with this email already exists.');
+
+        $freeEmail = $this->getJson('/api/v1/signup/check-email?email=fresh-owner@example.test');
+        $freeEmail->assertOk();
+        $freeEmail->assertJsonPath('available', true);
+    }
+
     public function test_public_signup_provisions_tenant_plan_and_verification_email(): void
     {
         Mail::fake();

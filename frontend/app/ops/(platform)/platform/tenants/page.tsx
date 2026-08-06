@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Hand } from "lucide-react";
+import { Plus, Hand, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -76,6 +76,8 @@ export default function PlatformTenantsPage() {
   const [overrideReason, setOverrideReason] = useState("");
   const [disablePromoAlerts, setDisablePromoAlerts] = useState(false);
   const [entitlementsTenantId, setEntitlementsTenantId] = useState<string | null>(null);
+  const [purgeTenant, setPurgeTenant] = useState<PlatformTenant | null>(null);
+  const [purgeSlugConfirm, setPurgeSlugConfirm] = useState("");
   const [overrideFeatureKey, setOverrideFeatureKey] = useState("");
   const [overrideFeatureEnabled, setOverrideFeatureEnabled] = useState(true);
   const [overrideLimitKey, setOverrideLimitKey] = useState("max_menu_items");
@@ -243,6 +245,26 @@ export default function PlatformTenantsPage() {
     },
   });
 
+  const purgeMutation = useMutation({
+    mutationFn: () =>
+      platformService.purgeTenant(purgeTenant!.id, {
+        confirmation_slug: purgeSlugConfirm.trim(),
+        confirm: true,
+      }),
+    onSuccess: (res) => {
+      showToast("Kitchen deleted", `${res.slug} and all related data were permanently removed.`);
+      queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
+      setPurgeTenant(null);
+      setPurgeSlugConfirm("");
+    },
+    onError: (err) => {
+      showToast(
+        "Delete failed",
+        err instanceof ApiClientError ? err.message : "Could not permanently delete this kitchen.",
+      );
+    },
+  });
+
   const tenants = data?.tenants ?? [];
 
   return (
@@ -357,6 +379,18 @@ export default function PlatformTenantsPage() {
                             onClick={() => setEntitlementsTenantId(tenant.id)}
                           >
                             Entitlements
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            className="gap-1"
+                            onClick={() => {
+                              setPurgeSlugConfirm("");
+                              setPurgeTenant(tenant);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete forever
                           </Button>
                         </div>
                       </td>
@@ -762,6 +796,59 @@ export default function PlatformTenantsPage() {
               </div>
             </CardContent>
           </Card>
+      </ModalFrame>
+
+      <ModalFrame
+        open={!!purgeTenant}
+        onClose={() => {
+          if (purgeMutation.isPending) return;
+          setPurgeTenant(null);
+          setPurgeSlugConfirm("");
+        }}
+      >
+        <Card className="w-full border-danger/30 bg-[#0f1117]">
+          <CardHeader>
+            <CardTitle>Permanently delete kitchen</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted">
+              This permanently deletes{" "}
+              <span className="font-semibold text-foreground">{purgeTenant?.name}</span> (
+              <span className="font-mono text-xs">{purgeTenant?.slug}</span>) and all related data:
+              users, orders, menu, customers, branding, and subscriptions. This cannot be undone.
+            </p>
+            <Input
+              label={`Type slug “${purgeTenant?.slug ?? ""}” to confirm`}
+              value={purgeSlugConfirm}
+              onChange={(e) => setPurgeSlugConfirm(e.target.value)}
+              placeholder={purgeTenant?.slug}
+              autoComplete="off"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="danger"
+                isLoading={purgeMutation.isPending}
+                disabled={
+                  !purgeTenant ||
+                  purgeSlugConfirm.trim().toLowerCase() !== (purgeTenant?.slug ?? "").toLowerCase()
+                }
+                onClick={() => purgeMutation.mutate()}
+              >
+                Delete forever
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={purgeMutation.isPending}
+                onClick={() => {
+                  setPurgeTenant(null);
+                  setPurgeSlugConfirm("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </ModalFrame>
     </BackendPage>
   );

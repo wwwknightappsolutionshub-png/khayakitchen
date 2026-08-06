@@ -70,8 +70,18 @@ export const platformService = {
     return api.put<{ tenant: PlatformTenant }>(`/platform/tenants/${tenantId}`, payload);
   },
 
-  async deleteTenant(tenantId: string): Promise<{ deleted: boolean }> {
-    return api.delete<{ deleted: boolean }>(`/platform/tenants/${tenantId}`);
+  async deleteTenant(tenantId: string): Promise<{ deleted: boolean; mode?: string }> {
+    return api.delete<{ deleted: boolean; mode?: string }>(`/platform/tenants/${tenantId}`);
+  },
+
+  async purgeTenant(
+    tenantId: string,
+    payload: { confirmation_slug: string; confirm: boolean },
+  ): Promise<{ purged: boolean; tenant_id: string; slug: string }> {
+    return api.post<{ purged: boolean; tenant_id: string; slug: string }>(
+      `/platform/tenants/${tenantId}/purge`,
+      payload,
+    );
   },
 
   async pokeTenant(tenantId: string): Promise<{ message: unknown; channel: string }> {

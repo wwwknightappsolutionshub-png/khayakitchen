@@ -63,6 +63,20 @@ function appendField(form: FormData, key: string, value: unknown) {
 }
 
 export const signupService = {
+  checkSlug(slug: string) {
+    return api.get<{ slug: string; available: boolean; message: string }>("/signup/check-slug", {
+      params: { slug },
+      skipAuth: true,
+    });
+  },
+
+  checkEmail(email: string) {
+    return api.get<{ email: string; available: boolean; message: string }>("/signup/check-email", {
+      params: { email },
+      skipAuth: true,
+    });
+  },
+
   register(payload: SignupPayload) {
     const form = new FormData();
     const { logo, order_types, ...rest } = payload;

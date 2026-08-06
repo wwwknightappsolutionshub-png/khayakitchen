@@ -50,7 +50,19 @@ class PlatformTenantController extends Controller
     {
         $this->tenantService->deleteTenant($tenantId);
 
-        return ApiResponse::success(['deleted' => true]);
+        return ApiResponse::success(['deleted' => true, 'mode' => 'suspended']);
+    }
+
+    public function purge(\Illuminate\Http\Request $request, string $tenantId)
+    {
+        $data = $request->validate([
+            'confirmation_slug' => ['required', 'string', 'max:100'],
+            'confirm' => ['required', 'boolean'],
+        ]);
+
+        return ApiResponse::success(
+            $this->tenantService->purgeTenant($tenantId, $data),
+        );
     }
 
     public function poke(\Illuminate\Http\Request $request, string $tenantId)

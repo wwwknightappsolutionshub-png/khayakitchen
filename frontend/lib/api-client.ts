@@ -164,7 +164,10 @@ async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Pro
     endpoint === "/auth/resend-verification" ||
     endpoint === "/auth/forgot-password" ||
     endpoint === "/auth/reset-password";
-  const isPublicSignupRoute = endpoint === "/signup";
+  const isPublicSignupRoute =
+    endpoint === "/signup" ||
+    endpoint.startsWith("/signup/check-slug") ||
+    endpoint.startsWith("/signup/check-email");
   const isPublicPricingRoute = endpoint === "/pricing/plans";
   const isMarketingRoute = endpoint.startsWith("/marketing/");
 

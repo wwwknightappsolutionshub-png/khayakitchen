@@ -44,7 +44,7 @@ class PublicSignupService
             throw ValidationException::withMessages(['plan_id' => ['Selected plan is not available.']]);
         }
 
-        if (User::withoutGlobalScopes()->where('email', $data['owner_email'])->exists()) {
+        if (User::withoutGlobalScopes()->whereRaw('LOWER(email) = ?', [strtolower((string) $data['owner_email'])])->exists()) {
             throw ValidationException::withMessages(['owner_email' => ['An account with this email already exists.']]);
         }
 
