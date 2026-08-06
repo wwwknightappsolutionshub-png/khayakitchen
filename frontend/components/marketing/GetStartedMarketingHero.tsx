@@ -203,12 +203,14 @@ export function GetStartedMarketingHero({
             <div className={theme.compareTable}>
               <div
                 className={cn(
-                  "grid grid-cols-[minmax(7rem,1.1fr)_1fr_1fr] gap-0 border-b bg-amber-500/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider sm:px-5 sm:text-sm",
+                  "grid grid-cols-[minmax(7rem,1.15fr)_1fr_1fr] items-start gap-3 border-b bg-amber-500/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider sm:gap-4 sm:px-5 sm:text-sm",
                   theme.compareRowBorder,
                   theme.body,
                 )}
               >
-                <span className="sr-only sm:not-sr-only sm:text-transparent">.</span>
+                <span className="invisible select-none" aria-hidden>
+                  Label
+                </span>
                 <span>Marketplaces</span>
                 <span className={theme.eyebrow}>KhayaOS</span>
               </div>
@@ -216,7 +218,7 @@ export function GetStartedMarketingHero({
                 <div
                   key={row.label}
                   className={cn(
-                    "grid grid-cols-[minmax(7rem,1.1fr)_1fr_1fr] gap-3 border-b px-4 py-4 text-sm last:border-b-0 sm:gap-4 sm:px-5",
+                    "grid grid-cols-[minmax(7rem,1.15fr)_1fr_1fr] items-start gap-3 border-b px-4 py-4 text-sm last:border-b-0 sm:gap-4 sm:px-5",
                     theme.compareRowBorder,
                   )}
                 >

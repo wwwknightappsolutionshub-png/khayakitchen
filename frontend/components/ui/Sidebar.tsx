@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEngagementBadges } from "@/hooks/useEngagementBadges";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { KitchenAvatar } from "@/components/admin/KitchenAvatar";
 import { AdminPwaInstallNav } from "@/components/admin/AdminPwaInstallNav";
 import type { MobileNavProps } from "@/components/shared/ResponsiveAppShell";
 import { OPS_ROUTES } from "@/lib/ops-paths";
@@ -56,6 +58,9 @@ interface SidebarProps extends MobileNavProps {}
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { data: workspaceData } = useWorkspace(true);
+  const workspace = workspaceData?.workspace;
+  const kitchenName = workspace?.name ?? "KhayaOS";
   const { isEnabled } = useFeatureFlags();
   const {
     unreadChat,
@@ -106,14 +111,20 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           : "-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0",
       )}
     >
-      <div className="flex h-16 items-center gap-2 border-b border-border px-5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-          K
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">KhayaOS</p>
-          <p className="text-xs text-muted">Business OS</p>
-        </div>
+      <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
+        <Link
+          href={OPS_ROUTES.adminDashboard}
+          onClick={onMobileClose}
+          className="flex min-w-0 flex-1 items-center gap-2.5"
+        >
+          <KitchenAvatar name={kitchenName} logoUrl={workspace?.logo_url} size="sm" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{kitchenName}</p>
+            <p className="truncate text-xs text-muted">
+              {workspace?.slug ? `/${workspace.slug}` : "Kitchen OS"}
+            </p>
+          </div>
+        </Link>
         {onMobileClose ? (
           <button
             type="button"

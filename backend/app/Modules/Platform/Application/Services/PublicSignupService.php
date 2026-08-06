@@ -10,7 +10,9 @@ use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
 use App\Modules\Pricing\Domain\Models\Plan;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class PublicSignupService
@@ -46,10 +48,12 @@ class PublicSignupService
         $signupMetadata = $this->buildSignupMetadata($data);
 
         $result = DB::transaction(function () use ($data, $plan, $plainPassword, $signupMetadata) {
+            $logoUrl = $this->resolveLogoUrl($data);
+
             $tenant = $this->tenantService->createTenant([
                 'name' => $data['restaurant_name'],
                 'slug' => $data['slug'],
-                'logo_url' => $data['logo_url'] ?? null,
+                'logo_url' => $logoUrl,
                 'primary_color' => $data['primary_color'] ?? '#1a1a2e',
                 'owner_name' => $data['owner_name'],
                 'owner_email' => $data['owner_email'],
@@ -66,7 +70,14 @@ class PublicSignupService
                     'country_iso' => isset($data['country_iso']) ? strtoupper((string) $data['country_iso']) : null,
                     'timezone' => $data['timezone'] ?? null,
                     'ui_theme' => 'light',
+                    'logo_url' => $logoUrl,
                 ]);
+
+            // Persist uploaded logo under the real tenant id (createTenant may run before id exists).
+            if (($data['logo'] ?? null) instanceof UploadedFile) {
+                $logoUrl = $this->storeSignupLogo($data['logo'], $tenant['id']);
+                Tenant::withoutGlobalScopes()->where('id', $tenant['id'])->update(['logo_url' => $logoUrl]);
+            }
 
             TenantBranding::withoutGlobalScopes()
                 ->where('tenant_id', $tenant['id'])
@@ -74,7 +85,7 @@ class PublicSignupService
                     'restaurant_name' => $data['restaurant_name'],
                     'primary_color' => $data['primary_color'] ?? '#1a1a2e',
                     'secondary_color' => $data['secondary_color'] ?? '#e94560',
-                    'logo_url' => $data['logo_url'] ?? null,
+                    'logo_url' => $logoUrl,
                 ]);
 
             // Referral trial/reward applied after create via TenantReferralService (valid codes only).
@@ -99,6 +110,7 @@ class PublicSignupService
                     'business_type' => $data['business_type'] ?? null,
                     'email_verified' => false,
                     'referral_code' => $data['referral_code'] ?? null,
+                    'has_logo' => filled($logoUrl),
                 ],
             );
 
@@ -108,7 +120,10 @@ class PublicSignupService
                 ->firstOrFail();
 
             return [
-                'tenant' => $tenant,
+                'tenant' => array_merge($tenant, [
+                    'name' => $data['restaurant_name'],
+                    'logo_url' => $logoUrl,
+                ]),
                 'plan' => [
                     'id' => $plan->id,
                     'name' => $plan->name,
@@ -164,5 +179,24 @@ class PublicSignupService
             'referral_code' => isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null,
             'submitted_at' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveLogoUrl(array $data): ?string
+    {
+        if (! empty($data['logo_url'])) {
+            return (string) $data['logo_url'];
+        }
+
+        return null;
+    }
+
+    private function storeSignupLogo(UploadedFile $file, string $tenantId): string
+    {
+        $path = $file->store("branding/{$tenantId}", 'public');
+
+        return Storage::disk('public')->url($path);
     }
 }

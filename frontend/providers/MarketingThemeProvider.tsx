@@ -13,6 +13,7 @@ import {
   MARKETING_THEME_HTML_ATTR,
   MARKETING_THEME_STORAGE_KEY,
   marketingThemes,
+  migrateMarketingThemeToLightDefault,
   parseMarketingThemeMode,
   type MarketingThemeMode,
   type MarketingThemeTokens,
@@ -29,15 +30,19 @@ type MarketingThemeContextValue = {
 const MarketingThemeContext = createContext<MarketingThemeContextValue | null>(null);
 
 function readBootMode(): MarketingThemeMode {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   try {
+    // Idempotent: first visit after deploy forces light even if legacy dark was stored.
+    migrateMarketingThemeToLightDefault();
     const fromHtml = parseMarketingThemeMode(
       document.documentElement.getAttribute(MARKETING_THEME_HTML_ATTR),
     );
     if (fromHtml) return fromHtml;
-    return parseMarketingThemeMode(window.localStorage.getItem(MARKETING_THEME_STORAGE_KEY)) ?? "dark";
+    return (
+      parseMarketingThemeMode(window.localStorage.getItem(MARKETING_THEME_STORAGE_KEY)) ?? "light"
+    );
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
@@ -52,8 +57,8 @@ function writeBootMode(mode: MarketingThemeMode) {
 }
 
 export function MarketingThemeProvider({ children }: { children: ReactNode }) {
-  // SSR defaults dark; useLayoutEffect aligns to boot script / localStorage before paint.
-  const [mode, setModeState] = useState<MarketingThemeMode>("dark");
+  // SSR defaults light; useLayoutEffect aligns to boot script / localStorage before paint.
+  const [mode, setModeState] = useState<MarketingThemeMode>("light");
   const [ready, setReady] = useState(false);
 
   useLayoutEffect(() => {
@@ -92,8 +97,8 @@ export function useMarketingTheme(): MarketingThemeContextValue {
   const ctx = useContext(MarketingThemeContext);
   if (!ctx) {
     return {
-      mode: "dark",
-      theme: marketingThemes.dark,
+      mode: "light",
+      theme: marketingThemes.light,
       setMode: () => undefined,
       toggle: () => undefined,
       ready: false,

@@ -4,15 +4,40 @@ export type MarketingThemeMode = "dark" | "light";
 
 export const MARKETING_THEME_STORAGE_KEY = "khayaos_marketing_theme";
 
+/** One-time flag: force light for visitors who still have legacy dark preference. */
+export const MARKETING_THEME_LIGHT_DEFAULT_MIGRATION_KEY =
+  "khayaos_marketing_theme_migrated_light_default_v1";
+
 /** Set on <html> by the beforeInteractive boot script (prevents light-theme FOUC). */
 export const MARKETING_THEME_HTML_ATTR = "data-khayaos-mkt";
 
-/** Inline boot — runs before body paint; always sets light or dark on <html>. */
+/** Inline boot — runs before body paint; migrates legacy dark → light once, then respects choice. */
 export const MARKETING_THEME_BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(
   "khayaos_marketing_theme",
-)};var a=${JSON.stringify("data-khayaos-mkt")};var t=localStorage.getItem(k);if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute(a,t);}catch(e){document.documentElement.setAttribute(${JSON.stringify(
+)};var m=${JSON.stringify(
+  "khayaos_marketing_theme_migrated_light_default_v1",
+)};var a=${JSON.stringify(
   "data-khayaos-mkt",
-)},"dark");}})();`;
+)};if(!localStorage.getItem(m)){localStorage.setItem(k,"light");localStorage.setItem(m,"1");}var t=localStorage.getItem(k);if(t!=="light"&&t!=="dark")t="light";document.documentElement.setAttribute(a,t);}catch(e){document.documentElement.setAttribute(${JSON.stringify(
+  "data-khayaos-mkt",
+)},"light");}})();`;
+
+/** Apply one-time light-default migration; returns the mode that should paint. */
+export function migrateMarketingThemeToLightDefault(): MarketingThemeMode {
+  if (typeof window === "undefined") return "light";
+  try {
+    if (!window.localStorage.getItem(MARKETING_THEME_LIGHT_DEFAULT_MIGRATION_KEY)) {
+      window.localStorage.setItem(MARKETING_THEME_STORAGE_KEY, "light");
+      window.localStorage.setItem(MARKETING_THEME_LIGHT_DEFAULT_MIGRATION_KEY, "1");
+      return "light";
+    }
+    return (
+      parseMarketingThemeMode(window.localStorage.getItem(MARKETING_THEME_STORAGE_KEY)) ?? "light"
+    );
+  } catch {
+    return "light";
+  }
+}
 
 export type MarketingThemeTokens = {
   pageBg: string;

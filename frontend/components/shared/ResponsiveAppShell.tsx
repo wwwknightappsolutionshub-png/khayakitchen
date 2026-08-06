@@ -14,6 +14,7 @@ interface ResponsiveAppShellProps {
   children: React.ReactNode;
   mobileTitle: string;
   mobileSubtitle: string;
+  mobileLeading?: React.ReactNode;
   renderSidebar: (props: MobileNavProps) => React.ReactNode;
   className?: string;
   headerClassName?: string;
@@ -26,6 +27,7 @@ export function ResponsiveAppShell({
   children,
   mobileTitle,
   mobileSubtitle,
+  mobileLeading,
   renderSidebar,
   className,
   headerClassName,
@@ -87,6 +89,7 @@ export function ResponsiveAppShell({
           >
             <Menu className="h-5 w-5" />
           </button>
+          {mobileLeading}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{mobileTitle}</p>
             <p className={cn("truncate text-xs text-muted", mobileSubtitleClassName)}>

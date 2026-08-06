@@ -55,6 +55,7 @@ class TenantWorkspaceAndOrdersCrmTest extends TestCase
         $response->assertJsonPath('workspace.country', 'Nigeria');
         $response->assertJsonPath('workspace.ui_theme', 'dark');
         $response->assertJsonPath('workspace.ordering_path', '/r/pilot');
+        $response->assertJsonStructure(['workspace' => ['logo_url', 'name', 'slug']]);
 
         $this->assertDatabaseHas('tenants', [
             'id' => $tenant->id,

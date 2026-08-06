@@ -9,7 +9,6 @@ import {
 } from "@/components/marketing/EnterpriseSignupForm";
 import { pricingService } from "@/services/pricing.service";
 import { signupService } from "@/services/signup.service";
-import { useToast } from "@/providers/ToastProvider";
 import { ApiClientError } from "@/lib/api-client";
 
 const REFERRAL_STORAGE_KEY = "khayaos-tenant-referral-code";
@@ -21,7 +20,6 @@ interface SignupWizardProps {
 export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { showToast } = useToast();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [storedReferralCode, setStoredReferralCode] = useState<string | undefined>(undefined);
 
@@ -71,24 +69,19 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       } catch {
         /* ignore */
       }
-      showToast(
-        "Almost there!",
-        "Check your inbox and confirm your email to activate your account.",
-      );
-      window.setTimeout(() => {
-        const params = new URLSearchParams({
-          email: response.owner_email,
-          tenant: response.tenant.slug,
-        });
-        router.push(`/ops/verify-email-pending?${params.toString()}`);
-      }, 1200);
+      const params = new URLSearchParams({
+        email: response.owner_email,
+        tenant: response.tenant.slug,
+        kitchen: response.tenant.name,
+      });
+      router.replace(`/ops/verify-email-pending?${params.toString()}`);
     },
     onError: (error) => {
       setSubmitError(error instanceof ApiClientError ? error.message : "Signup failed. Please try again.");
     },
   });
 
-  const handleSignup = (values: EnterpriseSignupFormValues) => {
+  const handleSignup = (values: EnterpriseSignupFormValues, logoFile?: File | null) => {
     if (plans.length === 0) {
       setSubmitError("Select a subscription plan to continue. If plans do not load, contact sales@khayaos.com.");
       return;
@@ -103,8 +96,6 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       restaurant_name: values.restaurant_name,
       legal_business_name: values.legal_business_name,
       business_type: values.business_type,
-      company_registration_number: values.company_registration_number || undefined,
-      tax_vat_number: values.tax_vat_number || undefined,
       slug: values.slug,
       country: values.country,
       state: values.state || undefined,
@@ -124,14 +115,13 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       estimated_daily_orders: values.estimated_daily_orders,
       staff_count: values.staff_count,
       branch_count: values.branch_count,
-      average_order_value: values.average_order_value,
       tagline: values.tagline || undefined,
       primary_color: values.primary_color || undefined,
       secondary_color: values.secondary_color || undefined,
-      logo_url: values.logo_url || undefined,
       terms_accepted: values.terms_accepted,
       marketing_opt_in: values.marketing_opt_in,
       referral_code: resolvedReferralCode,
+      logo: logoFile ?? null,
     });
   };
 

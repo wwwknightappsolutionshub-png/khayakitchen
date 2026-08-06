@@ -50,10 +50,15 @@ class PublicSignupController extends Controller
             'primary_color' => ['nullable', 'string', 'max:20'],
             'secondary_color' => ['nullable', 'string', 'max:20'],
             'logo_url' => ['nullable', 'url', 'max:500'],
+            'logo' => ['nullable', 'file', 'max:2048', 'mimes:jpeg,jpg,png,svg'],
             'terms_accepted' => ['accepted'],
             'marketing_opt_in' => ['nullable', 'boolean'],
             'referral_code' => ['nullable', 'string', 'max:32'],
         ]);
+
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo');
+        }
 
         return ApiResponse::success(
             $this->signupService->register($data),

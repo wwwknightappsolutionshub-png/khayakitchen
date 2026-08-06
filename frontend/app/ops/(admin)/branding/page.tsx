@@ -55,6 +55,7 @@ export default function BrandingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branding"] });
       queryClient.invalidateQueries({ queryKey: ["storefront"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace"] });
     },
   });
 
@@ -76,6 +77,7 @@ export default function BrandingPage() {
       setLogoUploadProgress("Upload complete");
       queryClient.invalidateQueries({ queryKey: ["branding"] });
       queryClient.invalidateQueries({ queryKey: ["storefront"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace"] });
     } catch {
       setLogoUploadProgress("Upload failed — try again");
     } finally {

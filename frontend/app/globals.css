@@ -413,12 +413,10 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes signup-splash-glow {
   0%,
   100% {
-    opacity: 0.45;
-    transform: scale(1);
+    opacity: 0.4;
   }
   50% {
-    opacity: 0.75;
-    transform: scale(1.05);
+    opacity: 0.65;
   }
 }
 
@@ -619,9 +617,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .visitor-rotator-shake {
-  animation:
-    visitor-rotator-enter 0.45s ease-out both,
-    visitor-rotator-shake 0.55s ease-in-out 0.45s 3;
+  /* Intentionally static — shake made the get-started page feel like it was bouncing. */
+  animation: visitor-rotator-enter 0.45s ease-out both;
 }
 
 .marketing-chat-dots {
@@ -661,24 +658,25 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Public signup / marketing shell — dark default; light via data-marketing-theme
+/* Public signup / marketing shell — light default; dark via data-marketing-theme
    and html[data-khayaos-mkt] from the beforeInteractive boot script (FOUC guard). */
 .marketing-app {
-  --background: #0a0806;
-  --foreground: #ffffff;
-  --surface: #14100c;
-  --surface-elevated: #1c1612;
+  --background: #f6f1ea;
+  --foreground: #18181b;
+  --surface: #ffffff;
+  --surface-elevated: #efe8df;
   --primary: #e07a5f;
-  --primary-hover: #e89078;
-  --border: rgba(255, 255, 255, 0.1);
-  --muted: #a1a1aa;
-  background-color: #0a0806;
-  color: #ffffff;
+  --primary-hover: #d4684e;
+  --border: rgba(28, 25, 23, 0.12);
+  --muted: #57534e;
+  background-color: #f6f1ea;
+  color: #18181b;
+  overflow-x: hidden;
 }
 
 .marketing-app .marketing-header {
-  background-color: rgb(10 8 6 / 0.85);
-  border-bottom-color: rgb(255 255 255 / 0.1);
+  background-color: rgb(246 241 234 / 0.9);
+  border-bottom-color: rgb(231 229 228 / 0.8);
 }
 
 .marketing-app[data-marketing-theme="light"],
@@ -703,6 +701,68 @@ html[data-khayaos-mkt="light"] .marketing-app .marketing-header,
 
 html[data-khayaos-mkt="dark"] .marketing-app,
 .marketing-app[data-marketing-theme="dark"] {
+  --background: #0a0806;
+  --foreground: #ffffff;
+  --surface: #14100c;
+  --surface-elevated: #1c1612;
+  --primary: #e07a5f;
+  --primary-hover: #e89078;
+  --border: rgba(255, 255, 255, 0.1);
+  --muted: #a1a1aa;
   background-color: #0a0806;
   color: #ffffff;
+}
+
+html[data-khayaos-mkt="dark"] .marketing-app .marketing-header,
+.marketing-app[data-marketing-theme="dark"] .marketing-header {
+  background-color: rgb(10 8 6 / 0.85);
+  border-bottom-color: rgb(255 255 255 / 0.1);
+}
+
+@keyframes signup-create-orbit {
+  0%,
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+  50% {
+    transform: rotate(2deg) scale(1.04);
+  }
+}
+
+@keyframes signup-create-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.signup-create-orbit {
+  animation: signup-create-orbit 1.6s ease-in-out infinite;
+}
+
+.signup-create-progress {
+  width: 45%;
+  animation: signup-create-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes signup-confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.signup-confetti-piece {
+  position: absolute;
+  top: -8px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: signup-confetti-fall linear forwards;
 }

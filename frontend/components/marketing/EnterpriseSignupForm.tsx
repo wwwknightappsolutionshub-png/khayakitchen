@@ -24,8 +24,6 @@ const signupSchema = z
     restaurant_name: z.string().min(2, "Restaurant name is required"),
     legal_business_name: z.string().min(2, "Legal business name is required"),
     business_type: z.enum(["restaurant", "cafe", "cloud_kitchen", "catering", "franchise", "other"]),
-    company_registration_number: z.string().optional(),
-    tax_vat_number: z.string().optional(),
     slug: z
       .string()
       .min(2, "Workspace slug is required")
@@ -58,11 +56,9 @@ const signupSchema = z
     estimated_daily_orders: z.number().min(1).max(100000),
     staff_count: z.number().min(1).max(10000),
     branch_count: z.number().min(1).max(1000),
-    average_order_value: z.number().min(0).optional(),
     tagline: z.string().max(160).optional(),
     primary_color: z.string().max(20).optional(),
     secondary_color: z.string().max(20).optional(),
-    logo_url: z.string().url("Enter a valid logo URL").optional().or(z.literal("")),
     terms_accepted: z.boolean().refine((value) => value, "You must accept the terms"),
     marketing_opt_in: z.boolean().optional(),
   })
@@ -91,7 +87,7 @@ interface EnterpriseSignupFormProps {
   plans: PublicPricingPlan[];
   defaultPlanId?: string;
   isSubmitting?: boolean;
-  onSubmit: (values: EnterpriseSignupFormValues) => void;
+  onSubmit: (values: EnterpriseSignupFormValues, logoFile?: File | null) => void;
   startAtForm?: boolean;
   plansLoading?: boolean;
   plansUnavailable?: boolean;
@@ -128,7 +124,7 @@ const SIGNUP_PHASES = [
   { id: "location", short: "Location", title: "Location & locale", description: "Where you operate and how you price orders." },
   { id: "owner", short: "Account", title: "Owner account", description: "Primary administrator credentials for your tenant." },
   { id: "operations", short: "Profile", title: "Operations profile", description: "How your kitchen runs day to day." },
-  { id: "launch", short: "Launch", title: "Branding & launch", description: "Appearance, plan selection, and terms." },
+  { id: "launch", short: "Launch", title: "Branding & launch", description: "Define your workspace color, brand logo and others." },
 ] as const;
 
 const TOTAL_STEPS = FEATURE_COUNT + SIGNUP_PHASES.length;
@@ -136,7 +132,7 @@ const TOTAL_STEPS = FEATURE_COUNT + SIGNUP_PHASES.length;
 const STEP_LABELS = [...FEATURE_LABELS, ...SIGNUP_PHASES.map((phase) => phase.short)];
 
 const PHASE_FIELDS: Record<number, (keyof EnterpriseSignupFormValues)[]> = {
-  0: ["restaurant_name", "legal_business_name", "business_type", "slug", "company_registration_number", "tax_vat_number"],
+  0: ["restaurant_name", "legal_business_name", "business_type", "slug"],
   1: ["country_iso", "country", "state_code", "state", "city", "street_address", "postal_code", "timezone", "currency"],
   2: [
     "owner_name",
@@ -152,11 +148,9 @@ const PHASE_FIELDS: Record<number, (keyof EnterpriseSignupFormValues)[]> = {
     "estimated_daily_orders",
     "staff_count",
     "branch_count",
-    "average_order_value",
   ],
   4: [
     "tagline",
-    "logo_url",
     "primary_color",
     "secondary_color",
     "plan_id",
@@ -165,6 +159,17 @@ const PHASE_FIELDS: Record<number, (keyof EnterpriseSignupFormValues)[]> = {
   ],
 };
 
+const LOGO_ACCEPT = "image/jpeg,image/jpg,image/png,image/svg+xml,.jpeg,.jpg,.png,.svg";
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_MIME = new Set(["image/jpeg", "image/jpg", "image/png", "image/svg+xml"]);
+
+const CREATE_TIPS = [
+  "Spinning up your kitchen workspace…",
+  "Wiring menu, orders, and inventory…",
+  "Polishing your brand for customers…",
+  "Almost ready — plating the finishing touches…",
+] as const;
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -172,6 +177,34 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 100);
+}
+
+function CreatingWorkspaceOverlay({ kitchenName }: { kitchenName?: string }) {
+  const [tipIndex, setTipIndex] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTipIndex((current) => (current + 1) % CREATE_TIPS.length);
+    }, 1800);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#0a0806]/55 px-6 backdrop-blur-sm">
+      <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-amber-500/25 bg-[#14100c] px-6 py-8 text-center shadow-2xl">
+        <div className="signup-create-orbit mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-amber-400/30 bg-gradient-to-br from-orange-500 to-rose-500 text-3xl font-bold text-white shadow-lg shadow-orange-500/30">
+          K
+        </div>
+        <p className="text-lg font-semibold text-amber-50">
+          {kitchenName?.trim() ? `Building ${kitchenName.trim()}` : "Building your kitchen"}
+        </p>
+        <p className="mt-2 min-h-[2.5rem] text-sm text-amber-100/75">{CREATE_TIPS[tipIndex]}</p>
+        <div className="mx-auto mt-5 h-1.5 w-full max-w-[12rem] overflow-hidden rounded-full bg-white/10">
+          <div className="signup-create-progress h-full rounded-full bg-gradient-to-r from-orange-400 via-amber-300 to-rose-400" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SectionTitle({ title, description }: { title: string; description: string }) {
@@ -261,6 +294,9 @@ export function EnterpriseSignupForm({
   const [states, setStates] = useState<StateRow[]>([]);
   const [cities, setCities] = useState<CityRow[]>([]);
   const [geoReady, setGeoReady] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const slugManuallyEditedRef = useRef(false);
 
   const {
@@ -455,8 +491,44 @@ export function EnterpriseSignupForm({
 
   const goPrev = () => setStep((current) => Math.max(0, current - 1));
 
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setLogoError(null);
+    if (!file) {
+      setLogoFile(null);
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      setLogoPreview(null);
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    const okExt = ext === "jpeg" || ext === "jpg" || ext === "png" || ext === "svg";
+    if (!LOGO_MIME.has(file.type) && !okExt) {
+      setLogoError("Upload a JPEG, JPG, PNG, or SVG image only.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoError("Logo must be 2MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((values) => onSubmit(values, logoFile))}
+      className="relative space-y-6"
+    >
+      {isSubmitting ? <CreatingWorkspaceOverlay kitchenName={restaurantName} /> : null}
       <UnifiedProgress currentStep={step} label={currentLabel} />
 
       {isFeatureStep ? (
@@ -512,8 +584,6 @@ export function EnterpriseSignupForm({
                 onBlur={slugField.onBlur}
                 onChange={handleSlugChange}
               />
-              <Input label="Company registration number" {...register("company_registration_number")} />
-              <Input label="Tax / VAT number" {...register("tax_vat_number")} />
             </div>
           ) : null}
 
@@ -639,11 +709,11 @@ export function EnterpriseSignupForm({
                   <InfoTooltip label="Order types offered" text="Select at least one order type." />
                 </div>
                 <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <label className={cn("flex items-center gap-2 text-sm", theme.body)}>
                     <input type="checkbox" className={theme.checkbox} {...register("order_types_pickup")} />
                     Pickup
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <label className={cn("flex items-center gap-2 text-sm", theme.body)}>
                     <input type="checkbox" className={theme.checkbox} {...register("order_types_delivery")} />
                     Delivery
                   </label>
@@ -653,19 +723,22 @@ export function EnterpriseSignupForm({
                 ) : null}
               </div>
               <Input
-                label="Estimated daily orders"
+                label="Daily orders you take per day"
                 type="number"
                 error={errors.estimated_daily_orders?.message}
                 {...register("estimated_daily_orders", { valueAsNumber: true })}
               />
-              <Input label="Staff count" type="number" error={errors.staff_count?.message} {...register("staff_count", { valueAsNumber: true })} />
-              <Input label="Branch count" type="number" error={errors.branch_count?.message} {...register("branch_count", { valueAsNumber: true })} />
               <Input
-                label="Average order value (optional)"
+                label="How many staff do you have"
                 type="number"
-                step="0.01"
-                error={errors.average_order_value?.message}
-                {...register("average_order_value", { valueAsNumber: true })}
+                error={errors.staff_count?.message}
+                {...register("staff_count", { valueAsNumber: true })}
+              />
+              <Input
+                label="How many branches do you have"
+                type="number"
+                error={errors.branch_count?.message}
+                {...register("branch_count", { valueAsNumber: true })}
               />
             </div>
           ) : null}
@@ -674,7 +747,31 @@ export function EnterpriseSignupForm({
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <Input label="Tagline (optional)" error={errors.tagline?.message} {...register("tagline")} />
-                <Input label="Logo URL (optional)" error={errors.logo_url?.message} {...register("logo_url")} />
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-foreground">Upload your logo</label>
+                    <InfoTooltip
+                      label="Upload your logo"
+                      text="JPEG, JPG, PNG, or SVG only. Max 2MB. Used as your kitchen profile avatar and customer menu header logo."
+                    />
+                  </div>
+                  <input
+                    type="file"
+                    accept={LOGO_ACCEPT}
+                    onChange={handleLogoChange}
+                    className="block w-full text-sm text-foreground file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
+                  />
+                  {logoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="mt-2 h-16 w-16 rounded-xl border border-border object-contain bg-surface-elevated"
+                    />
+                  ) : null}
+                  {logoError ? <p className="text-xs text-danger">{logoError}</p> : null}
+                  <p className={cn("text-xs", theme.muted)}>JPEG, JPG, PNG, SVG · max 2MB</p>
+                </div>
                 <ColorField
                   label="Primary color"
                   value={watch("primary_color") || "#1A1A2E"}
@@ -735,7 +832,7 @@ export function EnterpriseSignupForm({
               </div>
               <label className="flex items-start gap-3">
                 <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("terms_accepted")} />
-                <span className="text-sm text-zinc-300">
+                <span className={cn("text-sm", theme.body)}>
                   I agree to the KhayaOS terms of service and confirm the information provided is accurate.
                 </span>
               </label>
@@ -744,7 +841,7 @@ export function EnterpriseSignupForm({
               ) : null}
               <label className="flex items-start gap-3">
                 <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("marketing_opt_in")} />
-                <span className="text-sm text-zinc-300">
+                <span className={cn("text-sm", theme.body)}>
                   Keep me updated about KhayaOS product news and best practices.
                 </span>
               </label>
@@ -769,10 +866,9 @@ export function EnterpriseSignupForm({
             type="submit"
             className={theme.primaryButton}
             size="lg"
-            isLoading={isSubmitting}
-            disabled={plansUnavailable}
+            disabled={plansUnavailable || isSubmitting}
           >
-            Create my KhayaOS workspace
+            {isSubmitting ? "Preparing your kitchen…" : "Create my KhayaOS workspace"}
           </Button>
         ) : (
           <Button type="button" className={theme.primaryButton} size="lg" onClick={goNext}>

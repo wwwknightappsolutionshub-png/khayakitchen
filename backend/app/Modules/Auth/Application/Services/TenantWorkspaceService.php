@@ -4,6 +4,7 @@ namespace App\Modules\Auth\Application\Services;
 
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Pricing\Application\Services\AuditLogService;
+use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Validation\ValidationException;
 
@@ -151,10 +152,23 @@ class TenantWorkspaceService
      */
     private function serialize(Tenant $tenant): array
     {
+        $branding = TenantBranding::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->first();
+
+        $logoUrl = $branding?->platform_override_logo_url
+            ?: $branding?->logo_url
+            ?: $tenant->logo_url;
+
+        $displayName = filled($branding?->restaurant_name)
+            ? $branding->restaurant_name
+            : $tenant->name;
+
         return [
             'tenant_id' => $tenant->id,
-            'name' => $tenant->name,
+            'name' => $displayName,
             'slug' => $tenant->slug,
+            'logo_url' => $logoUrl,
             'currency' => strtoupper((string) ($tenant->currency ?: 'GBP')),
             'country' => $tenant->country,
             'country_iso' => $tenant->country_iso,

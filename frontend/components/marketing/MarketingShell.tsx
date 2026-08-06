@@ -33,7 +33,7 @@ function MarketingShellInner({ children }: { children: React.ReactNode }) {
     >
       <div
         className={cn(
-          "signup-splash-glow pointer-events-none absolute inset-0",
+          "signup-splash-glow pointer-events-none absolute inset-0 overflow-hidden",
           theme.glowOpacity,
         )}
       />

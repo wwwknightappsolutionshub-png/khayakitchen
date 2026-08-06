@@ -732,6 +732,7 @@ export interface TenantWorkspace {
   tenant_id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
   currency: string;
   country?: string | null;
   country_iso?: string | null;

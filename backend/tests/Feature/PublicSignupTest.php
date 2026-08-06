@@ -8,7 +8,9 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Platform\Mail\WelcomeOwnerMail;
 use App\Modules\Pricing\Domain\Models\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PublicSignupTest extends TestCase
@@ -343,5 +345,52 @@ class PublicSignupTest extends TestCase
         $response->assertJsonPath('code', 'VALIDATION_ERROR');
         $this->assertArrayHasKey('postal_code', $response->json('details'));
         Mail::assertNothingSent();
+    }
+
+    public function test_signup_stores_uploaded_logo_on_tenant_and_branding(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+
+        $plan = Plan::where('slug', 'growth')->firstOrFail();
+
+        $response = $this->post('/api/v1/signup', [
+            'restaurant_name' => 'Logo Kitchen',
+            'legal_business_name' => 'Logo Kitchen Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'logo-kitchen',
+            'country' => 'United Kingdom',
+            'city' => 'Manchester',
+            'street_address' => '9 Logo Lane',
+            'postal_code' => 'M1 1AE',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Logo Owner',
+            'owner_email' => 'owner@logokitchen.test',
+            'owner_phone' => '+447700900333',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 25,
+            'staff_count' => 3,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+            'logo' => UploadedFile::fake()->image('kitchen-logo.png'),
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('tenant.slug', 'logo-kitchen');
+        $this->assertNotEmpty($response->json('tenant.logo_url'));
+
+        $tenant = Tenant::where('slug', 'logo-kitchen')->firstOrFail();
+        $this->assertNotNull($tenant->logo_url);
+
+        $this->assertDatabaseHas('tenant_brandings', [
+            'tenant_id' => $tenant->id,
+            'logo_url' => $tenant->logo_url,
+            'restaurant_name' => 'Logo Kitchen',
+        ]);
     }
 }

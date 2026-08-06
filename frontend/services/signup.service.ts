@@ -33,6 +33,7 @@ export type SignupPayload = {
   terms_accepted: boolean;
   marketing_opt_in?: boolean;
   referral_code?: string;
+  logo?: File | null;
 };
 
 export type SignupResponse = {
@@ -51,8 +52,30 @@ export type SignupResponse = {
   message: string;
 };
 
+function appendField(form: FormData, key: string, value: unknown) {
+  if (value === undefined || value === null) return;
+  if (typeof value === "boolean") {
+    form.append(key, value ? "1" : "0");
+    return;
+  }
+  form.append(key, String(value));
+}
+
 export const signupService = {
   register(payload: SignupPayload) {
-    return api.post<SignupResponse>("/signup", payload, { skipAuth: true });
+    const form = new FormData();
+    const { logo, order_types, ...rest } = payload;
+
+    Object.entries(rest).forEach(([key, value]) => {
+      appendField(form, key, value);
+    });
+
+    order_types.forEach((type) => form.append("order_types[]", type));
+
+    if (logo) {
+      form.append("logo", logo);
+    }
+
+    return api.upload<SignupResponse>("/signup", form, { skipAuth: true });
   },
 };
