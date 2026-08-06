@@ -749,20 +749,26 @@ html[data-khayaos-mkt="dark"] .marketing-app .marketing-header,
 
 @keyframes signup-confetti-fall {
   0% {
-    transform: translateY(-10vh) rotate(0deg);
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
     opacity: 1;
   }
   100% {
-    transform: translateY(110vh) rotate(720deg);
+    transform: translate3d(0, 110vh, 0) rotate(720deg);
     opacity: 0;
   }
 }
 
+.signup-confetti-blast {
+  overflow: hidden;
+}
+
 .signup-confetti-piece {
   position: absolute;
-  top: -8px;
+  top: -12px;
   width: 8px;
   height: 12px;
   border-radius: 2px;
-  animation: signup-confetti-fall linear forwards;
+  animation-name: signup-confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }

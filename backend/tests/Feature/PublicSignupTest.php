@@ -101,6 +101,7 @@ class PublicSignupTest extends TestCase
             ->once()
             ->withArgs(function (string $phone, string $message, array $context): bool {
                 return str_contains($phone, '447700900222')
+                    && str_contains($message, 'Congratulations')
                     && str_contains($message, 'Welcome to KhayaOS')
                     && (($context['type'] ?? null) === 'owner_welcome');
             });
@@ -132,6 +133,8 @@ class PublicSignupTest extends TestCase
             'branch_count' => 1,
             'terms_accepted' => true,
         ])->assertCreated();
+
+        // Welcome WhatsApp is sent at signup (asserted via mock above).
 
         $token = null;
         Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) use (&$token) {

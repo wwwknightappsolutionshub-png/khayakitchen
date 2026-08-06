@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Application\Services;
 use App\Modules\Auth\Application\Services\EmailVerificationService;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
@@ -12,8 +13,10 @@ use App\Modules\Pricing\Domain\Models\Plan;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class PublicSignupService
 {
@@ -23,6 +26,7 @@ class PublicSignupService
         private AuditLogService $auditLogService,
         private EmailVerificationService $emailVerificationService,
         private TenantReferralService $referralService,
+        private WhatsAppProviderInterface $whatsAppProvider,
     ) {}
 
     /**
@@ -143,10 +147,53 @@ class PublicSignupService
 
         $owner = User::withoutGlobalScopes()->findOrFail($result['owner_id']);
         $this->emailVerificationService->createAndSendVerification($owner, $data['slug']);
+        $this->sendWelcomeWhatsApp($result, $data, $plan->name);
 
         unset($result['owner_id']);
 
         return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @param  array<string, mixed>  $data
+     */
+    private function sendWelcomeWhatsApp(array $result, array $data, string $planName): void
+    {
+        $ownerPhone = preg_replace('/\s+/', '', trim((string) ($data['owner_phone'] ?? ''))) ?? '';
+        if ($ownerPhone === '') {
+            return;
+        }
+
+        $tenantId = (string) ($result['tenant']['id'] ?? '');
+        $tenantSlug = (string) ($result['tenant']['slug'] ?? ($data['slug'] ?? ''));
+        $ownerEmail = (string) ($result['owner_email'] ?? ($data['owner_email'] ?? ''));
+        $ownerName = (string) ($data['owner_name'] ?? 'Owner');
+        $restaurant = (string) ($data['restaurant_name'] ?? ($result['tenant']['name'] ?? 'your kitchen'));
+
+        $loginUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/').'/ops/login?'.http_build_query([
+            'email' => $ownerEmail,
+            'tenant' => $tenantSlug,
+            'welcome' => '1',
+        ]);
+
+        $message = "Congratulations {$ownerName}! Welcome to KhayaOS. ".
+            "Your workspace {$restaurant} is now onboarded on the {$planName} plan. ".
+            "Confirm your email, then sign in here: {$loginUrl}";
+
+        try {
+            $this->whatsAppProvider->send($ownerPhone, $message, [
+                'type' => 'owner_welcome',
+                'tenant_id' => $tenantId,
+                'owner_email' => $ownerEmail,
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('Signup welcome WhatsApp failed', [
+                'tenant_id' => $tenantId,
+                'phone' => $ownerPhone,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
