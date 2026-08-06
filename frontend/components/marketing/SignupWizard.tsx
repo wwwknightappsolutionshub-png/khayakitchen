@@ -136,11 +136,11 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
         plansLoading={plansQuery.isLoading || plansQuery.isFetching}
         plansUnavailable={plansUnavailable}
         plansErrorMessage={plansErrorMessage}
+        apiError={submitError}
         onRetryPlans={() => {
           void plansQuery.refetch();
         }}
       />
-      {submitError ? <p className="text-sm text-red-400">{submitError}</p> : null}
     </div>
   );
 }

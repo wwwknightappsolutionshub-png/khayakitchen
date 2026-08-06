@@ -59,7 +59,9 @@ const signupSchema = z
     tagline: z.string().max(160).optional(),
     primary_color: z.string().max(20).optional(),
     secondary_color: z.string().max(20).optional(),
-    terms_accepted: z.boolean().refine((value) => value, "You must accept the terms"),
+    terms_accepted: z.boolean().refine((value) => value === true, {
+      message: "You must accept the terms",
+    }),
     marketing_opt_in: z.boolean().optional(),
   })
   .refine((data) => data.owner_password === data.owner_password_confirmation, {
@@ -93,6 +95,7 @@ interface EnterpriseSignupFormProps {
   plansUnavailable?: boolean;
   plansErrorMessage?: string | null;
   onRetryPlans?: () => void;
+  apiError?: string | null;
 }
 
 type CountryRow = {
@@ -158,6 +161,44 @@ const PHASE_FIELDS: Record<number, (keyof EnterpriseSignupFormValues)[]> = {
     "marketing_opt_in",
   ],
 };
+
+const FIELD_LABELS: Partial<Record<keyof EnterpriseSignupFormValues, string>> = {
+  restaurant_name: "Restaurant name",
+  legal_business_name: "Legal business name",
+  business_type: "Business type",
+  slug: "Workspace slug",
+  country_iso: "Country",
+  country: "Country",
+  state_code: "State / province",
+  state: "State / province",
+  city: "City",
+  street_address: "Street address",
+  postal_code: "Postal code",
+  timezone: "Timezone",
+  currency: "Currency",
+  owner_name: "Owner full name",
+  owner_email: "Owner email",
+  owner_phone: "Owner phone",
+  owner_role_title: "Role / title",
+  owner_password: "Password",
+  owner_password_confirmation: "Confirm password",
+  plan_id: "Subscription plan",
+  order_types_pickup: "Order types",
+  order_types_delivery: "Order types",
+  estimated_daily_orders: "Daily orders",
+  staff_count: "Staff count",
+  branch_count: "Branch count",
+  terms_accepted: "Terms of service",
+};
+
+function phaseForFieldName(fieldName: string): number {
+  for (const [phaseKey, fields] of Object.entries(PHASE_FIELDS)) {
+    if (fields.includes(fieldName as keyof EnterpriseSignupFormValues)) {
+      return Number(phaseKey);
+    }
+  }
+  return 0;
+}
 
 const LOGO_ACCEPT = "image/jpeg,image/jpg,image/png,image/svg+xml,.jpeg,.jpg,.png,.svg";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -287,6 +328,7 @@ export function EnterpriseSignupForm({
   plansUnavailable = false,
   plansErrorMessage = null,
   onRetryPlans,
+  apiError = null,
 }: EnterpriseSignupFormProps) {
   const { theme } = useMarketingTheme();
   const [step, setStep] = useState(startAtForm ? FEATURE_COUNT : 0);
@@ -297,6 +339,7 @@ export function EnterpriseSignupForm({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [submitValidationError, setSubmitValidationError] = useState<string | null>(null);
   const slugManuallyEditedRef = useRef(false);
 
   const {
@@ -305,9 +348,11 @@ export function EnterpriseSignupForm({
     watch,
     setValue,
     trigger,
+    setFocus,
     formState: { errors },
   } = useForm<EnterpriseSignupFormValues>({
     resolver: zodResolver(signupSchema),
+    shouldFocusError: true,
     defaultValues: {
       business_type: "restaurant",
       country_iso: "",
@@ -479,7 +524,34 @@ export function EnterpriseSignupForm({
     [setValue, states],
   );
 
+  const jumpToFirstError = useCallback(
+    (fieldErrors: Record<string, unknown>) => {
+      const firstField = Object.keys(fieldErrors)[0];
+      if (!firstField) {
+        setSubmitValidationError("Please review the form and fix any missing or invalid fields.");
+        return;
+      }
+      const targetPhase = phaseForFieldName(firstField);
+      const label =
+        FIELD_LABELS[firstField as keyof EnterpriseSignupFormValues] ??
+        firstField.replace(/_/g, " ");
+      setStep(FEATURE_COUNT + targetPhase);
+      setSubmitValidationError(`Please fix “${label}” before creating your workspace.`);
+      window.setTimeout(() => {
+        try {
+          setFocus(firstField as keyof EnterpriseSignupFormValues);
+        } catch {
+          /* field may not be focusable */
+        }
+        const el = document.querySelector<HTMLElement>(`[name="${firstField}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 80);
+    },
+    [setFocus],
+  );
+
   const goNext = async () => {
+    setSubmitValidationError(null);
     if (isFeatureStep) {
       setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1));
       return;
@@ -489,7 +561,19 @@ export function EnterpriseSignupForm({
     setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1));
   };
 
-  const goPrev = () => setStep((current) => Math.max(0, current - 1));
+  const goPrev = () => {
+    setSubmitValidationError(null);
+    setStep((current) => Math.max(0, current - 1));
+  };
+
+  const onValidSubmit = (values: EnterpriseSignupFormValues) => {
+    if (logoError) {
+      setSubmitValidationError(logoError);
+      return;
+    }
+    setSubmitValidationError(null);
+    onSubmit(values, logoFile);
+  };
 
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -525,8 +609,9 @@ export function EnterpriseSignupForm({
 
   return (
     <form
-      onSubmit={handleSubmit((values) => onSubmit(values, logoFile))}
+      onSubmit={handleSubmit(onValidSubmit, (fieldErrors) => jumpToFirstError(fieldErrors))}
       className="relative space-y-6"
+      noValidate
     >
       {isSubmitting ? <CreatingWorkspaceOverlay kitchenName={restaurantName} /> : null}
       <UnifiedProgress currentStep={step} label={currentLabel} />
@@ -850,13 +935,19 @@ export function EnterpriseSignupForm({
         </section>
       )}
 
+      {submitValidationError || apiError ? (
+        <p className="rounded-[var(--radius)] border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-300">
+          {submitValidationError || apiError}
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           type="button"
           variant="secondary"
           className={theme.secondaryButton}
           onClick={goPrev}
-          disabled={step === 0}
+          disabled={step === 0 || isSubmitting}
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -867,6 +958,7 @@ export function EnterpriseSignupForm({
             className={theme.primaryButton}
             size="lg"
             disabled={plansUnavailable || isSubmitting}
+            isLoading={isSubmitting}
           >
             {isSubmitting ? "Preparing your kitchen…" : "Create my KhayaOS workspace"}
           </Button>
