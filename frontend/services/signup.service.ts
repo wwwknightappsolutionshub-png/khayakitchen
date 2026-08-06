@@ -55,6 +55,7 @@ export type SignupResponse = {
 function appendField(form: FormData, key: string, value: unknown) {
   if (value === undefined || value === null) return;
   if (typeof value === "boolean") {
+    // Laravel `accepted` / `boolean` rules expect "1"/"0" or "yes"/"no"
     form.append(key, value ? "1" : "0");
     return;
   }
@@ -69,6 +70,11 @@ export const signupService = {
     Object.entries(rest).forEach(([key, value]) => {
       appendField(form, key, value);
     });
+
+    // Ensure terms is always an accepted value when the client validated it.
+    if (payload.terms_accepted) {
+      form.set("terms_accepted", "1");
+    }
 
     order_types.forEach((type) => form.append("order_types[]", type));
 

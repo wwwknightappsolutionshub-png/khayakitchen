@@ -70,14 +70,22 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
         /* ignore */
       }
       const params = new URLSearchParams({
-        email: response.owner_email,
-        tenant: response.tenant.slug,
-        kitchen: response.tenant.name,
+        email: response.owner_email ?? "",
+        tenant: response.tenant?.slug ?? "",
+        kitchen: response.tenant?.name ?? "",
       });
       router.replace(`/ops/verify-email-pending?${params.toString()}`);
     },
     onError: (error) => {
-      setSubmitError(error instanceof ApiClientError ? error.message : "Signup failed. Please try again.");
+      if (error instanceof ApiClientError) {
+        setSubmitError(error.message);
+        return;
+      }
+      if (error instanceof Error && error.message) {
+        setSubmitError(error.message);
+        return;
+      }
+      setSubmitError("Signup failed. Please try again.");
     },
   });
 

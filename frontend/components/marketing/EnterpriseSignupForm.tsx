@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -344,6 +344,7 @@ export function EnterpriseSignupForm({
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     setValue,
@@ -915,21 +916,52 @@ export function EnterpriseSignupForm({
                   ) : null}
                 </div>
               </div>
-              <label className="flex items-start gap-3">
-                <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("terms_accepted")} />
-                <span className={cn("text-sm", theme.body)}>
-                  I agree to the KhayaOS terms of service and confirm the information provided is accurate.
-                </span>
-              </label>
+              <Controller
+                name="terms_accepted"
+                control={control}
+                render={({ field }) => (
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className={cn("mt-1 h-4 w-4 shrink-0", theme.checkbox)}
+                      checked={field.value === true}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      onChange={(event) =>
+                        field.onChange(event.target.checked)
+                      }
+                    />
+                    <span className={cn("text-sm", theme.body)}>
+                      I agree to the KhayaOS terms of service and confirm the information provided is
+                      accurate.
+                    </span>
+                  </label>
+                )}
+              />
               {errors.terms_accepted?.message ? (
                 <p className="text-sm text-red-400">{errors.terms_accepted.message}</p>
               ) : null}
-              <label className="flex items-start gap-3">
-                <input type="checkbox" className={cn("mt-1", theme.checkbox)} {...register("marketing_opt_in")} />
-                <span className={cn("text-sm", theme.body)}>
-                  Keep me updated about KhayaOS product news and best practices.
-                </span>
-              </label>
+              <Controller
+                name="marketing_opt_in"
+                control={control}
+                render={({ field }) => (
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className={cn("mt-1 h-4 w-4 shrink-0", theme.checkbox)}
+                      checked={field.value === true}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      onChange={(event) =>
+                        field.onChange(event.target.checked)
+                      }
+                    />
+                    <span className={cn("text-sm", theme.body)}>
+                      Keep me updated about KhayaOS product news and best practices.
+                    </span>
+                  </label>
+                )}
+              />
             </div>
           ) : null}
         </section>

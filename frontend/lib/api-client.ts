@@ -264,25 +264,44 @@ async function uploadFormData<T>(
     if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;
   }
 
-  const response = await fetch(url.toString(), {
-    ...fetchOptions,
-    method: "POST",
-    headers,
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      ...fetchOptions,
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch {
+    throw new ApiClientError(
+      "Could not reach the server. Check your connection and try again.",
+      "NETWORK_ERROR",
+      0,
+    );
+  }
 
   if (!response.ok) {
-    let errorBody: ApiError | null = null;
+    let errorBody: (ApiError & { errors?: Record<string, string[] | string> }) | null = null;
     try {
       errorBody = await response.json();
     } catch {
       // non-json error
     }
+
+    const validationErrors = errorBody?.errors;
+    let message = errorBody?.message ?? `Request failed with status ${response.status}`;
+    if (validationErrors && typeof validationErrors === "object") {
+      const first = Object.values(validationErrors).flat().find(Boolean);
+      if (typeof first === "string" && first.trim()) {
+        message = first;
+      }
+    }
+
     throw new ApiClientError(
-      errorBody?.message ?? `Request failed with status ${response.status}`,
+      message,
       errorBody?.code ?? "REQUEST_FAILED",
       response.status,
-      errorBody?.details as Record<string, unknown> | undefined,
+      (errorBody?.details ?? validationErrors) as Record<string, unknown> | undefined,
     );
   }
 
