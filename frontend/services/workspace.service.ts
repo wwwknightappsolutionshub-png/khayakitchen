@@ -22,7 +22,7 @@ export const workspaceService = {
 
   async updateWhatsApp(payload: {
     enabled?: boolean;
-    provider?: "meta" | "twilio";
+    provider?: "meta" | "twilio" | "genius";
     phone_number_id?: string | null;
     access_token?: string | null;
     twilio_account_sid?: string | null;
@@ -30,5 +30,23 @@ export const workspaceService = {
     twilio_from?: string | null;
   }): Promise<{ whatsapp: TenantWhatsAppSettings }> {
     return api.patch<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp", payload);
+  },
+
+  async initWhatsAppSession(): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.post<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp/session/init", {});
+  },
+
+  async activateWhatsAppSession(phone_number: string): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.post<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp/session/activate", {
+      phone_number,
+    });
+  },
+
+  async refreshWhatsAppSession(): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.post<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp/session/refresh", {});
+  },
+
+  async disconnectWhatsAppSession(): Promise<{ whatsapp: TenantWhatsAppSettings }> {
+    return api.post<{ whatsapp: TenantWhatsAppSettings }>("/workspace/whatsapp/session/disconnect", {});
   },
 };

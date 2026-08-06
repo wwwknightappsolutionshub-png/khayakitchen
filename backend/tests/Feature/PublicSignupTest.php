@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Modules\Auth\Mail\EmailVerificationMail;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Platform\Mail\WelcomeOwnerMail;
 use App\Modules\Pricing\Domain\Models\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class PublicSignupTest extends TestCase
@@ -94,6 +96,15 @@ class PublicSignupTest extends TestCase
     public function test_signup_owner_can_login_after_email_verification(): void
     {
         Mail::fake();
+        $whatsAppMock = Mockery::mock(WhatsAppProviderInterface::class);
+        $whatsAppMock->shouldReceive('send')
+            ->once()
+            ->withArgs(function (string $phone, string $message, array $context): bool {
+                return str_contains($phone, '447700900222')
+                    && str_contains($message, 'Welcome to KhayaOS')
+                    && (($context['type'] ?? null) === 'owner_welcome');
+            });
+        $this->app->instance(WhatsAppProviderInterface::class, $whatsAppMock);
 
         $plan = Plan::where('slug', 'starter')->firstOrFail();
 

@@ -5,6 +5,7 @@ namespace App\Modules\Auth\Application\Services;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Mail\EmailVerificationMail;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Platform\Mail\WelcomeOwnerMail;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,10 @@ use Throwable;
 
 class EmailVerificationService
 {
+  public function __construct(
+    private WhatsAppProviderInterface $whatsAppProvider,
+  ) {}
+
   public function createAndSendVerification(User $user, ?string $tenantSlug = null): void
   {
     if ($user->isEmailVerified()) {
@@ -210,6 +215,33 @@ class EmailVerificationService
       Log::error('Post-verification welcome email failed to send', [
         'user_id' => $user->id,
         'email' => $user->email,
+        'error' => $e->getMessage(),
+      ]);
+    }
+
+    $ownerPhone = (string) data_get($tenant->signup_metadata, 'owner_phone', '');
+    $ownerPhone = preg_replace('/\s+/', '', trim($ownerPhone)) ?? '';
+    if ($ownerPhone === '') {
+      return;
+    }
+
+    $restaurant = $branding?->restaurant_name ?? $tenant->name;
+    $planName = $subscription->plan_name ?? 'Starter';
+    $message = "Welcome to KhayaOS, {$user->name}! ".
+      "Your workspace {$restaurant} is now active on {$planName}. ".
+      "Sign in here: {$loginUrl}";
+
+    try {
+      $this->whatsAppProvider->send($ownerPhone, $message, [
+        'type' => 'owner_welcome',
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+      ]);
+    } catch (Throwable $e) {
+      Log::warning('Post-verification welcome WhatsApp failed', [
+        'tenant_id' => $tenant->id,
+        'user_id' => $user->id,
+        'phone' => $ownerPhone,
         'error' => $e->getMessage(),
       ]);
     }

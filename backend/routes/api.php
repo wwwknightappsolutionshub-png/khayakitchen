@@ -292,6 +292,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('/workspace', [TenantWorkspaceController::class, 'update']);
         Route::get('/workspace/whatsapp', [TenantWhatsAppSettingsController::class, 'show']);
         Route::patch('/workspace/whatsapp', [TenantWhatsAppSettingsController::class, 'update']);
+        Route::post('/workspace/whatsapp/session/init', [TenantWhatsAppSettingsController::class, 'initSession']);
+        Route::post('/workspace/whatsapp/session/activate', [TenantWhatsAppSettingsController::class, 'activateSession']);
+        Route::post('/workspace/whatsapp/session/refresh', [TenantWhatsAppSettingsController::class, 'refreshSession']);
+        Route::post('/workspace/whatsapp/session/disconnect', [TenantWhatsAppSettingsController::class, 'disconnectSession']);
         Route::get('/engagement/platform-messages', [TenantEngagementController::class, 'platformMessages']);
         Route::get('/engagement/platform-chat/threads', [TenantEngagementController::class, 'platformThreads']);
         Route::get('/engagement/customer-chat/threads', [TenantEngagementController::class, 'customerThreads']);

@@ -7,6 +7,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Menu\Domain\Models\Meal;
 use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
+use App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings;
 use App\Modules\Notifications\Domain\Models\TenantWhatsAppSettings;
 use App\Modules\Notifications\Jobs\SendOrderEmailNotificationJob;
 use App\Modules\Notifications\Mail\CustomerOrderStatusMail;
@@ -70,6 +71,44 @@ class MultiChannelNotificationsAndMealShareTest extends TestCase
         TenantWhatsAppSettings::where('tenant_id', $tenant->id)->update(['enabled' => false]);
         $fallback = app(WhatsAppCredentialResolver::class)->resolve($tenant->id);
         $this->assertSame('platform', $fallback['source']);
+    }
+
+    public function test_tenant_hosted_genius_session_overrides_platform_session_for_30_days(): void
+    {
+        $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
+
+        PlatformWhatsAppSettings::create([
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'api-platform-key',
+            'session_id' => 'session_platform_default',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ]);
+
+        TenantWhatsAppSettings::create([
+            'tenant_id' => $tenant->id,
+            'enabled' => true,
+            'provider' => 'genius',
+            'hosted_session_id' => 'session_tenant_abc',
+            'hosted_status' => 'active',
+            'hosted_expires_at' => now()->addDays(30),
+        ]);
+
+        $resolved = app(WhatsAppCredentialResolver::class)->resolve($tenant->id);
+        $this->assertSame('tenant', $resolved['source']);
+        $this->assertSame('genius', $resolved['provider']);
+        $this->assertSame('session_tenant_abc', $resolved['genius']['session_id']);
+        $this->assertSame('api-platform-key', $resolved['genius']['api_key']);
+
+        TenantWhatsAppSettings::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->update([
+                'hosted_expires_at' => now()->subMinute(),
+                'hosted_status' => 'active',
+            ]);
+
+        $expiredFallback = app(WhatsAppCredentialResolver::class)->resolve($tenant->id);
+        $this->assertSame('platform', $expiredFallback['source']);
     }
 
     public function test_customer_otp_sends_email_and_whatsapp_in_parallel(): void

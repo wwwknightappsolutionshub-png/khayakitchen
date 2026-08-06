@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Link2, Settings, Users } from "lucide-react";
+import { Copy, Link2, RefreshCw, Settings, Smartphone, Unplug, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -89,13 +89,14 @@ export default function SettingsPage() {
   const [whatsappSuccess, setWhatsappSuccess] = useState<string | null>(null);
   const [whatsappForm, setWhatsappForm] = useState({
     enabled: false,
-    provider: "meta" as "meta" | "twilio",
+    provider: "meta" as "meta" | "twilio" | "genius",
     phone_number_id: "",
     access_token: "",
     twilio_account_sid: "",
     twilio_auth_token: "",
     twilio_from: "",
   });
+  const [hostedPhoneNumber, setHostedPhoneNumber] = useState("");
 
   const { data: staffData, isLoading: staffLoading } = useQuery({
     queryKey: ["staff"],
@@ -121,13 +122,19 @@ export default function SettingsPage() {
     if (!wa) return;
     setWhatsappForm({
       enabled: wa.enabled,
-      provider: wa.provider === "twilio" ? "twilio" : "meta",
+      provider:
+        wa.provider === "twilio"
+          ? "twilio"
+          : wa.provider === "genius"
+            ? "genius"
+            : "meta",
       phone_number_id: wa.phone_number_id ?? "",
       access_token: "",
       twilio_account_sid: wa.twilio_account_sid ?? "",
       twilio_auth_token: "",
       twilio_from: wa.twilio_from ?? "",
     });
+    setHostedPhoneNumber(wa.hosted_session?.phone_number ?? "");
   }, [whatsappData?.whatsapp]);
 
   const orderingUrl = useMemo(() => {
@@ -199,6 +206,58 @@ export default function SettingsPage() {
       setWhatsappError(
         err instanceof ApiClientError ? err.message : "Failed to update WhatsApp settings.",
       );
+    },
+  });
+
+  const initHostedSessionMutation = useMutation({
+    mutationFn: () => workspaceService.initWhatsAppSession(),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace-whatsapp"], response);
+      setWhatsappSuccess("Scan session initialized. Open QR and complete activation.");
+      setWhatsappError(null);
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(err instanceof ApiClientError ? err.message : "Failed to initialize session.");
+    },
+  });
+
+  const activateHostedSessionMutation = useMutation({
+    mutationFn: () => workspaceService.activateWhatsAppSession(hostedPhoneNumber),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace-whatsapp"], response);
+      setWhatsappSuccess("Tenant WhatsApp number activated for 30 days.");
+      setWhatsappError(null);
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(err instanceof ApiClientError ? err.message : "Failed to activate hosted session.");
+    },
+  });
+
+  const refreshHostedSessionMutation = useMutation({
+    mutationFn: () => workspaceService.refreshWhatsAppSession(),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace-whatsapp"], response);
+      setWhatsappSuccess("Session lifecycle extended by 30 days.");
+      setWhatsappError(null);
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(err instanceof ApiClientError ? err.message : "Failed to refresh session.");
+    },
+  });
+
+  const disconnectHostedSessionMutation = useMutation({
+    mutationFn: () => workspaceService.disconnectWhatsAppSession(),
+    onSuccess: (response) => {
+      queryClient.setQueryData(["workspace-whatsapp"], response);
+      setWhatsappSuccess("Hosted session disconnected. Platform fallback is now active.");
+      setWhatsappError(null);
+    },
+    onError: (err) => {
+      setWhatsappSuccess(null);
+      setWhatsappError(err instanceof ApiClientError ? err.message : "Failed to disconnect session.");
     },
   });
 
@@ -433,9 +492,9 @@ export default function SettingsPage() {
             ) : (
               <>
                 <p className="text-sm text-muted">
-                  Connect your own WhatsApp Business credentials for OTPs and order updates.
-                  When disabled or incomplete, KhayaOS uses the platform WhatsApp sender as
-                  fallback.
+                  Connect your own WhatsApp sender. For hosted mode, scan your number once and
+                  KhayaOS sends through the platform API using your active 30-day session.
+                  When unavailable, platform fallback is used.
                 </p>
                 {whatsappData?.whatsapp?.using_platform_fallback ? (
                   <p className="rounded-[var(--radius)] bg-secondary/10 px-3 py-2 text-sm text-secondary">
@@ -468,15 +527,99 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setWhatsappForm((f) => ({
                         ...f,
-                        provider: e.target.value === "twilio" ? "twilio" : "meta",
+                        provider:
+                          e.target.value === "twilio"
+                            ? "twilio"
+                            : e.target.value === "genius"
+                              ? "genius"
+                              : "meta",
                       }))
                     }
                   >
+                    <option value="genius">Hosted session (scan number)</option>
                     <option value="meta">Meta Cloud API</option>
                     <option value="twilio">Twilio</option>
                   </select>
                 </div>
-                {whatsappForm.provider === "meta" ? (
+                {whatsappForm.provider === "genius" ? (
+                  <div className="space-y-3 rounded-[var(--radius)] border border-border bg-surface-elevated/40 p-4">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">Tenant hosted WhatsApp session</p>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Lifecycle is 30 days. Initialize a scan session, then activate with the
+                      WhatsApp number you connected.
+                    </p>
+                    {whatsappData?.whatsapp?.hosted_session?.qr_payload ? (
+                      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(
+                            whatsappData.whatsapp.hosted_session.qr_payload,
+                          )}`}
+                          alt="WhatsApp hosted session QR"
+                          width={170}
+                          height={170}
+                          className="rounded-[var(--radius)] border border-border bg-white p-2"
+                        />
+                        <div className="text-xs text-muted">
+                          <p>Status: {whatsappData.whatsapp.hosted_session.status}</p>
+                          <p>
+                            Remaining days:{" "}
+                            {whatsappData.whatsapp.hosted_session.remaining_days ?? "—"}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                    <Input
+                      label="Connected WhatsApp number"
+                      value={hostedPhoneNumber}
+                      disabled={!canEditWhatsApp}
+                      placeholder="+447..."
+                      onChange={(e) => setHostedPhoneNumber(e.target.value)}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!canEditWhatsApp}
+                        isLoading={initHostedSessionMutation.isPending}
+                        onClick={() => initHostedSessionMutation.mutate()}
+                      >
+                        Start scan session
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={!canEditWhatsApp || !hostedPhoneNumber.trim()}
+                        isLoading={activateHostedSessionMutation.isPending}
+                        onClick={() => activateHostedSessionMutation.mutate()}
+                      >
+                        Activate session
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!canEditWhatsApp}
+                        isLoading={refreshHostedSessionMutation.isPending}
+                        onClick={() => refreshHostedSessionMutation.mutate()}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh 30 days
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!canEditWhatsApp}
+                        isLoading={disconnectHostedSessionMutation.isPending}
+                        onClick={() => disconnectHostedSessionMutation.mutate()}
+                      >
+                        <Unplug className="h-4 w-4" />
+                        Disconnect
+                      </Button>
+                    </div>
+                  </div>
+                ) : whatsappForm.provider === "meta" ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
                       label="Phone number ID"

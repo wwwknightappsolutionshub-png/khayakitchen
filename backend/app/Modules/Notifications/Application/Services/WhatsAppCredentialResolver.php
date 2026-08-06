@@ -26,6 +26,27 @@ class WhatsAppCredentialResolver
                 ->first();
 
             if ($settings && $settings->enabled) {
+                if ($settings->provider === 'genius'
+                    && $settings->hosted_status === 'active'
+                    && filled($settings->hosted_session_id)
+                    && (! $settings->hosted_expires_at || $settings->hosted_expires_at->isFuture())
+                ) {
+                    $platformGenius = $this->platformGeniusCredentials();
+                    if (filled($platformGenius['api_key'])) {
+                        return [
+                            'provider' => 'genius',
+                            'source' => 'tenant',
+                            'meta' => $this->emptyMeta(),
+                            'twilio' => $this->emptyTwilio(),
+                            'genius' => [
+                                'api_key' => $platformGenius['api_key'],
+                                'session_id' => $settings->hosted_session_id,
+                                'base_url' => $platformGenius['base_url'],
+                            ],
+                        ];
+                    }
+                }
+
                 if ($settings->provider === 'meta'
                     && filled($settings->access_token)
                     && filled($settings->phone_number_id)
@@ -195,5 +216,18 @@ class WhatsAppCredentialResolver
     private function emptyGenius(): array
     {
         return ['api_key' => null, 'session_id' => null, 'base_url' => null];
+    }
+
+    /**
+     * @return array{api_key: ?string, base_url: ?string}
+     */
+    private function platformGeniusCredentials(): array
+    {
+        $settings = PlatformWhatsAppSettings::query()->first();
+
+        return [
+            'api_key' => $settings?->api_key ?: config('whatsapp.genius.api_key'),
+            'base_url' => $settings?->base_url ?: config('whatsapp.genius.base_url'),
+        ];
     }
 }

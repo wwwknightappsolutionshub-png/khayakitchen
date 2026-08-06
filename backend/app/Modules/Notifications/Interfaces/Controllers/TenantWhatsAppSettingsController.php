@@ -22,7 +22,7 @@ class TenantWhatsAppSettingsController extends Controller
     {
         $data = $request->validate([
             'enabled' => ['sometimes', 'boolean'],
-            'provider' => ['sometimes', 'in:meta,twilio'],
+            'provider' => ['sometimes', 'in:meta,twilio,genius'],
             'phone_number_id' => ['nullable', 'string', 'max:120'],
             'access_token' => ['nullable', 'string', 'max:2000'],
             'twilio_account_sid' => ['nullable', 'string', 'max:120'],
@@ -32,6 +32,38 @@ class TenantWhatsAppSettingsController extends Controller
 
         return ApiResponse::success([
             'whatsapp' => $this->settingsService->updateForCurrentTenant($data),
+        ]);
+    }
+
+    public function initSession()
+    {
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->initHostedSession(),
+        ]);
+    }
+
+    public function activateSession(Request $request)
+    {
+        $data = $request->validate([
+            'phone_number' => ['required', 'string', 'max:40'],
+        ]);
+
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->activateHostedSession((string) $data['phone_number']),
+        ]);
+    }
+
+    public function refreshSession()
+    {
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->refreshHostedSession(),
+        ]);
+    }
+
+    public function disconnectSession()
+    {
+        return ApiResponse::success([
+            'whatsapp' => $this->settingsService->disconnectHostedSession(),
         ]);
     }
 }

@@ -745,12 +745,23 @@ export interface TenantWorkspace {
 export interface TenantWhatsAppSettings {
   tenant_id: string;
   enabled: boolean;
-  provider: "meta" | "twilio";
+  provider: "meta" | "twilio" | "genius";
   phone_number_id?: string | null;
   has_access_token: boolean;
   twilio_account_sid?: string | null;
   has_twilio_auth_token: boolean;
   twilio_from?: string | null;
+  hosted_session?: {
+    session_id?: string | null;
+    phone_number?: string | null;
+    status: "inactive" | "pending_scan" | "active" | "expired" | "disconnected";
+    qr_payload?: string | null;
+    connected_at?: string | null;
+    last_seen_at?: string | null;
+    expires_at?: string | null;
+    remaining_days?: number | null;
+    lifecycle_days: number;
+  };
   using_platform_fallback: boolean;
   active_source: "tenant" | "platform";
   active_provider: string;

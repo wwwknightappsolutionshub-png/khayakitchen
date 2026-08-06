@@ -17,6 +17,13 @@ class TenantWhatsAppSettings extends Model
         'tenant_id',
         'enabled',
         'provider',
+        'hosted_session_id',
+        'hosted_phone_number',
+        'hosted_status',
+        'hosted_qr_payload',
+        'hosted_connected_at',
+        'hosted_last_seen_at',
+        'hosted_expires_at',
         'phone_number_id',
         'access_token',
         'twilio_account_sid',
@@ -30,6 +37,9 @@ class TenantWhatsAppSettings extends Model
             'enabled' => 'boolean',
             'access_token' => 'encrypted',
             'twilio_auth_token' => 'encrypted',
+            'hosted_connected_at' => 'datetime',
+            'hosted_last_seen_at' => 'datetime',
+            'hosted_expires_at' => 'datetime',
         ];
     }
 
