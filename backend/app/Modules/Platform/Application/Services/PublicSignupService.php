@@ -153,16 +153,27 @@ class PublicSignupService
         $signupData = $data;
         unset($signupData['logo']);
 
-        // Never block the HTTP response on SMTP / WhatsApp — browsers report hangs as
-        // "Could not reach the server" even after the tenant row already committed.
-        // Queued in production; sync in phpunit so assertions still see mail/WhatsApp.
-        SendSignupNotificationsJob::dispatch(
-            $ownerId,
-            $tenantSlug,
-            $result,
-            $signupData,
-            $planName,
-        );
+        // Email + WhatsApp must not block/time out the HTTP response, but also must not
+        // depend on a queue worker (ShouldQueue left jobs sitting unprocessed on VPS).
+        // Tests: run inline so Mail/WhatsApp assertions see a single delivery.
+        // Production: afterResponse runs in the same PHP request after 201 is sent.
+        if (app()->runningUnitTests()) {
+            $this->deliverPostSignupNotifications(
+                $ownerId,
+                $tenantSlug,
+                $result,
+                $signupData,
+                $planName,
+            );
+        } else {
+            SendSignupNotificationsJob::dispatch(
+                $ownerId,
+                $tenantSlug,
+                $result,
+                $signupData,
+                $planName,
+            )->afterResponse();
+        }
 
         unset($result['owner_id']);
 
@@ -182,10 +193,23 @@ class PublicSignupService
         array $data,
         string $planName,
     ): void {
+        Log::info('Signup notifications starting', [
+            'owner_id' => $ownerId,
+            'tenant_slug' => $tenantSlug,
+        ]);
+
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
             if ($owner) {
                 $this->emailVerificationService->createAndSendVerification($owner, $tenantSlug);
+                Log::info('Signup verification email attempted', [
+                    'owner_id' => $ownerId,
+                    'email' => $owner->email,
+                ]);
+            } else {
+                Log::error('Signup notifications skipped — owner not found', [
+                    'owner_id' => $ownerId,
+                ]);
             }
         } catch (Throwable $e) {
             Log::error('Signup verification email dispatch failed', [

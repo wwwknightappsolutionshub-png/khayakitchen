@@ -4,21 +4,17 @@ namespace App\Modules\Platform\Jobs;
 
 use App\Modules\Platform\Application\Services\PublicSignupService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Queued so SMTP / WhatsApp cannot block or time out the signup HTTP response.
+ * Runs after the signup HTTP response is sent (not a queued worker job).
+ * Keeps SMTP/WhatsApp off the critical path without depending on pm2 queue workers.
  */
-class SendSignupNotificationsJob implements ShouldQueue
+class SendSignupNotificationsJob
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $tries = 3;
-
-    public int $backoff = 30;
 
     /**
      * @param  array<string, mixed>  $signupResult
