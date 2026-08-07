@@ -7,7 +7,6 @@ use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
-use App\Modules\Notifications\Jobs\SendSignupWelcomeWhatsAppJob;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
@@ -164,10 +163,9 @@ class PublicSignupService
         unset($signupData['logo']);
 
         /*
-         * Email stays in-request (working path).
-         * WhatsApp is deferred until after the HTTP 201 is sent — sync WhatsApp/Genius/Twilio
-         * in this request was tied to production "Server Error" / timeouts after create.
-         * Welcome WhatsApp still fires on registration success, not after email verification.
+         * Email + welcome WhatsApp both run in-request (same path as `whatsapp:send-test`).
+         * Queue/afterResponse were unreliable on this VPS: CLI test delivered, form signup did not.
+         * Genius is fast when credentials are valid; failures are caught so signup still returns 201.
          */
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
@@ -184,13 +182,8 @@ class PublicSignupService
             report($e);
         }
 
-        /*
-         * Queue the welcome WhatsApp (khayaos-queue worker). Do NOT use afterResponse —
-         * PHP-FPM commonly kills that work after the 201, so Genius never sends.
-         * QUEUE_CONNECTION=sync in tests still runs the job inline (mock assertions hold).
-         */
         try {
-            SendSignupWelcomeWhatsAppJob::dispatch(
+            $this->deliverPostSignupNotifications(
                 $ownerId,
                 $tenantSlug,
                 $result,
@@ -198,7 +191,7 @@ class PublicSignupService
                 $planName,
             );
         } catch (Throwable $e) {
-            Log::error('Signup welcome WhatsApp job dispatch failed', [
+            Log::error('Signup welcome WhatsApp failed (signup still succeeded)', [
                 'owner_id' => $ownerId,
                 'error' => $e->getMessage(),
             ]);
@@ -278,30 +271,19 @@ class PublicSignupService
                 'phone' => $ownerPhone,
             ]);
 
-            throw new \RuntimeException(
-                'Platform WhatsApp credentials are incomplete. Enable Genius (or Meta/Twilio) under Super Admin → Platform WhatsApp.',
-            );
+            return;
         }
 
-        try {
-            $this->whatsAppProvider->send($ownerPhone, $message, [
-                'type' => 'owner_welcome',
-                'tenant_id' => null,
-                'signup_tenant_id' => $tenantId,
-                'owner_email' => $ownerEmail,
-            ]);
-            Log::info('Signup WhatsApp send completed', [
-                'tenant_id' => $tenantId,
-                'phone' => $ownerPhone,
-            ]);
-        } catch (Throwable $e) {
-            Log::warning('Signup welcome WhatsApp failed', [
-                'tenant_id' => $tenantId,
-                'phone' => $ownerPhone,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
+        $this->whatsAppProvider->send($ownerPhone, $message, [
+            'type' => 'owner_welcome',
+            'tenant_id' => null,
+            'signup_tenant_id' => $tenantId,
+            'owner_email' => $ownerEmail,
+        ]);
+        Log::info('Signup WhatsApp send completed', [
+            'tenant_id' => $tenantId,
+            'phone' => $ownerPhone,
+        ]);
     }
 
     /**

@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Delivers the owner welcome WhatsApp after public signup.
- * Uses the queue worker (not PHP-FPM afterResponse) so Genius/Twilio sends are not killed
- * when nginx finishes the signup 201.
+ * Optional re-delivery helper for signup welcome WhatsApp.
+ * Primary path is in-request via PublicSignupService (same as whatsapp:send-test).
+ * Keep this job for manual/retry dispatch if a signup WhatsApp was skipped.
  */
 class SendSignupWelcomeWhatsAppJob implements ShouldQueue
 {
