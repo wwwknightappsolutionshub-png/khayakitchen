@@ -60,9 +60,9 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'body' => $response->body(),
                 'context' => $context,
             ]);
-            throw new \RuntimeException(
-                'Genius WhatsApp API error: '.$response->body(),
-            );
+
+            // Never throw — signup/order HTTP paths must not become Server Error when Genius rejects.
+            return;
         }
 
         Log::info('WhatsApp (Genius): message sent', [

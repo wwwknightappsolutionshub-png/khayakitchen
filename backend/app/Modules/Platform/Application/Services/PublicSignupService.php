@@ -162,10 +162,14 @@ class PublicSignupService
         $signupData = $data;
         unset($signupData['logo']);
 
+        // Prepare the HTTP payload before side-effects so a notification failure cannot
+        // leave the client with Server Error after the tenant already exists.
+        $responsePayload = $result;
+        unset($responsePayload['owner_id']);
+
         /*
          * Email + welcome WhatsApp both run in-request (same path as `whatsapp:send-test`).
-         * Queue/afterResponse were unreliable on this VPS: CLI test delivered, form signup did not.
-         * Genius is fast when credentials are valid; failures are caught so signup still returns 201.
+         * Failures are swallowed — tenant create already committed.
          */
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
@@ -198,9 +202,7 @@ class PublicSignupService
             report($e);
         }
 
-        unset($result['owner_id']);
-
-        return $result;
+        return $responsePayload;
     }
 
     /**
