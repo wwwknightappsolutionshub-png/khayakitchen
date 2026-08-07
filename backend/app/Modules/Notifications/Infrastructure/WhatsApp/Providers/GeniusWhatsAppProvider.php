@@ -28,9 +28,11 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         $baseUrl = rtrim((string) ($credentials['base_url'] ?? config('whatsapp.genius.base_url')), '/');
 
         if (! $apiKey || ! $sessionId) {
-            Log::info('WhatsApp (Genius stub): message not sent — credentials not configured', [
+            Log::error('WhatsApp (Genius): message not sent — api_key/session_id missing', [
                 'to' => $toPhone,
-                'message' => $message,
+                'has_api_key' => filled($apiKey),
+                'has_session_id' => filled($sessionId),
+                'base_url' => $baseUrl,
                 'context' => $context,
             ]);
 
@@ -52,9 +54,20 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         ]);
 
         if ($response->failed()) {
+            Log::error('WhatsApp (Genius): API send failed', [
+                'to' => $number,
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'context' => $context,
+            ]);
             throw new \RuntimeException(
                 'Genius WhatsApp API error: '.$response->body(),
             );
         }
+
+        Log::info('WhatsApp (Genius): message sent', [
+            'to' => $number,
+            'context_type' => $context['type'] ?? null,
+        ]);
     }
 }

@@ -5,12 +5,12 @@ namespace App\Modules\Platform\Application\Services;
 use App\Modules\Auth\Application\Services\EmailVerificationService;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
 use App\Modules\Pricing\Domain\Models\Plan;
-use App\Modules\Platform\Jobs\SendSignupNotificationsJob;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -149,15 +149,18 @@ class PublicSignupService
         $ownerId = (string) $result['owner_id'];
         $tenantSlug = (string) ($data['slug'] ?? $result['tenant']['slug'] ?? '');
         $planName = $plan->name;
-        // Never capture UploadedFile in deferred afterResponse payloads (not serializable).
+        // Never keep UploadedFile on the payload used for notifications.
         $signupData = $data;
         unset($signupData['logo']);
 
         /*
          * Notification timing (registration success — NOT after email verification):
-         * 1) Verification email — immediate, in-request (SMTP timeout-bounded).
-         * 2) Welcome WhatsApp — ~30s after HTTP response via afterResponse + sleep
-         *    (no queue worker; fastcgi_finish_request so the browser is not held open).
+         * 1) Verification email — immediate
+         * 2) Welcome WhatsApp — immediate after email (same request)
+         *
+         * A prior afterResponse + sleep(30) approach was killed by PHP-FPM before send,
+         * so WhatsApp never left the server while email (in-request) still worked.
+         * WhatsApp HTTP is timeout-bounded (8s) so it cannot hang the signup forever.
          */
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
@@ -174,8 +177,7 @@ class PublicSignupService
             report($e);
         }
 
-        // Tests: send WhatsApp immediately (no 30s sleep / afterResponse accumulation).
-        if (app()->runningUnitTests()) {
+        try {
             $this->deliverPostSignupNotifications(
                 $ownerId,
                 $tenantSlug,
@@ -183,14 +185,12 @@ class PublicSignupService
                 $signupData,
                 $planName,
             );
-        } else {
-            SendSignupNotificationsJob::dispatch(
-                $ownerId,
-                $tenantSlug,
-                $result,
-                $signupData,
-                $planName,
-            )->afterResponse();
+        } catch (Throwable $e) {
+            Log::warning('Signup welcome WhatsApp failed after email', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
         }
 
         unset($result['owner_id']);
@@ -235,6 +235,10 @@ class PublicSignupService
     {
         $ownerPhone = preg_replace('/\s+/', '', trim((string) ($data['owner_phone'] ?? ''))) ?? '';
         if ($ownerPhone === '') {
+            Log::warning('Signup WhatsApp skipped — owner phone missing', [
+                'tenant_id' => $result['tenant']['id'] ?? null,
+            ]);
+
             return;
         }
 
@@ -254,11 +258,25 @@ class PublicSignupService
             "Your workspace {$restaurant} is now onboarded on the {$planName} plan. ".
             "Confirm your email, then sign in here: {$loginUrl}";
 
+        // New kitchens have no tenant WhatsApp yet — always use platform sender.
+        $resolver = app(WhatsAppCredentialResolver::class);
+        if (! $resolver->hasSendableCredentials(null)) {
+            Log::error('Signup WhatsApp: platform WhatsApp credentials look incomplete — attempting send anyway', [
+                'tenant_id' => $tenantId,
+                'phone' => $ownerPhone,
+            ]);
+        }
+
         try {
             $this->whatsAppProvider->send($ownerPhone, $message, [
                 'type' => 'owner_welcome',
-                'tenant_id' => $tenantId,
+                'tenant_id' => null,
+                'signup_tenant_id' => $tenantId,
                 'owner_email' => $ownerEmail,
+            ]);
+            Log::info('Signup WhatsApp send completed', [
+                'tenant_id' => $tenantId,
+                'phone' => $ownerPhone,
             ]);
         } catch (Throwable $e) {
             Log::warning('Signup welcome WhatsApp failed', [
