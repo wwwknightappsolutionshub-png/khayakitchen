@@ -30,7 +30,14 @@ class PlanService
             $query->where('is_visible', true)->where('is_active', true)->whereNull('deleted_at');
         }
 
-        return $query->orderBy('display_order')->orderBy('price_monthly')->get();
+        $plans = $query->orderBy('display_order')->orderBy('price_monthly')->get();
+
+        // Public signup/pricing UI should not list duplicate slug rows if seed data was duplicated.
+        if ($publicOnly) {
+            return $plans->unique('slug')->values();
+        }
+
+        return $plans;
     }
 
     public function getPlan(string $id): Plan

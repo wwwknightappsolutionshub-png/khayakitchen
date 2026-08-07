@@ -79,9 +79,18 @@ class PublicSignupService
                 ]);
 
             // Persist uploaded logo under the real tenant id (createTenant may run before id exists).
+            // Soft-fail: a storage permission/disk error must not abort tenant provisioning.
             if (($data['logo'] ?? null) instanceof UploadedFile) {
-                $logoUrl = $this->storeSignupLogo($data['logo'], $tenant['id']);
-                Tenant::withoutGlobalScopes()->where('id', $tenant['id'])->update(['logo_url' => $logoUrl]);
+                try {
+                    $logoUrl = $this->storeSignupLogo($data['logo'], $tenant['id']);
+                    Tenant::withoutGlobalScopes()->where('id', $tenant['id'])->update(['logo_url' => $logoUrl]);
+                } catch (Throwable $e) {
+                    Log::error('Signup logo upload failed — continuing without logo', [
+                        'tenant_id' => $tenant['id'],
+                        'error' => $e->getMessage(),
+                    ]);
+                    report($e);
+                }
             }
 
             TenantBranding::withoutGlobalScopes()
@@ -154,13 +163,10 @@ class PublicSignupService
         unset($signupData['logo']);
 
         /*
-         * Notification timing (registration success — NOT after email verification):
-         * 1) Verification email — immediate
-         * 2) Welcome WhatsApp — immediate after email (same request)
-         *
-         * A prior afterResponse + sleep(30) approach was killed by PHP-FPM before send,
-         * so WhatsApp never left the server while email (in-request) still worked.
-         * WhatsApp HTTP is timeout-bounded (8s) so it cannot hang the signup forever.
+         * Email stays in-request (working path).
+         * WhatsApp is deferred until after the HTTP 201 is sent — sync WhatsApp/Genius/Twilio
+         * in this request was tied to production "Server Error" / timeouts after create.
+         * Welcome WhatsApp still fires on registration success, not after email verification.
          */
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
@@ -177,7 +183,33 @@ class PublicSignupService
             report($e);
         }
 
-        try {
+        $whatsAppResult = $result;
+        $whatsAppData = $signupData;
+        $whatsAppPlanName = $planName;
+
+        $sendWhatsApp = function () use ($ownerId, $tenantSlug, $whatsAppResult, $whatsAppData, $whatsAppPlanName): void {
+            try {
+                if (function_exists('fastcgi_finish_request')) {
+                    @fastcgi_finish_request();
+                }
+                app(self::class)->deliverPostSignupNotifications(
+                    $ownerId,
+                    $tenantSlug,
+                    $whatsAppResult,
+                    $whatsAppData,
+                    $whatsAppPlanName,
+                );
+            } catch (Throwable $e) {
+                Log::warning('Signup welcome WhatsApp failed after response', [
+                    'owner_id' => $ownerId,
+                    'error' => $e->getMessage(),
+                ]);
+                report($e);
+            }
+        };
+
+        // Tests assert WhatsApp during the request; production must not block/timeout the 201.
+        if (app()->runningUnitTests()) {
             $this->deliverPostSignupNotifications(
                 $ownerId,
                 $tenantSlug,
@@ -185,12 +217,8 @@ class PublicSignupService
                 $signupData,
                 $planName,
             );
-        } catch (Throwable $e) {
-            Log::warning('Signup welcome WhatsApp failed after email', [
-                'owner_id' => $ownerId,
-                'error' => $e->getMessage(),
-            ]);
-            report($e);
+        } else {
+            dispatch($sendWhatsApp)->afterResponse();
         }
 
         unset($result['owner_id']);

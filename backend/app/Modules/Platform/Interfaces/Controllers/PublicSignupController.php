@@ -88,7 +88,8 @@ class PublicSignupController extends Controller
             'primary_color' => ['nullable', 'string', 'max:20'],
             'secondary_color' => ['nullable', 'string', 'max:20'],
             'logo_url' => ['nullable', 'url', 'max:500'],
-            'logo' => ['nullable', 'file', 'max:2048', 'mimes:jpeg,jpg,png,svg'],
+            // mimetypes covers mobile JPEG variants that fail strict `mimes` checks.
+            'logo' => ['nullable', 'file', 'max:2048', 'mimetypes:image/jpeg,image/pjpeg,image/png,image/svg+xml'],
             'terms_accepted' => ['accepted'],
             'marketing_opt_in' => ['nullable', 'boolean'],
             'referral_code' => ['nullable', 'string', 'max:32'],

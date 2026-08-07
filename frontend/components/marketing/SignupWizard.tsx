@@ -84,6 +84,12 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
           );
           return;
         }
+        if (error.status >= 500 || error.message === "Server Error") {
+          setSubmitError(
+            "Server error while creating your workspace. If you get a verification email, continue from there. Otherwise try again without a logo, or contact support.",
+          );
+          return;
+        }
         setSubmitError(error.message);
         return;
       }

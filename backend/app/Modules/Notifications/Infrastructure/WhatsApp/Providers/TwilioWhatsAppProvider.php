@@ -36,6 +36,10 @@ class TwilioWhatsAppProvider implements WhatsAppProviderInterface
             return;
         }
 
-        throw new \RuntimeException('Twilio WhatsApp adapter is not implemented yet.');
+        // Do not throw — an unimplemented adapter must never fail signup or order flows.
+        Log::warning('WhatsApp (Twilio): adapter not implemented — message skipped', [
+            'to' => $toPhone,
+            'context' => $context,
+        ]);
     }
 }
