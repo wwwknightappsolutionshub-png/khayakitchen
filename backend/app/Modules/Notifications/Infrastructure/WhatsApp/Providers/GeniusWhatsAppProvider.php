@@ -39,7 +39,7 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
 
         $number = preg_replace('/\D+/', '', $toPhone) ?: $toPhone;
 
-        $response = Http::withHeaders([
+        $response = Http::timeout(8)->withHeaders([
             'x-api-key' => $apiKey,
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',

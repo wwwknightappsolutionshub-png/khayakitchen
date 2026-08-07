@@ -353,6 +353,7 @@ export function EnterpriseSignupForm({
     trigger,
     setFocus,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm<EnterpriseSignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -377,6 +378,14 @@ export function EnterpriseSignupForm({
       marketing_opt_in: true,
     },
   });
+
+  // Sticky submit banner must clear as soon as the user edits any field.
+  useEffect(() => {
+    const subscription = watch(() => {
+      setSubmitValidationError((prev) => (prev ? null : prev));
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   const restaurantName = watch("restaurant_name");
   const countryIso = watch("country_iso");
@@ -620,13 +629,15 @@ export function EnterpriseSignupForm({
     setLogoError(null);
     if (!file) {
       setLogoFile(null);
-      if (logoPreview) URL.revokeObjectURL(logoPreview);
       setLogoPreview(null);
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase();
     const okExt = ext === "jpeg" || ext === "jpg" || ext === "png" || ext === "svg";
-    if (!LOGO_MIME.has(file.type) && !okExt) {
+    // Some mobile browsers omit MIME or use image/pjpeg — fall back to extension.
+    const mimeOk =
+      !file.type || LOGO_MIME.has(file.type) || file.type === "image/pjpeg";
+    if (!mimeOk && !okExt) {
       setLogoError("Upload a JPEG, JPG, PNG, or SVG image only.");
       event.target.value = "";
       return;
@@ -636,17 +647,25 @@ export function EnterpriseSignupForm({
       event.target.value = "";
       return;
     }
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
-  };
-
-  useEffect(() => {
-    return () => {
-      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(null);
+    // Data URL avoids blob: revoke races (Strict Mode / remount) and CSP blocks on blob:.
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        setLogoError("Could not preview this image. Try a different JPEG, PNG, or SVG.");
+        return;
+      }
+      setLogoPreview(reader.result);
     };
-  }, [logoPreview]);
-
+    reader.onerror = () => {
+      setLogoError("Could not read this file. Try a different JPEG, PNG, or SVG.");
+      setLogoFile(null);
+      setLogoPreview(null);
+      event.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
   return (
     <form
       onSubmit={handleSubmit(onValidSubmit, (fieldErrors) => jumpToFirstError(fieldErrors))}
@@ -892,6 +911,12 @@ export function EnterpriseSignupForm({
                       src={logoPreview}
                       alt="Logo preview"
                       className="mt-2 h-16 w-16 rounded-xl border border-border object-contain bg-surface-elevated"
+                      onError={() => {
+                        setLogoError(
+                          "Preview failed for this file. Use a standard JPEG, PNG, or SVG under 2MB.",
+                        );
+                        setLogoPreview(null);
+                      }}
                     />
                   ) : null}
                   {logoError ? <p className="text-xs text-danger">{logoError}</p> : null}
@@ -962,13 +987,19 @@ export function EnterpriseSignupForm({
                   <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
+                      name={field.name}
                       className={cn("mt-1 h-4 w-4 shrink-0", theme.checkbox)}
                       checked={field.value === true}
                       onBlur={field.onBlur}
                       ref={field.ref}
-                      onChange={(event) =>
-                        field.onChange(event.target.checked)
-                      }
+                      onChange={(event) => {
+                        const accepted = event.target.checked;
+                        field.onChange(accepted);
+                        setSubmitValidationError(null);
+                        if (accepted) {
+                          clearErrors("terms_accepted");
+                        }
+                      }}
                     />
                     <span className={cn("text-sm", theme.body)}>
                       I agree to the KhayaOS terms of service and confirm the information provided is
@@ -987,13 +1018,15 @@ export function EnterpriseSignupForm({
                   <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
+                      name={field.name}
                       className={cn("mt-1 h-4 w-4 shrink-0", theme.checkbox)}
                       checked={field.value === true}
                       onBlur={field.onBlur}
                       ref={field.ref}
-                      onChange={(event) =>
-                        field.onChange(event.target.checked)
-                      }
+                      onChange={(event) => {
+                        field.onChange(event.target.checked);
+                        setSubmitValidationError(null);
+                      }}
                     />
                     <span className={cn("text-sm", theme.body)}>
                       Keep me updated about KhayaOS product news and best practices.

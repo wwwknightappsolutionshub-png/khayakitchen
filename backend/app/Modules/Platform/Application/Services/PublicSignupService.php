@@ -10,6 +10,7 @@ use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
 use App\Modules\Pricing\Domain\Models\Plan;
+use App\Modules\Platform\Jobs\SendSignupNotificationsJob;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -145,13 +146,64 @@ class PublicSignupService
             report($e);
         }
 
-        $owner = User::withoutGlobalScopes()->findOrFail($result['owner_id']);
-        $this->emailVerificationService->createAndSendVerification($owner, $data['slug']);
-        $this->sendWelcomeWhatsApp($result, $data, $plan->name);
+        $ownerId = (string) $result['owner_id'];
+        $tenantSlug = (string) ($data['slug'] ?? $result['tenant']['slug'] ?? '');
+        $planName = $plan->name;
+        // Never capture UploadedFile in deferred jobs (not serializable).
+        $signupData = $data;
+        unset($signupData['logo']);
+
+        // Never block the HTTP response on SMTP / WhatsApp — browsers report hangs as
+        // "Could not reach the server" even after the tenant row already committed.
+        // Queued in production; sync in phpunit so assertions still see mail/WhatsApp.
+        SendSignupNotificationsJob::dispatch(
+            $ownerId,
+            $tenantSlug,
+            $result,
+            $signupData,
+            $planName,
+        );
 
         unset($result['owner_id']);
 
         return $result;
+    }
+
+    /**
+     * Runs after the signup HTTP response is sent (email + welcome WhatsApp).
+     *
+     * @param  array<string, mixed>  $result
+     * @param  array<string, mixed>  $data
+     */
+    public function deliverPostSignupNotifications(
+        string $ownerId,
+        string $tenantSlug,
+        array $result,
+        array $data,
+        string $planName,
+    ): void {
+        try {
+            $owner = User::withoutGlobalScopes()->find($ownerId);
+            if ($owner) {
+                $this->emailVerificationService->createAndSendVerification($owner, $tenantSlug);
+            }
+        } catch (Throwable $e) {
+            Log::error('Signup verification email dispatch failed', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
+
+        try {
+            $this->sendWelcomeWhatsApp($result, $data, $planName);
+        } catch (Throwable $e) {
+            Log::warning('Signup welcome WhatsApp dispatch failed', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
     }
 
     /**

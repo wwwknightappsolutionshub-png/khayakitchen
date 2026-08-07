@@ -35,7 +35,7 @@ class MetaCloudWhatsAppProvider implements WhatsAppProviderInterface
             return;
         }
 
-        $response = Http::withToken($token)
+        $response = Http::timeout(8)->withToken($token)
             ->post("https://graph.facebook.com/v19.0/{$phoneNumberId}/messages", [
                 'messaging_product' => 'whatsapp',
                 'to' => $toPhone,

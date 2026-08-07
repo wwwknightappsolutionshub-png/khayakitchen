@@ -261,7 +261,15 @@ async function uploadFormData<T>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  if (!endpoint.startsWith("/platform") && endpoint !== "/signup" && endpoint !== "/pricing/plans") {
+  const isPlatformRoute = endpoint.startsWith("/platform");
+  const isPublicSignupRoute =
+    endpoint === "/signup" ||
+    endpoint.startsWith("/signup/check-slug") ||
+    endpoint.startsWith("/signup/check-email");
+  const isPublicPricingRoute = endpoint === "/pricing/plans";
+  const isMarketingRoute = endpoint.startsWith("/marketing/");
+
+  if (!isPlatformRoute && !isPublicSignupRoute && !isPublicPricingRoute && !isMarketingRoute) {
     const { tenantId, tenantSlug } = resolveTenantHeaders(endpoint);
     if (tenantId) headers["X-Tenant-ID"] = tenantId;
     if (tenantSlug) headers["X-Tenant-Slug"] = tenantSlug;
@@ -275,27 +283,36 @@ async function uploadFormData<T>(
       headers,
       body: formData,
     });
-  } catch {
+  } catch (error) {
+    const detail =
+      error instanceof Error && error.message && error.message !== "Failed to fetch"
+        ? ` (${error.message})`
+        : "";
     throw new ApiClientError(
-      "Could not reach the server. Check your connection and try again.",
+      `Could not reach the server. Check your connection and try again.${detail}`,
       "NETWORK_ERROR",
       0,
     );
   }
 
   if (!response.ok) {
-    let errorBody: (ApiError & { errors?: Record<string, string[] | string> }) | null = null;
+    let errorBody: (ApiError & {
+      errors?: Record<string, string[] | string>;
+      details?: Record<string, string[] | string | unknown>;
+    }) | null = null;
     try {
       errorBody = await response.json();
     } catch {
       // non-json error
     }
 
-    const validationErrors = errorBody?.errors;
+    const validationBag = errorBody?.errors ?? errorBody?.details;
     let message = errorBody?.message ?? `Request failed with status ${response.status}`;
-    if (validationErrors && typeof validationErrors === "object") {
-      const first = Object.values(validationErrors).flat().find(Boolean);
-      if (typeof first === "string" && first.trim()) {
+    if (validationBag && typeof validationBag === "object") {
+      const first = Object.values(validationBag)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .find((value) => typeof value === "string" && value.trim());
+      if (typeof first === "string") {
         message = first;
       }
     }
@@ -304,7 +321,7 @@ async function uploadFormData<T>(
       message,
       errorBody?.code ?? "REQUEST_FAILED",
       response.status,
-      (errorBody?.details ?? validationErrors) as Record<string, unknown> | undefined,
+      (errorBody?.details ?? errorBody?.errors) as Record<string, unknown> | undefined,
     );
   }
 
