@@ -116,6 +116,13 @@ class PublicSignupTest extends TestCase
     public function test_signup_owner_can_login_after_email_verification(): void
     {
         Mail::fake();
+        \App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings::create([
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'test-platform-key',
+            'session_id' => 'test-platform-session',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ]);
         $whatsAppMock = Mockery::mock(WhatsAppProviderInterface::class);
         $whatsAppMock->shouldReceive('send')
             ->once()

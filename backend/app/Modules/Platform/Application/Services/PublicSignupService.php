@@ -273,10 +273,14 @@ class PublicSignupService
         // New kitchens have no tenant WhatsApp yet — always use platform sender.
         $resolver = app(WhatsAppCredentialResolver::class);
         if (! $resolver->hasSendableCredentials(null)) {
-            Log::error('Signup WhatsApp: platform WhatsApp credentials look incomplete — attempting send anyway', [
+            Log::error('Signup WhatsApp skipped — platform WhatsApp credentials incomplete', [
                 'tenant_id' => $tenantId,
                 'phone' => $ownerPhone,
             ]);
+
+            throw new \RuntimeException(
+                'Platform WhatsApp credentials are incomplete. Enable Genius (or Meta/Twilio) under Super Admin → Platform WhatsApp.',
+            );
         }
 
         try {
@@ -296,6 +300,7 @@ class PublicSignupService
                 'phone' => $ownerPhone,
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
     }
 
