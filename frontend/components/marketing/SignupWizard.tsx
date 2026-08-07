@@ -78,6 +78,12 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
     },
     onError: (error) => {
       if (error instanceof ApiClientError) {
+        if (error.code === "NETWORK_ERROR" || error.status === 0) {
+          setSubmitError(
+            "The request timed out. Your kitchen may already have been created — check your email (and spam), or try signing in. If the email is taken on retry, use Resend verification from the confirm-email page.",
+          );
+          return;
+        }
         setSubmitError(error.message);
         return;
       }

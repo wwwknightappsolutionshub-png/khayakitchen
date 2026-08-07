@@ -7,14 +7,17 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 /**
- * Runs after the signup HTTP response is sent (not a queued worker job).
- * Keeps SMTP/WhatsApp off the critical path without depending on pm2 queue workers.
+ * Welcome WhatsApp ~30s after signup HTTP response (not a queue-worker job).
+ * Verification email is sent synchronously during register(); this never waits for email verify.
  */
 class SendSignupNotificationsJob
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public const WHATSAPP_DELAY_SECONDS = 30;
 
     /**
      * @param  array<string, mixed>  $signupResult
@@ -30,6 +33,19 @@ class SendSignupNotificationsJob
 
     public function handle(PublicSignupService $signupService): void
     {
+        // Release the client connection before sleeping (PHP-FPM). Without this,
+        // afterResponse still holds the browser request open → network timeout UI.
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        }
+
+        Log::info('Signup WhatsApp delay started', [
+            'owner_id' => $this->ownerId,
+            'delay_seconds' => self::WHATSAPP_DELAY_SECONDS,
+        ]);
+
+        sleep(self::WHATSAPP_DELAY_SECONDS);
+
         $signupService->deliverPostSignupNotifications(
             $this->ownerId,
             $this->tenantSlug,

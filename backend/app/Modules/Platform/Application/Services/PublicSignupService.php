@@ -149,14 +149,32 @@ class PublicSignupService
         $ownerId = (string) $result['owner_id'];
         $tenantSlug = (string) ($data['slug'] ?? $result['tenant']['slug'] ?? '');
         $planName = $plan->name;
-        // Never capture UploadedFile in deferred jobs (not serializable).
+        // Never capture UploadedFile in deferred afterResponse payloads (not serializable).
         $signupData = $data;
         unset($signupData['logo']);
 
-        // Email + WhatsApp must not block/time out the HTTP response, but also must not
-        // depend on a queue worker (ShouldQueue left jobs sitting unprocessed on VPS).
-        // Tests: run inline so Mail/WhatsApp assertions see a single delivery.
-        // Production: afterResponse runs in the same PHP request after 201 is sent.
+        /*
+         * Notification timing (registration success — NOT after email verification):
+         * 1) Verification email — immediate, in-request (SMTP timeout-bounded).
+         * 2) Welcome WhatsApp — ~30s after HTTP response via afterResponse + sleep
+         *    (no queue worker; fastcgi_finish_request so the browser is not held open).
+         */
+        try {
+            $owner = User::withoutGlobalScopes()->find($ownerId);
+            if ($owner) {
+                $this->emailVerificationService->createAndSendVerification($owner, $tenantSlug);
+            } else {
+                Log::error('Signup verification skipped — owner not found', ['owner_id' => $ownerId]);
+            }
+        } catch (Throwable $e) {
+            Log::error('Signup verification email failed', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
+
+        // Tests: send WhatsApp immediately (no 30s sleep / afterResponse accumulation).
         if (app()->runningUnitTests()) {
             $this->deliverPostSignupNotifications(
                 $ownerId,
@@ -181,7 +199,7 @@ class PublicSignupService
     }
 
     /**
-     * Runs after the signup HTTP response is sent (email + welcome WhatsApp).
+     * Welcome WhatsApp for a successful registration (not gated on email verification).
      *
      * @param  array<string, mixed>  $result
      * @param  array<string, mixed>  $data
@@ -193,31 +211,10 @@ class PublicSignupService
         array $data,
         string $planName,
     ): void {
-        Log::info('Signup notifications starting', [
+        Log::info('Signup WhatsApp notification starting', [
             'owner_id' => $ownerId,
             'tenant_slug' => $tenantSlug,
         ]);
-
-        try {
-            $owner = User::withoutGlobalScopes()->find($ownerId);
-            if ($owner) {
-                $this->emailVerificationService->createAndSendVerification($owner, $tenantSlug);
-                Log::info('Signup verification email attempted', [
-                    'owner_id' => $ownerId,
-                    'email' => $owner->email,
-                ]);
-            } else {
-                Log::error('Signup notifications skipped — owner not found', [
-                    'owner_id' => $ownerId,
-                ]);
-            }
-        } catch (Throwable $e) {
-            Log::error('Signup verification email dispatch failed', [
-                'owner_id' => $ownerId,
-                'error' => $e->getMessage(),
-            ]);
-            report($e);
-        }
 
         try {
             $this->sendWelcomeWhatsApp($result, $data, $planName);
