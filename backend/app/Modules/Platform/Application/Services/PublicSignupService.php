@@ -7,6 +7,7 @@ use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
+use App\Modules\Notifications\Jobs\SendSignupWelcomeWhatsAppJob;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
@@ -183,42 +184,25 @@ class PublicSignupService
             report($e);
         }
 
-        $whatsAppResult = $result;
-        $whatsAppData = $signupData;
-        $whatsAppPlanName = $planName;
-
-        $sendWhatsApp = function () use ($ownerId, $tenantSlug, $whatsAppResult, $whatsAppData, $whatsAppPlanName): void {
-            try {
-                if (function_exists('fastcgi_finish_request')) {
-                    @fastcgi_finish_request();
-                }
-                app(self::class)->deliverPostSignupNotifications(
-                    $ownerId,
-                    $tenantSlug,
-                    $whatsAppResult,
-                    $whatsAppData,
-                    $whatsAppPlanName,
-                );
-            } catch (Throwable $e) {
-                Log::warning('Signup welcome WhatsApp failed after response', [
-                    'owner_id' => $ownerId,
-                    'error' => $e->getMessage(),
-                ]);
-                report($e);
-            }
-        };
-
-        // Tests assert WhatsApp during the request; production must not block/timeout the 201.
-        if (app()->runningUnitTests()) {
-            $this->deliverPostSignupNotifications(
+        /*
+         * Queue the welcome WhatsApp (khayaos-queue worker). Do NOT use afterResponse —
+         * PHP-FPM commonly kills that work after the 201, so Genius never sends.
+         * QUEUE_CONNECTION=sync in tests still runs the job inline (mock assertions hold).
+         */
+        try {
+            SendSignupWelcomeWhatsAppJob::dispatch(
                 $ownerId,
                 $tenantSlug,
                 $result,
                 $signupData,
                 $planName,
             );
-        } else {
-            dispatch($sendWhatsApp)->afterResponse();
+        } catch (Throwable $e) {
+            Log::error('Signup welcome WhatsApp job dispatch failed', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
         }
 
         unset($result['owner_id']);
