@@ -11,12 +11,15 @@ import { SocialProof } from "@/components/customer/SocialProof";
 import { MealReferModal } from "@/components/customer/MealReferModal";
 import { ReviewTicker } from "@/components/customer/ReviewTicker";
 import { KitchenReviewForm } from "@/components/customer/KitchenReviewForm";
+import { VoiceOrderAssistant } from "@/components/customer/VoiceOrderAssistant";
 import { useMenu } from "@/hooks/useMenu";
 import { usePromoMeals } from "@/hooks/usePromoMeals";
 import { useRevenueRecoveryOffers } from "@/hooks/useRevenueRecoveryOffers";
 import { useStorefront } from "@/hooks/useStorefront";
 import { engagementService } from "@/services/engagement.service";
 import type { Meal, MealReferPayload, PromoMealItem } from "@/lib/types";
+import { toNumber } from "@/lib/utils";
+import type { VoiceCartPricing } from "@/lib/voice-order";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 const GUEST_KEY_STORAGE = "khayaos-guest-key";
@@ -118,6 +121,24 @@ export default function MenuPage() {
   const meals = data?.meals ?? [];
   const likesEnabled = data?.menu_likes_refer_enabled === true;
   const reviewTicker = storefront.data?.review_ticker ?? [];
+
+  const resolveOfferForMeal = (mealId: string): PromoMealItem | undefined =>
+    getOfferForMeal(mealId) ?? promoItems.find((p) => p.meal_id === mealId);
+
+  const getVoiceCartPricing = (meal: Meal): VoiceCartPricing => {
+    const list = toNumber(meal.base_price);
+    const offer = resolveOfferForMeal(meal.id);
+    const promo =
+      offer?.promo_price != null ? Number(offer.promo_price) : getPromoUnitPrice(meal.id);
+    if (promo != null && !Number.isNaN(promo) && promo < list) {
+      return {
+        basePrice: promo,
+        originalBasePrice: list,
+        campaignId: offer?.campaign_id ?? null,
+      };
+    }
+    return { basePrice: list, campaignId: offer?.campaign_id ?? null };
+  };
 
   const recoveryOnlyOffers = recoveryOffers.filter(
     (offer) =>
@@ -278,6 +299,17 @@ export default function MenuPage() {
         onClose={() => {
           setReferOpen(false);
           setReferPayload(null);
+        }}
+      />
+
+      <VoiceOrderAssistant
+        meals={meals}
+        kitchenName={storefront.data?.branding?.restaurant_name}
+        isAcceptingOrders={storefront.data?.status?.is_accepting_orders !== false}
+        getCartPricing={getVoiceCartPricing}
+        onCustomizeMeal={(meal) => {
+          setCustomizingOffer(resolveOfferForMeal(meal.id) ?? null);
+          setCustomizingMeal(meal);
         }}
       />
     </div>

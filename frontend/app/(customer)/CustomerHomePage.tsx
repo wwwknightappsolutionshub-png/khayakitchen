@@ -9,11 +9,14 @@ import { PromoMealsSection } from "@/components/customer/PromoMealsSection";
 import { RevenueRecoveryOffersSection } from "@/components/customer/RevenueRecoveryOffersSection";
 import { PopularAddonsChips } from "@/components/customer/PopularAddonsChips";
 import { MealCustomizeFlow } from "@/components/customer/MealCustomizeFlow";
+import { VoiceOrderAssistant } from "@/components/customer/VoiceOrderAssistant";
 import { usePromoMeals } from "@/hooks/usePromoMeals";
 import { useRevenueRecoveryOffers } from "@/hooks/useRevenueRecoveryOffers";
 import type { Meal } from "@/lib/types";
 import type { AddonPopularity } from "@/lib/order-analytics";
 import type { PromoMealItem } from "@/lib/types";
+import { toNumber } from "@/lib/utils";
+import type { VoiceCartPricing } from "@/lib/voice-order";
 
 export default function CustomerHomePage() {
   const {
@@ -68,6 +71,24 @@ export default function CustomerHomePage() {
     if (!addon.mealId) return;
     const meal = menu.data?.meals.find((m) => m.id === addon.mealId);
     if (meal) setCustomizingMeal(meal);
+  };
+
+  const resolveOfferForMeal = (mealId: string): PromoMealItem | undefined =>
+    getOfferForMeal(mealId) ?? promoItems.find((p) => p.meal_id === mealId);
+
+  const getVoiceCartPricing = (meal: Meal): VoiceCartPricing => {
+    const list = toNumber(meal.base_price);
+    const offer = resolveOfferForMeal(meal.id);
+    const promo =
+      offer?.promo_price != null ? Number(offer.promo_price) : getPromoUnitPrice(meal.id);
+    if (promo != null && !Number.isNaN(promo) && promo < list) {
+      return {
+        basePrice: promo,
+        originalBasePrice: list,
+        campaignId: offer?.campaign_id ?? null,
+      };
+    }
+    return { basePrice: list, campaignId: offer?.campaign_id ?? null };
   };
 
   return (
@@ -147,6 +168,17 @@ export default function CustomerHomePage() {
           }}
         />
       )}
+
+      <VoiceOrderAssistant
+        meals={menu.data?.meals ?? []}
+        kitchenName={storefront.data?.branding?.restaurant_name}
+        isAcceptingOrders={!isClosed}
+        getCartPricing={getVoiceCartPricing}
+        onCustomizeMeal={(meal) => {
+          setCustomizingOffer(resolveOfferForMeal(meal.id) ?? null);
+          setCustomizingMeal(meal);
+        }}
+      />
     </div>
   );
 }
