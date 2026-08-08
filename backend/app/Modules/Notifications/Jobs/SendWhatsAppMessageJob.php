@@ -22,6 +22,9 @@ class SendWhatsAppMessageJob implements ShouldQueue
 
     public int $backoff = 30;
 
+    /** Genius send is capped at ~20s; keep under DB retry_after (120). */
+    public int $timeout = 45;
+
     public function __construct(
         public string $tenantId,
         public string $customerId,

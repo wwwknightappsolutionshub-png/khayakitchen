@@ -37,7 +37,9 @@ npm run build
 
 echo "==> restart processes"
 pm2 start khayaos-frontend
-pm2 restart khayaos-queue khayaos-reverb
+# Recreate queue worker on database (never leave a dead/redis worker after deploy).
+bash "$ROOT/scripts/vps-queue-health.sh"
+pm2 restart khayaos-reverb
 
 echo "==> verify build"
 curl -fsS "http://127.0.0.1:3004/app-version.json"

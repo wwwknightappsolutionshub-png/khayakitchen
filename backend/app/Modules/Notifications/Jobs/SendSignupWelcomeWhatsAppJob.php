@@ -25,6 +25,9 @@ class SendSignupWelcomeWhatsAppJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [10, 30, 60, 120];
 
+    /** Genius send is capped at ~20s; keep under DB retry_after (120). */
+    public int $timeout = 45;
+
     /**
      * @param  array<string, mixed>  $result
      * @param  array<string, mixed>  $signupData

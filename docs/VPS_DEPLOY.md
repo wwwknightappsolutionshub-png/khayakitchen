@@ -90,6 +90,29 @@ bash ../scripts/verify-frontend-chunks.sh
 
 > **Feature catalog (required):** Always run `PricingSeeder` after migrate. It `updateOrCreate`s billable features and re-syncs Starter/Growth/Professional/Enterprise plan feature matrices so Feature Library and entitlements stay aligned with the codebase. Safe to re-run; it does not wipe tenant subscriptions or per-tenant overrides.
 
+---
+
+## WhatsApp / queue stuck (hours of silence, then a flood)
+
+This VPS uses **`QUEUE_CONNECTION=database`**. If `khayaos-queue` dies, points at **redis** (no php-redis), or leaves jobs **reserved**, WhatsApp sits for hours and then dumps when the worker comes back.
+
+**Unstick now (on VPS):**
+
+```bash
+bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-queue-health.sh
+pm2 logs khayaos-queue --lines 80
+```
+
+Confirm:
+
+1. `QUEUE_CONNECTION=database` and worker args include `queue:work database` (not `redis`).
+2. `pending` drops toward 0 while logs show `WhatsApp (Genius): message sent` / `Signup welcome`.
+3. PM2 `status` stays `online` and restarts after `--max-time` (worker recycles; that is expected).
+
+Do **not** use `queue:work redis` on this host unless php-redis is installed and Redis is the intentional queue backend.
+
+---
+
 Why the frontend is stopped before `rm -rf .next`: `next start` serves route HTML from the running process while chunks are loaded from `.next/static`. If `.next` is deleted while the old process is still serving traffic, users can receive old HTML that references deleted chunks, producing permanent `/_next/static/... 404` spinners.
 
 After deploy:
