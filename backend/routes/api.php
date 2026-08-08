@@ -359,6 +359,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/settings/og-image', [PlatformSettingsController::class, 'uploadOgImage']);
             Route::get('/whatsapp', [PlatformWhatsAppSettingsController::class, 'show']);
             Route::patch('/whatsapp', [PlatformWhatsAppSettingsController::class, 'update']);
+            Route::post('/whatsapp/test', [PlatformWhatsAppSettingsController::class, 'sendTest']);
 
             Route::prefix('pricing')->group(function () {
                 Route::get('/plans', [PlatformPlanController::class, 'index']);

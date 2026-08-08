@@ -23,6 +23,18 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
      */
     public function sendWithCredentials(string $toPhone, string $message, array $credentials, array $context = []): void
     {
+        $this->attemptSendWithCredentials($toPhone, $message, $credentials, $context);
+    }
+
+    /**
+     * Same as sendWithCredentials but returns success/failure for Super Admin diagnostics.
+     *
+     * @param  array{api_key?: ?string, session_id?: ?string, base_url?: ?string}  $credentials
+     * @param  array<string, mixed>  $context
+     * @return array{ok: bool, error?: string, status?: int}
+     */
+    public function attemptSendWithCredentials(string $toPhone, string $message, array $credentials, array $context = []): array
+    {
         $apiKey = $credentials['api_key'] ?? null;
         $sessionId = $credentials['session_id'] ?? null;
         $baseUrl = rtrim((string) ($credentials['base_url'] ?? config('whatsapp.genius.base_url')), '/');
@@ -36,7 +48,10 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'context' => $context,
             ]);
 
-            return;
+            return [
+                'ok' => false,
+                'error' => 'Genius API key or session ID is missing.',
+            ];
         }
 
         $number = preg_replace('/\D+/', '', $toPhone) ?: $toPhone;
@@ -60,8 +75,10 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'context' => $context,
             ]);
 
-            // Never throw — callers (signup queue job, orders) must soft-fail.
-            return;
+            return [
+                'ok' => false,
+                'error' => 'Genius request failed: '.$e->getMessage(),
+            ];
         }
 
         if ($response->failed()) {
@@ -72,13 +89,22 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'context' => $context,
             ]);
 
-            // Never throw — signup/order paths must not become Server Error when Genius rejects.
-            return;
+            $body = trim($response->body());
+
+            return [
+                'ok' => false,
+                'status' => $response->status(),
+                'error' => $body !== ''
+                    ? 'Genius API error (HTTP '.$response->status().'): '.$body
+                    : 'Genius API error (HTTP '.$response->status().').',
+            ];
         }
 
         Log::info('WhatsApp (Genius): message sent', [
             'to' => $number,
             'context_type' => $context['type'] ?? null,
         ]);
+
+        return ['ok' => true];
     }
 }

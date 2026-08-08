@@ -63,6 +63,58 @@ class PlatformWhatsAppSettingsTest extends TestCase
         $this->assertTrue(app(WhatsAppCredentialResolver::class)->hasSendableCredentials(null));
     }
 
+    public function test_super_admin_can_send_platform_whatsapp_test_message(): void
+    {
+        Http::fake([
+            'restapi.geniusdevel.com/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $this->patchJson('/api/v1/platform/whatsapp', [
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'api-test-key',
+            'session_id' => 'session_test',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ])->assertOk();
+
+        $response = $this->postJson('/api/v1/platform/whatsapp/test', [
+            'phone' => '+447756183484',
+            'message' => 'Super Admin diagnostic ping',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('sent', true);
+        $response->assertJsonPath('phone', '+447756183484');
+        $response->assertJsonPath('provider', 'genius');
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://restapi.geniusdevel.com/api/send'
+                && $request['number'] === '447756183484'
+                && $request['message'] === 'Super Admin diagnostic ping';
+        });
+    }
+
+    public function test_whatsapp_test_rejects_incomplete_credentials(): void
+    {
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $response = $this->postJson('/api/v1/platform/whatsapp/test', [
+            'phone' => '+447756183484',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ]);
+
+        $response->assertStatus(422);
+    }
+
     public function test_genius_provider_posts_to_send_endpoint(): void
     {
         Http::fake([

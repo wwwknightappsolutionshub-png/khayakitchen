@@ -36,6 +36,12 @@ export default function PlatformSettingsPage() {
   const [splashSaveSuccess, setSplashSaveSuccess] = useState<string | null>(null);
   const [whatsappError, setWhatsappError] = useState<string | null>(null);
   const [whatsappSuccess, setWhatsappSuccess] = useState<string | null>(null);
+  const [whatsappTestError, setWhatsappTestError] = useState<string | null>(null);
+  const [whatsappTestSuccess, setWhatsappTestSuccess] = useState<string | null>(null);
+  const [whatsappTestForm, setWhatsappTestForm] = useState({
+    phone: "",
+    message: "",
+  });
   const [whatsappForm, setWhatsappForm] = useState({
     enabled: false,
     provider: "genius" as "genius" | "meta" | "twilio",
@@ -151,6 +157,26 @@ export default function PlatformSettingsPage() {
       setWhatsappSuccess(null);
       setWhatsappError(
         err instanceof ApiClientError ? err.message : "Failed to update WhatsApp settings.",
+      );
+    },
+  });
+
+  const sendWhatsAppTestMutation = useMutation({
+    mutationFn: () =>
+      platformSettingsService.sendWhatsAppTest({
+        phone: whatsappTestForm.phone.trim(),
+        message: whatsappTestForm.message.trim() || undefined,
+      }),
+    onSuccess: (response) => {
+      setWhatsappTestError(null);
+      setWhatsappTestSuccess(
+        `Test message sent via ${response.provider} to ${response.phone}. Check WhatsApp.`,
+      );
+    },
+    onError: (err) => {
+      setWhatsappTestSuccess(null);
+      setWhatsappTestError(
+        err instanceof ApiClientError ? err.message : "Failed to send WhatsApp test.",
       );
     },
   });
@@ -693,6 +719,48 @@ export default function PlatformSettingsPage() {
                 >
                   Save WhatsApp
                 </Button>
+
+                <div className="mt-2 space-y-3 rounded-[var(--radius)] border border-border/60 p-4">
+                  <div>
+                    <p className="text-sm font-medium text-violet-50">Send test message</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      Uses the saved platform credentials (same path as signup welcome WhatsApp).
+                      Save settings before testing if you just changed keys.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Phone (E.164)"
+                      value={whatsappTestForm.phone}
+                      onChange={(e) =>
+                        setWhatsappTestForm((f) => ({ ...f, phone: e.target.value }))
+                      }
+                      placeholder="+447756183484"
+                    />
+                    <Input
+                      label="Message (optional)"
+                      value={whatsappTestForm.message}
+                      onChange={(e) =>
+                        setWhatsappTestForm((f) => ({ ...f, message: e.target.value }))
+                      }
+                      placeholder="KhayaOS platform WhatsApp test…"
+                    />
+                  </div>
+                  {whatsappTestError ? (
+                    <p className="text-sm text-danger">{whatsappTestError}</p>
+                  ) : null}
+                  {whatsappTestSuccess ? (
+                    <p className="text-sm text-emerald-400">{whatsappTestSuccess}</p>
+                  ) : null}
+                  <Button
+                    variant="secondary"
+                    onClick={() => sendWhatsAppTestMutation.mutate()}
+                    isLoading={sendWhatsAppTestMutation.isPending}
+                    disabled={!whatsappTestForm.phone.trim().startsWith("+")}
+                  >
+                    Send test WhatsApp
+                  </Button>
+                </div>
               </>
             )}
           </CardContent>

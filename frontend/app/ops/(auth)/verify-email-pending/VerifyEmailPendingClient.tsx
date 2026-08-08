@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { authService } from "@/services/auth.service";
 import { ApiClientError } from "@/lib/api-client";
+import { OPS_ROUTES } from "@/lib/ops-paths";
 
 const CONFETTI_COLORS = ["#e07a5f", "#f59e0b", "#81b29a", "#3d405b", "#f4a261", "#e9c46a", "#2a9d8f", "#fb7185"];
+const REDIRECT_SECONDS = 4;
 
 export default function VerifyEmailPendingClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const tenant = searchParams.get("tenant") ?? "";
@@ -19,6 +22,15 @@ export default function VerifyEmailPendingClient() {
   const [error, setError] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
+  const [secondsLeft, setSecondsLeft] = useState(REDIRECT_SECONDS);
+
+  const loginHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (email) params.set("email", email);
+    if (tenant) params.set("tenant", tenant);
+    const query = params.toString();
+    return query ? `${OPS_ROUTES.login}?${query}` : OPS_ROUTES.login;
+  }, [email, tenant]);
 
   const confetti = useMemo(
     () =>
@@ -39,6 +51,21 @@ export default function VerifyEmailPendingClient() {
     const hide = window.setTimeout(() => setShowConfetti(false), 5200);
     return () => window.clearTimeout(hide);
   }, []);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      setSecondsLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    const redirect = window.setTimeout(() => {
+      router.replace(loginHref);
+    }, REDIRECT_SECONDS * 1000);
+
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(redirect);
+    };
+  }, [loginHref, router]);
 
   const handleResend = async () => {
     if (!email) {
@@ -110,6 +137,10 @@ export default function VerifyEmailPendingClient() {
               with the password you created.
             </p>
 
+            <p className="text-center text-sm font-medium text-foreground/80" aria-live="polite">
+              Redirecting to sign in in {secondsLeft}s…
+            </p>
+
             {message ? (
               <p className="rounded-[var(--radius)] bg-success/10 px-3 py-2 text-sm text-success">{message}</p>
             ) : null}
@@ -123,10 +154,7 @@ export default function VerifyEmailPendingClient() {
 
             <p className="text-center text-xs text-muted">
               Already confirmed?{" "}
-              <Link
-                href={`/ops/login?${new URLSearchParams({ email, tenant }).toString()}`}
-                className="text-primary hover:underline"
-              >
+              <Link href={loginHref} className="text-primary hover:underline">
                 Sign in
               </Link>
             </p>

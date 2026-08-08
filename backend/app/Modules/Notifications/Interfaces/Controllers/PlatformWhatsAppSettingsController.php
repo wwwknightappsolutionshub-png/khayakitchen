@@ -37,4 +37,28 @@ class PlatformWhatsAppSettingsController extends Controller
             'whatsapp' => $this->settingsService->update($data),
         ]);
     }
+
+    public function sendTest(Request $request)
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:40'],
+            'message' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $result = $this->settingsService->sendTestMessage(
+            (string) $data['phone'],
+            isset($data['message']) ? (string) $data['message'] : null,
+        );
+
+        if (! ($result['sent'] ?? false)) {
+            return ApiResponse::error(
+                $result['error'] ?? 'WhatsApp test message failed.',
+                'WHATSAPP_TEST_FAILED',
+                $result,
+                422,
+            );
+        }
+
+        return ApiResponse::success($result);
+    }
 }

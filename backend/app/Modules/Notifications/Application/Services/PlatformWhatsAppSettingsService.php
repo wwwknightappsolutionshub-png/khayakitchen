@@ -3,18 +3,25 @@
 namespace App\Modules\Notifications\Application\Services;
 
 use App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
+use App\Modules\Notifications\Infrastructure\WhatsApp\Providers\GeniusWhatsAppProvider;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class PlatformWhatsAppSettingsService
 {
     public const PROVIDERS = ['genius', 'meta', 'twilio'];
 
+    public const DEFAULT_TEST_MESSAGE = 'KhayaOS platform WhatsApp test — if you received this, delivery works.';
+
     public function __construct(
         private TenantContext $tenantContext,
         private AuditLogService $auditLogService,
         private WhatsAppCredentialResolver $credentialResolver,
+        private WhatsAppProviderInterface $whatsAppProvider,
+        private GeniusWhatsAppProvider $geniusProvider,
     ) {}
 
     /**
@@ -125,6 +132,89 @@ class PlatformWhatsAppSettingsService
             'provider' => 'genius',
             'base_url' => config('whatsapp.genius.base_url'),
         ]);
+    }
+
+    /**
+     * Super Admin diagnostic: send one platform WhatsApp using saved credentials.
+     *
+     * @return array{sent: bool, phone: string, provider: string, source: string, message: string, error?: string}
+     */
+    public function sendTestMessage(string $phone, ?string $message = null): array
+    {
+        $normalizedPhone = preg_replace('/\s+/', '', trim($phone)) ?? '';
+        if ($normalizedPhone === '' || ! str_starts_with($normalizedPhone, '+')) {
+            throw ValidationException::withMessages([
+                'phone' => ['Phone must be E.164, e.g. +447756183484.'],
+            ]);
+        }
+
+        if (! $this->credentialResolver->hasSendableCredentials(null)) {
+            throw ValidationException::withMessages([
+                'phone' => ['Platform WhatsApp credentials are incomplete. Enable the sender and save API key + session ID (or Meta/Twilio credentials) first.'],
+            ]);
+        }
+
+        $body = filled($message) ? trim((string) $message) : self::DEFAULT_TEST_MESSAGE;
+        $resolved = $this->credentialResolver->resolve(null);
+        $context = [
+            'type' => 'platform_test',
+            'tenant_id' => null,
+        ];
+
+        $sendResult = ['ok' => false, 'error' => 'Send did not complete.'];
+
+        if ($resolved['provider'] === 'genius') {
+            $sendResult = $this->geniusProvider->attemptSendWithCredentials(
+                $normalizedPhone,
+                $body,
+                $resolved['genius'],
+                $context,
+            );
+        } else {
+            try {
+                $this->whatsAppProvider->send($normalizedPhone, $body, $context);
+                $sendResult = ['ok' => true];
+            } catch (Throwable $e) {
+                $sendResult = [
+                    'ok' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $this->auditLogService->log(
+            'platform.whatsapp_settings.test_sent',
+            null,
+            $this->tenantContext->user()?->id,
+            'platform_whatsapp_settings',
+            $this->getOrCreate()->id,
+            [
+                'phone' => $normalizedPhone,
+                'provider' => $resolved['provider'],
+                'source' => $resolved['source'],
+                'sent' => (bool) ($sendResult['ok'] ?? false),
+                'error' => $sendResult['error'] ?? null,
+            ],
+        );
+
+        if (! ($sendResult['ok'] ?? false)) {
+            return [
+                'sent' => false,
+                'phone' => $normalizedPhone,
+                'provider' => $resolved['provider'],
+                'source' => $resolved['source'],
+                'message' => $body,
+                'error' => (string) ($sendResult['error'] ?? 'WhatsApp provider rejected the test message.'),
+            ];
+        }
+
+        return [
+            'sent' => true,
+            'phone' => $normalizedPhone,
+            'provider' => $resolved['provider'],
+            'source' => $resolved['source'],
+            'message' => $body,
+        ];
     }
 
     /**

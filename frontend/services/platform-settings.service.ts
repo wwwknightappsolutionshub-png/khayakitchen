@@ -50,4 +50,18 @@ export const platformSettingsService = {
   }): Promise<{ whatsapp: PlatformWhatsAppSettings }> {
     return api.patch<{ whatsapp: PlatformWhatsAppSettings }>("/platform/whatsapp", payload);
   },
+
+  async sendWhatsAppTest(payload: {
+    phone: string;
+    message?: string;
+  }): Promise<{
+    sent: boolean;
+    phone: string;
+    provider: string;
+    source: string;
+    message: string;
+    error?: string;
+  }> {
+    return api.post("/platform/whatsapp/test", payload);
+  },
 };
