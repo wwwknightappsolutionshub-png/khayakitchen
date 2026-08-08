@@ -95,8 +95,14 @@ class PublicSignupController extends Controller
             'referral_code' => ['nullable', 'string', 'max:32'],
         ]);
 
+        // Empty optional launch fields must not become invalid file/string payloads.
+        $data['tagline'] = filled($data['tagline'] ?? null) ? trim((string) $data['tagline']) : null;
+
         if ($request->hasFile('logo')) {
-            $data['logo'] = $request->file('logo');
+            $file = $request->file('logo');
+            if ($file && $file->isValid()) {
+                $data['logo'] = $file;
+            }
         }
 
         return ApiResponse::success(

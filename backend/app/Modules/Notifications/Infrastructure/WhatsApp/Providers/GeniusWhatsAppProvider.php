@@ -41,17 +41,28 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
 
         $number = preg_replace('/\D+/', '', $toPhone) ?: $toPhone;
 
-        $response = Http::timeout(8)->withHeaders([
-            'x-api-key' => $apiKey,
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ])->post("{$baseUrl}/api/send", [
-            'sessionId' => $sessionId,
-            'number' => $number,
-            'type' => 'text',
-            'message' => $message,
-            'source' => 'API',
-        ]);
+        try {
+            $response = Http::timeout(8)->connectTimeout(3)->withHeaders([
+                'x-api-key' => $apiKey,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->post("{$baseUrl}/api/send", [
+                'sessionId' => $sessionId,
+                'number' => $number,
+                'type' => 'text',
+                'message' => $message,
+                'source' => 'API',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp (Genius): request failed', [
+                'to' => $number,
+                'error' => $e->getMessage(),
+                'context' => $context,
+            ]);
+
+            // Never throw — callers (signup queue job, orders) must soft-fail.
+            return;
+        }
 
         if ($response->failed()) {
             Log::error('WhatsApp (Genius): API send failed', [
@@ -61,7 +72,7 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'context' => $context,
             ]);
 
-            // Never throw — signup/order HTTP paths must not become Server Error when Genius rejects.
+            // Never throw — signup/order paths must not become Server Error when Genius rejects.
             return;
         }
 

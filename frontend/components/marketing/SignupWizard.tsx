@@ -86,7 +86,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
         }
         if (error.status >= 500 || error.message === "Server Error") {
           setSubmitError(
-            "Server error while creating your workspace. If you get a verification email, continue from there. Otherwise try again without a logo, or contact support.",
+            "Something went wrong after submit. Your kitchen may already exist — check your email (and spam) for a verification link, or try signing in. If the email is already taken on retry, open the confirm-email page and use Resend. Contact support if you still need help.",
           );
           return;
         }
@@ -135,7 +135,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       estimated_daily_orders: values.estimated_daily_orders,
       staff_count: values.staff_count,
       branch_count: values.branch_count,
-      tagline: values.tagline || undefined,
+      tagline: values.tagline?.trim() || undefined,
       primary_color: values.primary_color || undefined,
       secondary_color: values.secondary_color || undefined,
       terms_accepted: values.terms_accepted,

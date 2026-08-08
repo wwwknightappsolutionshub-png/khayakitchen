@@ -90,6 +90,12 @@ class PublicSignupTest extends TestCase
         $tenant = Tenant::where('slug', 'sunrise-kitchen')->firstOrFail();
         $this->assertNotNull($tenant->signup_metadata);
         $this->assertSame('London', $tenant->signup_metadata['city']);
+        $this->assertSame('Fresh food, fast service', $tenant->signup_metadata['tagline']);
+
+        $this->assertDatabaseHas('tenant_brandings', [
+            'tenant_id' => $tenant->id,
+            'restaurant_name' => 'Sunrise Kitchen',
+        ]);
 
         $owner = User::where('email', 'ada@sunrisekitchen.test')->firstOrFail();
         $this->assertNull($owner->email_verified_at);
@@ -433,5 +439,59 @@ class PublicSignupTest extends TestCase
             'logo_url' => $tenant->logo_url,
             'restaurant_name' => 'Logo Kitchen',
         ]);
+    }
+
+    public function test_signup_succeeds_with_empty_optional_tagline_and_without_logo(): void
+    {
+        Mail::fake();
+
+        $plan = Plan::where('slug', 'growth')->firstOrFail();
+
+        $response = $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Plain Kitchen',
+            'legal_business_name' => 'Plain Kitchen Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'plain-kitchen',
+            'country' => 'United Kingdom',
+            'city' => 'London',
+            'street_address' => '1 Plain Street',
+            'postal_code' => 'E1 1AA',
+            'timezone' => 'Europe/London',
+            'currency' => 'GBP',
+            'owner_name' => 'Plain Owner',
+            'owner_email' => 'owner@plainkitchen.test',
+            'owner_phone' => '+447700900444',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 20,
+            'staff_count' => 2,
+            'branch_count' => 1,
+            'tagline' => '',
+            'primary_color' => '#1A1A2E',
+            'secondary_color' => '#E94560',
+            'terms_accepted' => true,
+            'marketing_opt_in' => true,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('tenant.slug', 'plain-kitchen');
+        $response->assertJsonPath('message', 'Check your email to confirm your account before signing in.');
+
+        $tenant = Tenant::where('slug', 'plain-kitchen')->firstOrFail();
+        $this->assertNull($tenant->logo_url);
+        $this->assertArrayHasKey('tagline', $tenant->signup_metadata);
+        $this->assertNull($tenant->signup_metadata['tagline']);
+
+        $this->assertDatabaseHas('tenant_brandings', [
+            'tenant_id' => $tenant->id,
+            'restaurant_name' => 'Plain Kitchen',
+            'primary_color' => '#1A1A2E',
+            'secondary_color' => '#E94560',
+        ]);
+
+        Mail::assertSent(EmailVerificationMail::class);
     }
 }

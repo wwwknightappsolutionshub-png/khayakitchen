@@ -75,7 +75,6 @@ class PlatformTenantService
             TenantBranding::create([
                 'tenant_id' => $tenant->id,
                 'restaurant_name' => $data['name'],
-                'tagline' => 'Welcome',
                 'primary_color' => $data['primary_color'] ?? '#1a1a2e',
                 'secondary_color' => '#e94560',
             ]);

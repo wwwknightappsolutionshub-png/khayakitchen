@@ -7,6 +7,7 @@ use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
+use App\Modules\Notifications\Jobs\SendSignupWelcomeWhatsAppJob;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
@@ -168,8 +169,9 @@ class PublicSignupService
         unset($responsePayload['owner_id']);
 
         /*
-         * Email + welcome WhatsApp both run in-request (same path as `whatsapp:send-test`).
-         * Failures are swallowed — tenant create already committed.
+         * Verification email stays in-request (usually fast; Mail::fake in tests).
+         * Welcome WhatsApp is queued — never block/timeout the signup HTTP response after
+         * the tenant row is already committed (that produced false "Server Error" UX).
          */
         try {
             $owner = User::withoutGlobalScopes()->find($ownerId);
@@ -187,7 +189,7 @@ class PublicSignupService
         }
 
         try {
-            $this->deliverPostSignupNotifications(
+            SendSignupWelcomeWhatsAppJob::dispatch(
                 $ownerId,
                 $tenantSlug,
                 $result,
@@ -195,7 +197,7 @@ class PublicSignupService
                 $planName,
             );
         } catch (Throwable $e) {
-            Log::error('Signup welcome WhatsApp failed (signup still succeeded)', [
+            Log::error('Signup welcome WhatsApp job dispatch failed (signup still succeeded)', [
                 'owner_id' => $ownerId,
                 'error' => $e->getMessage(),
             ]);
@@ -313,7 +315,8 @@ class PublicSignupService
             'staff_count' => $data['staff_count'] ?? null,
             'branch_count' => $data['branch_count'] ?? null,
             'average_order_value' => $data['average_order_value'] ?? null,
-            'tagline' => $data['tagline'] ?? null,
+            // Optional launch field — metadata only. Never write to tenant_brandings (no column).
+            'tagline' => filled($data['tagline'] ?? null) ? trim((string) $data['tagline']) : null,
             'marketing_opt_in' => (bool) ($data['marketing_opt_in'] ?? false),
             'referral_code' => isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null,
             'submitted_at' => now()->toIso8601String(),

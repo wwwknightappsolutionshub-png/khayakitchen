@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Optional re-delivery helper for signup welcome WhatsApp.
- * Primary path is in-request via PublicSignupService (same as whatsapp:send-test).
- * Keep this job for manual/retry dispatch if a signup WhatsApp was skipped.
+ * Primary delivery path for signup welcome WhatsApp.
+ * Dispatched after tenant create so the public signup HTTP response is never blocked
+ * by Genius/Twilio latency (which previously caused false "Server Error" after success).
  */
 class SendSignupWelcomeWhatsAppJob implements ShouldQueue
 {
