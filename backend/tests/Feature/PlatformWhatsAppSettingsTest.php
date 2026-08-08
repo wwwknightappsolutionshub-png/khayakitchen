@@ -120,7 +120,7 @@ class PlatformWhatsAppSettingsTest extends TestCase
             'Authorization' => "Bearer {$token}",
         ])->assertOk();
 
-        // Audit runs afterResponse and is isolated — HTTP status must still reflect Genius result.
+        // Soft-fail audit must never turn a confirmed Genius send into HTTP 500.
         $audit = \Mockery::mock(\App\Modules\Pricing\Application\Services\AuditLogService::class);
         $audit->shouldReceive('log')->andThrow(new \RuntimeException('audit boom'));
         $this->app->instance(\App\Modules\Pricing\Application\Services\AuditLogService::class, $audit);

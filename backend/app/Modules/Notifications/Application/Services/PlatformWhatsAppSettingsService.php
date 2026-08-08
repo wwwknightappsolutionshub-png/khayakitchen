@@ -206,34 +206,28 @@ class PlatformWhatsAppSettingsService
             $payload['error'] = (string) ($sendResult['error'] ?? 'WhatsApp provider rejected the test message.');
         }
 
-        // Return the real Genius/provider result immediately. Audit after the HTTP response
-        // so logging / report() can never turn a confirmed send into HTTP 500 for the UI.
-        $userId = $this->tenantContext->user()?->id;
-        $auditMeta = [
-            'phone' => $normalizedPhone,
-            'provider' => $resolved['provider'],
-            'source' => $resolved['source'],
-            'sent' => $payload['sent'],
-            'error' => $payload['error'] ?? null,
-        ];
-        dispatch(function () use ($userId, $auditMeta) {
-            try {
-                $settingsId = app(self::class)->getOrCreate()->id;
-                app(AuditLogService::class)->log(
-                    'platform.whatsapp_settings.test_sent',
-                    null,
-                    $userId,
-                    'platform_whatsapp_settings',
-                    $settingsId,
-                    $auditMeta,
-                );
-            } catch (Throwable $e) {
-                Log::error('Platform WhatsApp test audit log failed', [
-                    'phone' => $auditMeta['phone'] ?? null,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        })->afterResponse();
+        // Soft-fail audit only — never dispatch/queue after Genius confirms (that caused HTTP 500).
+        try {
+            $this->auditLogService->log(
+                'platform.whatsapp_settings.test_sent',
+                null,
+                $this->tenantContext->user()?->id,
+                'platform_whatsapp_settings',
+                $this->getOrCreate()->id,
+                [
+                    'phone' => $normalizedPhone,
+                    'provider' => $resolved['provider'],
+                    'source' => $resolved['source'],
+                    'sent' => $payload['sent'],
+                    'error' => $payload['error'] ?? null,
+                ],
+            );
+        } catch (Throwable $e) {
+            Log::error('Platform WhatsApp test audit log failed', [
+                'phone' => $normalizedPhone,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         Log::info('Platform WhatsApp test result', $payload);
 
