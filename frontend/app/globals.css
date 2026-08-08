@@ -125,7 +125,8 @@ html[data-platform-theme="light"] .platform-app {
   --foreground: #0f172a;
   --surface: #ffffff;
   --surface-elevated: #f1f5f9;
-  --muted: #64748b;
+  /* Stronger muted for light UI — #64748b was too faint on white cards/headers */
+  --muted: #475569;
   --border: #e2e8f0;
   color: var(--foreground);
 }
@@ -159,12 +160,25 @@ html[data-platform-theme="light"] .platform-app {
   color: #0f172a !important;
 }
 
+/*
+ * Dark-theme violet opacity utilities are nearly invisible on light backgrounds.
+ * Remap every common subtitle / label / table-header variant used on platform pages.
+ */
 .platform-app[data-platform-theme="light"] :is(
+  .text-violet-200\/40,
+  .text-violet-200\/50,
+  .text-violet-200\/60,
   .text-violet-200\/70,
+  .text-violet-300\/40,
+  .text-violet-300\/50,
   .text-violet-300\/60,
-  .text-violet-300\/70
+  .text-violet-300\/70,
+  .text-violet-300\/80,
+  .text-violet-400\/50,
+  .text-violet-400\/60,
+  .text-violet-400\/70
 ) {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 .platform-app[data-platform-theme="light"] :is(
@@ -174,7 +188,7 @@ html[data-platform-theme="light"] .platform-app {
   .border-violet-500\/30,
   .border-violet-500\/40
 ) {
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .platform-app[data-platform-theme="light"] :is(
@@ -193,12 +207,29 @@ html[data-platform-theme="light"] .platform-app {
   color: #4c1d95;
 }
 
-.platform-app[data-platform-theme="light"] .text-violet-300\/50 {
-  color: #94a3b8 !important;
+.platform-app[data-platform-theme="light"] .placeholder\:text-zinc-600::placeholder {
+  color: #64748b;
 }
 
-.platform-app[data-platform-theme="light"] .placeholder\:text-zinc-600::placeholder {
-  color: #94a3b8;
+/* Badge / status chips — raise contrast on white cards */
+.platform-app[data-platform-theme="light"] .bg-secondary\/20 {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.platform-app[data-platform-theme="light"] .bg-warning\/20 {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+}
+
+.platform-app[data-platform-theme="light"] .bg-primary\/20 {
+  background-color: #ede9fe !important;
+  color: #5b21b6 !important;
+}
+
+.platform-app[data-platform-theme="light"] .border-border.text-muted,
+.platform-app[data-platform-theme="light"] .text-muted {
+  color: #475569 !important;
 }
 
 /* Admin + platform backend pages */

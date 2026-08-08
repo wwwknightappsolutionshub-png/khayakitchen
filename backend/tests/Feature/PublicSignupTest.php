@@ -138,6 +138,17 @@ class PublicSignupTest extends TestCase
         $whatsAppMock = Mockery::mock(WhatsAppProviderInterface::class);
         $whatsAppMock->shouldReceive('send')
             ->once()
+            ->ordered()
+            ->withArgs(function (string $phone, string $message, array $context): bool {
+                return str_contains($phone, '447700900222')
+                    && $message === 'KhayaOS'
+                    && (($context['type'] ?? null) === 'owner_welcome_image')
+                    && filled($context['media_url'] ?? null)
+                    && str_contains((string) $context['media_url'], '/api/v1/public/whatsapp/owner-welcome.jpg');
+            });
+        $whatsAppMock->shouldReceive('send')
+            ->once()
+            ->ordered()
             ->withArgs(function (string $phone, string $message, array $context): bool {
                 return str_contains($phone, '447700900222')
                     && str_contains($message, '*Welcome aboard, Harbor Owner*')
@@ -147,8 +158,7 @@ class PublicSignupTest extends TestCase
                     && str_contains($message, 'Email: owner@harborbistro.test')
                     && str_contains($message, '/ops/login')
                     && (($context['type'] ?? null) === 'owner_welcome')
-                    && filled($context['media_url'] ?? null)
-                    && filled($context['media_base64'] ?? null);
+                    && ! array_key_exists('media_url', $context);
             });
         $this->app->instance(WhatsAppProviderInterface::class, $whatsAppMock);
 

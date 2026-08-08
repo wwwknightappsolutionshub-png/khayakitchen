@@ -26,6 +26,7 @@ use App\Modules\Loyalty\Interfaces\Controllers\LoyaltyProgramController;
 use App\Modules\Menu\Interfaces\Controllers\MenuController;
 use App\Modules\Notifications\Interfaces\Controllers\NotificationController;
 use App\Modules\Notifications\Interfaces\Controllers\PlatformWhatsAppSettingsController;
+use App\Modules\Notifications\Interfaces\Controllers\PlatformWhatsAppWelcomeImageController;
 use App\Modules\Notifications\Interfaces\Controllers\TenantWhatsAppSettingsController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CampaignController;
 use App\Modules\NotificationsCampaign\Interfaces\Controllers\CustomerNotificationController;
@@ -74,6 +75,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/signup/check-email', [PublicSignupController::class, 'checkEmail'])->middleware('throttle:30,1');
     Route::get('/pricing/plans', [PublicPricingController::class, 'index']);
     Route::get('/platform/public-config', [PlatformSettingsController::class, 'publicConfig']);
+    // Genius fetches this URL for signup welcome image (must be public + image/jpeg).
+    Route::get('/public/whatsapp/owner-welcome.jpg', [PlatformWhatsAppWelcomeImageController::class, 'show'])
+        ->middleware('throttle:120,1');
     Route::post('/marketing/visitor-hit', [MarketingEngagementController::class, 'visitorHit'])
         ->middleware('throttle:30,1');
     Route::post('/marketing/chat', [MarketingEngagementController::class, 'chat'])

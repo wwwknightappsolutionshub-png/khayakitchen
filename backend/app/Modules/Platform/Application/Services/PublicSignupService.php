@@ -305,30 +305,47 @@ class PublicSignupService
 
         $welcomeImage = app(PlatformWhatsAppWelcomeImageService::class);
         $mediaUrl = $welcomeImage->resolvePublicUrl();
-        $mediaBinary = $welcomeImage->resolveBinary();
-        $context = [
+
+        // Preserve the working text delivery path: always send type=text (no media).
+        // Banner is a separate soft-fail image send so a Genius media mismatch cannot
+        // block or alter the welcome copy that already works in production.
+        if (filled($mediaUrl)) {
+            try {
+                $this->whatsAppProvider->send($ownerPhone, 'KhayaOS', [
+                    'type' => 'owner_welcome_image',
+                    'tenant_id' => null,
+                    'signup_tenant_id' => $tenantId,
+                    'media_url' => $mediaUrl,
+                ]);
+                Log::info('Signup WhatsApp welcome image sent', [
+                    'tenant_id' => $tenantId,
+                    'phone' => $ownerPhone,
+                    'media_url' => $mediaUrl,
+                ]);
+            } catch (Throwable $e) {
+                Log::warning('Signup WhatsApp welcome image failed (text welcome still sending)', [
+                    'tenant_id' => $tenantId,
+                    'phone' => $ownerPhone,
+                    'media_url' => $mediaUrl,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        } else {
+            Log::warning('Signup WhatsApp welcome image skipped — no public media URL', [
+                'tenant_id' => $tenantId,
+            ]);
+        }
+
+        $this->whatsAppProvider->send($ownerPhone, $message, [
             'type' => 'owner_welcome',
             'tenant_id' => null,
             'signup_tenant_id' => $tenantId,
             'owner_email' => $ownerEmail,
-        ];
-        if ($mediaUrl) {
-            $context['media_url'] = $mediaUrl;
-        }
-        // Always attach DB-stored bytes so Genius can send even if the public URL is unreachable.
-        if (is_string($mediaBinary) && $mediaBinary !== '') {
-            $context['media_base64'] = base64_encode($mediaBinary);
-        }
-
-        // WhatsApp image captions max out at 1024 characters.
-        $caption = mb_strlen($message) > 1024 ? mb_substr($message, 0, 1021).'...' : $message;
-
-        $this->whatsAppProvider->send($ownerPhone, $caption, $context);
+        ]);
         Log::info('Signup WhatsApp send completed', [
             'tenant_id' => $tenantId,
             'phone' => $ownerPhone,
             'has_media_url' => filled($mediaUrl),
-            'has_media_base64' => isset($context['media_base64']),
         ]);
     }
 

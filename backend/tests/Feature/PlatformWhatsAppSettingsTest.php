@@ -250,8 +250,20 @@ class PlatformWhatsAppSettingsTest extends TestCase
                 && $request['type'] === 'image'
                 && $request['message'] === '*Welcome aboard*'
                 && $request['url'] === 'https://khayaos.prohost.cloud/whatsapp/owner-welcome.jpg'
+                && $request['mediaUrl'] === 'https://khayaos.prohost.cloud/whatsapp/owner-welcome.jpg'
                 && $request['source'] === 'API';
         });
+    }
+
+    public function test_public_welcome_image_endpoint_returns_jpeg(): void
+    {
+        app(\App\Modules\Notifications\Application\Services\PlatformWhatsAppWelcomeImageService::class)
+            ->ensureSeeded();
+
+        $response = $this->get('/api/v1/public/whatsapp/owner-welcome.jpg');
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertGreaterThan(1000, strlen($response->getContent()));
     }
 
     public function test_welcome_image_seeder_persists_image_in_database(): void

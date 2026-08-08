@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Storage;
  * Seeds and resolves the platform owner-welcome WhatsApp header image.
  * Source of truth: backend/resources/assets/whatsapp/owner-welcome.jpg
  * Persisted: path + public URL + base64 on platform_whatsapp_settings.
+ *
+ * Public fetch URL is Laravel /api/v1/public/whatsapp/owner-welcome.jpg (APP_URL),
+ * not the Next.js frontend — Genius must receive a stable image/jpeg response.
  */
 class PlatformWhatsAppWelcomeImageService
 {
@@ -18,6 +21,8 @@ class PlatformWhatsAppWelcomeImageService
     public const SOURCE_RELATIVE = 'assets/whatsapp/owner-welcome.jpg';
 
     public const MIME = 'image/jpeg';
+
+    public const PUBLIC_API_PATH = '/api/v1/public/whatsapp/owner-welcome.jpg';
 
     /**
      * @return array{path: ?string, url: ?string, mime: ?string, has_data: bool}
@@ -41,8 +46,7 @@ class PlatformWhatsAppWelcomeImageService
         }
 
         Storage::disk('public')->put(self::STORAGE_PATH, $binary);
-        $storageUrl = Storage::disk('public')->url(self::STORAGE_PATH);
-        $publicUrl = $this->preferredPublicUrl($storageUrl);
+        $publicUrl = $this->laravelPublicMediaUrl();
 
         $settings->update([
             'owner_welcome_image_path' => self::STORAGE_PATH,
@@ -60,8 +64,9 @@ class PlatformWhatsAppWelcomeImageService
     public function resolvePublicUrl(?PlatformWhatsAppSettings $settings = null): ?string
     {
         $settings ??= $this->getOrCreateSettings();
+        $canonical = $this->laravelPublicMediaUrl();
 
-        if (! filled($settings->owner_welcome_image_url) || ! filled($settings->owner_welcome_image_data)) {
+        if (! filled($settings->owner_welcome_image_data) || (string) $settings->owner_welcome_image_url !== $canonical) {
             $this->ensureSeeded();
             $settings = $settings->fresh() ?? $this->getOrCreateSettings();
         }
@@ -71,12 +76,7 @@ class PlatformWhatsAppWelcomeImageService
             return $this->absolutizeUrl($url);
         }
 
-        $frontend = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', '')), '/');
-        if ($frontend !== '') {
-            return $frontend.'/whatsapp/owner-welcome.jpg';
-        }
-
-        return null;
+        return $canonical !== '' ? $canonical : null;
     }
 
     /**
@@ -137,15 +137,17 @@ class PlatformWhatsAppWelcomeImageService
         ]);
     }
 
-    private function preferredPublicUrl(string $storageUrl): string
+    /**
+     * Laravel API host — nginx proxies /api to PHP, so Genius can fetch image/jpeg reliably.
+     */
+    private function laravelPublicMediaUrl(): string
     {
-        $frontend = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', '')), '/');
-        if ($frontend !== '') {
-            // Next.js serves committed asset from /public/whatsapp — most reliable for Genius fetch.
-            return $frontend.'/whatsapp/owner-welcome.jpg';
+        $appUrl = rtrim((string) config('app.url', env('APP_URL', '')), '/');
+        if ($appUrl === '') {
+            return '';
         }
 
-        return $this->absolutizeUrl($storageUrl);
+        return $appUrl.self::PUBLIC_API_PATH;
     }
 
     private function absolutizeUrl(string $url): string

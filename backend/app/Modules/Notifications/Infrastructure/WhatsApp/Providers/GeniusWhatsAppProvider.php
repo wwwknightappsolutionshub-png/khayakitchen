@@ -73,10 +73,13 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         ];
 
         if ($isImage) {
-            // Genius /api/send image: public URL preferred; data URI accepted by many WA engines.
-            $payload['url'] = $mediaUrl !== ''
+            // Genius /api/send image — public HTTPS JPEG URL (Laravel /api media route).
+            // Also set mediaUrl for gateways that ignore `url`.
+            $resolvedUrl = $mediaUrl !== ''
                 ? $mediaUrl
                 : 'data:image/jpeg;base64,'.$mediaBase64;
+            $payload['url'] = $resolvedUrl;
+            $payload['mediaUrl'] = $resolvedUrl;
         }
 
         try {
