@@ -120,6 +120,7 @@ class PlatformWhatsAppSettingsTest extends TestCase
             'Authorization' => "Bearer {$token}",
         ])->assertOk();
 
+        // Audit runs afterResponse and is isolated — HTTP status must still reflect Genius result.
         $audit = \Mockery::mock(\App\Modules\Pricing\Application\Services\AuditLogService::class);
         $audit->shouldReceive('log')->andThrow(new \RuntimeException('audit boom'));
         $this->app->instance(\App\Modules\Pricing\Application\Services\AuditLogService::class, $audit);
@@ -135,7 +136,7 @@ class PlatformWhatsAppSettingsTest extends TestCase
         $response->assertJsonPath('sent', true);
     }
 
-    public function test_whatsapp_test_treats_genius_timeout_as_soft_success(): void
+    public function test_whatsapp_test_reports_genius_timeout_as_not_confirmed(): void
     {
         Http::fake([
             'restapi.geniusdevel.com/*' => function () {
@@ -162,9 +163,9 @@ class PlatformWhatsAppSettingsTest extends TestCase
             'Authorization' => "Bearer {$token}",
         ]);
 
-        $response->assertOk();
-        $response->assertJsonPath('sent', true);
-        $this->assertNotEmpty($response->json('warning'));
+        $response->assertStatus(422);
+        $response->assertJsonPath('code', 'WHATSAPP_TEST_FAILED');
+        $this->assertStringContainsString('did not confirm', (string) $response->json('message'));
     }
 
     public function test_whatsapp_test_rejects_incomplete_credentials(): void

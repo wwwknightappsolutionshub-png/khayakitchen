@@ -138,7 +138,7 @@ class PlatformWhatsAppSettingsService
     /**
      * Super Admin diagnostic: send one platform WhatsApp using saved credentials.
      *
-     * @return array{sent: bool, phone: string, provider: string, source: string, message: string, error?: string, warning?: string}
+     * @return array{sent: bool, phone: string, provider: string, source: string, message: string, error?: string}
      */
     public function sendTestMessage(string $phone, ?string $message = null): array
     {
@@ -184,15 +184,13 @@ class PlatformWhatsAppSettingsService
                 }
             }
         } catch (Throwable $e) {
-            // Never let provider/runtime exceptions become HTTP 500 after Genius may already have delivered.
             Log::error('Platform WhatsApp test send threw', [
                 'phone' => $normalizedPhone,
                 'error' => $e->getMessage(),
             ]);
-            report($e);
             $sendResult = [
                 'ok' => false,
-                'error' => 'WhatsApp test failed: '.$e->getMessage().'. If the phone received a message, delivery still worked.',
+                'error' => 'WhatsApp test failed: '.$e->getMessage(),
             ];
         }
 
@@ -204,38 +202,40 @@ class PlatformWhatsAppSettingsService
             'message' => $body,
         ];
 
-        if (! empty($sendResult['warning'])) {
-            $payload['warning'] = (string) $sendResult['warning'];
-        }
-
         if (! ($sendResult['ok'] ?? false)) {
             $payload['error'] = (string) ($sendResult['error'] ?? 'WhatsApp provider rejected the test message.');
         }
 
-        // Audit must never turn a successful Genius delivery into Server Error.
-        try {
-            $this->auditLogService->log(
-                'platform.whatsapp_settings.test_sent',
-                null,
-                $this->tenantContext->user()?->id,
-                'platform_whatsapp_settings',
-                $this->getOrCreate()->id,
-                [
-                    'phone' => $normalizedPhone,
-                    'provider' => $resolved['provider'],
-                    'source' => $resolved['source'],
-                    'sent' => $payload['sent'],
-                    'error' => $payload['error'] ?? null,
-                    'warning' => $payload['warning'] ?? null,
-                ],
-            );
-        } catch (Throwable $e) {
-            Log::error('Platform WhatsApp test audit log failed', [
-                'phone' => $normalizedPhone,
-                'error' => $e->getMessage(),
-            ]);
-            report($e);
-        }
+        // Return the real Genius/provider result immediately. Audit after the HTTP response
+        // so logging / report() can never turn a confirmed send into HTTP 500 for the UI.
+        $userId = $this->tenantContext->user()?->id;
+        $auditMeta = [
+            'phone' => $normalizedPhone,
+            'provider' => $resolved['provider'],
+            'source' => $resolved['source'],
+            'sent' => $payload['sent'],
+            'error' => $payload['error'] ?? null,
+        ];
+        dispatch(function () use ($userId, $auditMeta) {
+            try {
+                $settingsId = app(self::class)->getOrCreate()->id;
+                app(AuditLogService::class)->log(
+                    'platform.whatsapp_settings.test_sent',
+                    null,
+                    $userId,
+                    'platform_whatsapp_settings',
+                    $settingsId,
+                    $auditMeta,
+                );
+            } catch (Throwable $e) {
+                Log::error('Platform WhatsApp test audit log failed', [
+                    'phone' => $auditMeta['phone'] ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        })->afterResponse();
+
+        Log::info('Platform WhatsApp test result', $payload);
 
         return $payload;
     }

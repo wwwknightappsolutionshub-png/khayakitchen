@@ -61,7 +61,6 @@ export const platformSettingsService = {
     source: string;
     message: string;
     error?: string;
-    warning?: string;
   }> {
     return api.post("/platform/whatsapp/test", payload);
   },

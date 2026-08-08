@@ -53,10 +53,12 @@ class PlatformWhatsAppSettingsController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            report($e);
+            \Illuminate\Support\Facades\Log::error('Platform WhatsApp test endpoint failed', [
+                'error' => $e->getMessage(),
+            ]);
 
             return ApiResponse::error(
-                'WhatsApp test failed unexpectedly. If the phone received a message, delivery still worked. Check server logs for details.',
+                'WhatsApp test failed: '.$e->getMessage(),
                 'WHATSAPP_TEST_FAILED',
                 ['error' => $e->getMessage()],
                 422,
