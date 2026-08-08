@@ -35,13 +35,26 @@ class MetaCloudWhatsAppProvider implements WhatsAppProviderInterface
             return;
         }
 
-        $response = Http::timeout(8)->withToken($token)
-            ->post("https://graph.facebook.com/v19.0/{$phoneNumberId}/messages", [
+        $mediaUrl = isset($context['media_url']) ? trim((string) $context['media_url']) : '';
+        $body = $mediaUrl !== ''
+            ? [
+                'messaging_product' => 'whatsapp',
+                'to' => $toPhone,
+                'type' => 'image',
+                'image' => [
+                    'link' => $mediaUrl,
+                    'caption' => mb_substr($message, 0, 1024),
+                ],
+            ]
+            : [
                 'messaging_product' => 'whatsapp',
                 'to' => $toPhone,
                 'type' => 'text',
                 'text' => ['body' => $message],
-            ]);
+            ];
+
+        $response = Http::timeout(8)->withToken($token)
+            ->post("https://graph.facebook.com/v19.0/{$phoneNumberId}/messages", $body);
 
         if ($response->failed()) {
             throw new \RuntimeException(

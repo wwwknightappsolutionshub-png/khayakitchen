@@ -311,6 +311,7 @@ class PlatformWhatsAppSettingsService
             'configured' => $this->credentialResolver->hasSendableCredentials(null),
             'active_provider' => $resolved['provider'],
             'active_source' => $resolved['source'],
+            'owner_welcome_image' => app(PlatformWhatsAppWelcomeImageService::class)->serialize($settings),
         ];
     }
 

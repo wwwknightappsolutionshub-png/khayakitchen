@@ -60,6 +60,24 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         }
 
         $number = preg_replace('/\D+/', '', $toPhone) ?: $toPhone;
+        $mediaUrl = isset($context['media_url']) ? trim((string) $context['media_url']) : '';
+        $mediaBase64 = isset($context['media_base64']) ? trim((string) $context['media_base64']) : '';
+        $isImage = $mediaUrl !== '' || $mediaBase64 !== '';
+
+        $payload = [
+            'sessionId' => $sessionId,
+            'number' => $number,
+            'type' => $isImage ? 'image' : 'text',
+            'message' => $message,
+            'source' => 'API',
+        ];
+
+        if ($isImage) {
+            // Genius /api/send image: public URL preferred; data URI accepted by many WA engines.
+            $payload['url'] = $mediaUrl !== ''
+                ? $mediaUrl
+                : 'data:image/jpeg;base64,'.$mediaBase64;
+        }
 
         try {
             // Queue workers may send during Genius backlog; allow a bit longer than the
@@ -68,13 +86,7 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'x-api-key' => $apiKey,
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-            ])->post("{$baseUrl}/api/send", [
-                'sessionId' => $sessionId,
-                'number' => $number,
-                'type' => 'text',
-                'message' => $message,
-                'source' => 'API',
-            ]);
+            ])->post("{$baseUrl}/api/send", $payload);
         } catch (\Throwable $e) {
             $errorMessage = $e->getMessage();
             Log::error('WhatsApp (Genius): request failed', [

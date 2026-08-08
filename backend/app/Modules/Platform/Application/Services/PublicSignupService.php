@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Application\Services;
 use App\Modules\Auth\Application\Services\EmailVerificationService;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Notifications\Application\Services\PlatformWhatsAppWelcomeImageService;
 use App\Modules\Notifications\Application\Services\WhatsAppCredentialResolver;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Notifications\Jobs\SendSignupWelcomeWhatsAppJob;
@@ -277,9 +278,17 @@ class PublicSignupService
             'welcome' => '1',
         ]);
 
-        $message = "Congratulations {$ownerName}! Welcome to KhayaOS. ".
-            "Your workspace {$restaurant} is now onboarded on the {$planName} plan. ".
-            "Confirm your email, then sign in here: {$loginUrl}";
+        // WhatsApp cannot render HTML email layouts. Use WhatsApp text formatting
+        // (*bold*, newlines) so the welcome mirrors WelcomeOwnerMail content hierarchy.
+        $message = "*Welcome aboard, {$ownerName}*\n\n".
+            "Your restaurant workspace *{$restaurant}* is live on KhayaOS.\n".
+            "You are on the *{$planName}* plan and ready to configure your menu, accept orders, and grow revenue.\n\n".
+            "*Your workspace*\n".
+            "Login URL: {$loginUrl}\n".
+            "Workspace slug: {$tenantSlug}\n".
+            "Email: {$ownerEmail}\n\n".
+            "Confirm your email, then sign in with the password you chose during registration.\n\n".
+            "Open admin dashboard:\n{$loginUrl}";
 
         // New kitchens have no tenant WhatsApp yet — always use platform sender.
         $resolver = app(WhatsAppCredentialResolver::class);
@@ -294,15 +303,32 @@ class PublicSignupService
             );
         }
 
-        $this->whatsAppProvider->send($ownerPhone, $message, [
+        $welcomeImage = app(PlatformWhatsAppWelcomeImageService::class);
+        $mediaUrl = $welcomeImage->resolvePublicUrl();
+        $mediaBinary = $welcomeImage->resolveBinary();
+        $context = [
             'type' => 'owner_welcome',
             'tenant_id' => null,
             'signup_tenant_id' => $tenantId,
             'owner_email' => $ownerEmail,
-        ]);
+        ];
+        if ($mediaUrl) {
+            $context['media_url'] = $mediaUrl;
+        }
+        // Always attach DB-stored bytes so Genius can send even if the public URL is unreachable.
+        if (is_string($mediaBinary) && $mediaBinary !== '') {
+            $context['media_base64'] = base64_encode($mediaBinary);
+        }
+
+        // WhatsApp image captions max out at 1024 characters.
+        $caption = mb_strlen($message) > 1024 ? mb_substr($message, 0, 1021).'...' : $message;
+
+        $this->whatsAppProvider->send($ownerPhone, $caption, $context);
         Log::info('Signup WhatsApp send completed', [
             'tenant_id' => $tenantId,
             'phone' => $ownerPhone,
+            'has_media_url' => filled($mediaUrl),
+            'has_media_base64' => isset($context['media_base64']),
         ]);
     }
 

@@ -22,6 +22,14 @@ class PlatformWhatsAppSettings extends Model
         'twilio_account_sid',
         'twilio_auth_token',
         'twilio_from',
+        'owner_welcome_image_path',
+        'owner_welcome_image_url',
+        'owner_welcome_image_mime',
+        'owner_welcome_image_data',
+    ];
+
+    protected $hidden = [
+        'owner_welcome_image_data',
     ];
 
     protected function casts(): array

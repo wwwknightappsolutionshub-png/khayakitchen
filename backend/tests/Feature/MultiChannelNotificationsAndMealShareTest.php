@@ -77,13 +77,14 @@ class MultiChannelNotificationsAndMealShareTest extends TestCase
     {
         $tenant = Tenant::where('slug', 'pilot')->firstOrFail();
 
-        PlatformWhatsAppSettings::create([
+        $platform = PlatformWhatsAppSettings::query()->first() ?? new PlatformWhatsAppSettings;
+        $platform->fill([
             'enabled' => true,
             'provider' => 'genius',
             'api_key' => 'api-platform-key',
             'session_id' => 'session_platform_default',
             'base_url' => 'https://restapi.geniusdevel.com',
-        ]);
+        ])->save();
 
         TenantWhatsAppSettings::create([
             'tenant_id' => $tenant->id,

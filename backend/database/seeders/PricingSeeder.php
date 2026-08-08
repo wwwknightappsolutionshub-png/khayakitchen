@@ -196,6 +196,9 @@ class PricingSeeder extends Seeder
         if ($tenant) {
             app(SubscriptionService::class)->assignPlan($tenant->id, $growth->id, 'active');
         }
+
+        // Keep signup welcome WhatsApp header image in DB + public storage on every deploy seed.
+        $this->call(PlatformWhatsAppWelcomeImageSeeder::class);
     }
 
     /**

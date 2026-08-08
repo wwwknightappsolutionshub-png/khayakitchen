@@ -782,6 +782,12 @@ export interface PlatformWhatsAppSettings {
   configured: boolean;
   active_provider: string;
   active_source: "platform";
+  owner_welcome_image?: {
+    path?: string | null;
+    url?: string | null;
+    mime?: string | null;
+    has_data: boolean;
+  };
 }
 
 export interface PlatformWhatsAppQueueStatus {

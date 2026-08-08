@@ -32,6 +32,7 @@ class PlatformWhatsAppSettingsTest extends TestCase
         $show->assertJsonPath('whatsapp.enabled', false);
         $show->assertJsonPath('whatsapp.provider', 'genius');
         $show->assertJsonPath('whatsapp.configured', false);
+        $show->assertJsonPath('whatsapp.owner_welcome_image.has_data', true);
 
         $update = $this->patchJson('/api/v1/platform/whatsapp', [
             'enabled' => true,
@@ -188,7 +189,13 @@ class PlatformWhatsAppSettingsTest extends TestCase
             'restapi.geniusdevel.com/*' => Http::response(['ok' => true], 200),
         ]);
 
-        PlatformWhatsAppSettings::create([
+        PlatformWhatsAppSettings::query()->first()?->update([
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'api-test-key',
+            'session_id' => 'session_abc',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ]) ?? PlatformWhatsAppSettings::create([
             'enabled' => true,
             'provider' => 'genius',
             'api_key' => 'api-test-key',
@@ -216,6 +223,60 @@ class PlatformWhatsAppSettingsTest extends TestCase
                 && $request['message'] === 'Hello from KhayaOS'
                 && $request['source'] === 'API';
         });
+    }
+
+    public function test_genius_provider_posts_image_when_media_url_present(): void
+    {
+        Http::fake([
+            'restapi.geniusdevel.com/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        app(GeniusWhatsAppProvider::class)->sendWithCredentials(
+            '+447700900123',
+            '*Welcome aboard*',
+            [
+                'api_key' => 'api-test-key',
+                'session_id' => 'session_abc',
+                'base_url' => 'https://restapi.geniusdevel.com',
+            ],
+            [
+                'type' => 'owner_welcome',
+                'media_url' => 'https://khayaos.prohost.cloud/whatsapp/owner-welcome.jpg',
+            ],
+        );
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://restapi.geniusdevel.com/api/send'
+                && $request['type'] === 'image'
+                && $request['message'] === '*Welcome aboard*'
+                && $request['url'] === 'https://khayaos.prohost.cloud/whatsapp/owner-welcome.jpg'
+                && $request['source'] === 'API';
+        });
+    }
+
+    public function test_welcome_image_seeder_persists_image_in_database(): void
+    {
+        $this->assertTrue(
+            is_file(resource_path('assets/whatsapp/owner-welcome.jpg')),
+            'Expected owner-welcome.jpg source asset in resources/assets/whatsapp',
+        );
+
+        $result = app(\App\Modules\Notifications\Application\Services\PlatformWhatsAppWelcomeImageService::class)
+            ->ensureSeeded();
+
+        $this->assertTrue($result['has_data']);
+        $this->assertNotEmpty($result['url']);
+        $this->assertSame('image/jpeg', $result['mime']);
+        $this->assertDatabaseHas('platform_whatsapp_settings', [
+            'owner_welcome_image_path' => 'platform/whatsapp/owner-welcome.jpg',
+            'owner_welcome_image_mime' => 'image/jpeg',
+        ]);
+
+        $row = PlatformWhatsAppSettings::query()->firstOrFail();
+        $this->assertNotEmpty($row->owner_welcome_image_data);
+        $decoded = base64_decode((string) $row->owner_welcome_image_data, true);
+        $this->assertIsString($decoded);
+        $this->assertGreaterThan(1000, strlen($decoded));
     }
 
     public function test_genius_provider_throws_when_api_rejects_send(): void

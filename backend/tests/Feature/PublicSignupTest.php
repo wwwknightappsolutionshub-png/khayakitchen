@@ -124,21 +124,31 @@ class PublicSignupTest extends TestCase
     public function test_signup_owner_can_login_after_email_verification(): void
     {
         Mail::fake();
-        \App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings::create([
+        $platformWa = \App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings::query()->first()
+            ?? new \App\Modules\Notifications\Domain\Models\PlatformWhatsAppSettings;
+        $platformWa->fill([
             'enabled' => true,
             'provider' => 'genius',
             'api_key' => 'test-platform-key',
             'session_id' => 'test-platform-session',
             'base_url' => 'https://restapi.geniusdevel.com',
-        ]);
+        ])->save();
+        // Ensure welcome banner bytes/URL are on the same singleton settings row.
+        app(\App\Modules\Notifications\Application\Services\PlatformWhatsAppWelcomeImageService::class)->ensureSeeded();
         $whatsAppMock = Mockery::mock(WhatsAppProviderInterface::class);
         $whatsAppMock->shouldReceive('send')
             ->once()
             ->withArgs(function (string $phone, string $message, array $context): bool {
                 return str_contains($phone, '447700900222')
-                    && str_contains($message, 'Congratulations')
-                    && str_contains($message, 'Welcome to KhayaOS')
-                    && (($context['type'] ?? null) === 'owner_welcome');
+                    && str_contains($message, '*Welcome aboard, Harbor Owner*')
+                    && str_contains($message, '*Harbor Bistro*')
+                    && str_contains($message, '*Starter*')
+                    && str_contains($message, 'Workspace slug: harbor-bistro')
+                    && str_contains($message, 'Email: owner@harborbistro.test')
+                    && str_contains($message, '/ops/login')
+                    && (($context['type'] ?? null) === 'owner_welcome')
+                    && filled($context['media_url'] ?? null)
+                    && filled($context['media_base64'] ?? null);
             });
         $this->app->instance(WhatsAppProviderInterface::class, $whatsAppMock);
 
