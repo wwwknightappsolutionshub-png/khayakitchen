@@ -238,4 +238,68 @@ class PlatformWhatsAppSettingsTest extends TestCase
             ['type' => 'owner_welcome'],
         );
     }
+
+    public function test_super_admin_can_view_and_flush_whatsapp_queue(): void
+    {
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        \Illuminate\Support\Facades\DB::table('jobs')->insert([
+            [
+                'queue' => 'default',
+                'payload' => json_encode([
+                    'displayName' => 'App\\Modules\\Notifications\\Jobs\\SendWhatsAppMessageJob',
+                    'data' => ['commandName' => 'App\\Modules\\Notifications\\Jobs\\SendWhatsAppMessageJob'],
+                ]),
+                'attempts' => 0,
+                'reserved_at' => null,
+                'available_at' => now()->getTimestamp(),
+                'created_at' => now()->getTimestamp(),
+            ],
+            [
+                'queue' => 'default',
+                'payload' => json_encode([
+                    'displayName' => 'App\\Modules\\Notifications\\Jobs\\SendOrderEmailNotificationJob',
+                    'data' => ['commandName' => 'App\\Modules\\Notifications\\Jobs\\SendOrderEmailNotificationJob'],
+                ]),
+                'attempts' => 0,
+                'reserved_at' => null,
+                'available_at' => now()->getTimestamp(),
+                'created_at' => now()->getTimestamp(),
+            ],
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('failed_jobs')->insert([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'connection' => 'database',
+            'queue' => 'default',
+            'payload' => json_encode([
+                'displayName' => 'App\\Modules\\Notifications\\Jobs\\SendSignupWelcomeWhatsAppJob',
+            ]),
+            'exception' => 'Genius quota',
+            'failed_at' => now(),
+        ]);
+
+        $status = $this->getJson('/api/v1/platform/whatsapp/queue', [
+            'Authorization' => "Bearer {$token}",
+        ]);
+        $status->assertOk();
+        $status->assertJsonPath('queue.pending', 1);
+        $status->assertJsonPath('queue.failed', 1);
+
+        $flush = $this->postJson('/api/v1/platform/whatsapp/queue/flush', [
+            'include_failed' => true,
+            'include_mixed' => false,
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ]);
+        $flush->assertOk();
+        $flush->assertJsonPath('flush.deleted_jobs', 1);
+        $flush->assertJsonPath('flush.deleted_failed_jobs', 1);
+        $flush->assertJsonPath('queue.pending', 0);
+        $flush->assertJsonPath('queue.failed', 0);
+
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table('jobs')->count());
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('failed_jobs')->count());
+    }
 }

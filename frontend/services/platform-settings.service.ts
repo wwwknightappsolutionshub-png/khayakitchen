@@ -1,5 +1,10 @@
 import { api } from "@/lib/api-client";
-import type { PlatformSettings, PlatformWhatsAppSettings } from "@/lib/types";
+import type {
+  PlatformSettings,
+  PlatformWhatsAppQueueFlushResult,
+  PlatformWhatsAppQueueStatus,
+  PlatformWhatsAppSettings,
+} from "@/lib/types";
 
 export const platformSettingsService = {
   async getPublicConfig(): Promise<PlatformSettings> {
@@ -63,5 +68,23 @@ export const platformSettingsService = {
     error?: string;
   }> {
     return api.post("/platform/whatsapp/test", payload);
+  },
+
+  async getWhatsAppQueue(includeMixed = false): Promise<{ queue: PlatformWhatsAppQueueStatus }> {
+    const qs = includeMixed ? "?include_mixed=1" : "";
+    return api.get<{ queue: PlatformWhatsAppQueueStatus }>(`/platform/whatsapp/queue${qs}`);
+  },
+
+  async flushWhatsAppQueue(payload?: {
+    include_failed?: boolean;
+    include_mixed?: boolean;
+  }): Promise<{ flush: PlatformWhatsAppQueueFlushResult; queue: PlatformWhatsAppQueueStatus }> {
+    return api.post<{ flush: PlatformWhatsAppQueueFlushResult; queue: PlatformWhatsAppQueueStatus }>(
+      "/platform/whatsapp/queue/flush",
+      {
+        include_failed: payload?.include_failed ?? true,
+        include_mixed: payload?.include_mixed ?? false,
+      },
+    );
   },
 };

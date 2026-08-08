@@ -1,15 +1,23 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
+import { Button } from "@/components/ui/Button";
 import { ModuleStatusBoard } from "@/components/platform/ModuleStatusBoard";
 import { ModuleTile } from "@/components/platform/ModuleTile";
 import { platformService } from "@/services/platform.service";
+import { platformSettingsService } from "@/services/platform-settings.service";
 import { BackendPage } from "@/components/shared/BackendPage";
+import { ApiClientError } from "@/lib/api-client";
 
 export default function PlatformDashboardPage() {
+  const queryClient = useQueryClient();
+  const [flushMessage, setFlushMessage] = useState<string | null>(null);
+  const [flushError, setFlushError] = useState<string | null>(null);
+
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ["platform", "dashboard"],
     queryFn: () => platformService.getDashboard(),
@@ -20,8 +28,37 @@ export default function PlatformDashboardPage() {
     queryFn: () => platformService.getModules(),
   });
 
+  const { data: queueData, isLoading: queueLoading } = useQuery({
+    queryKey: ["platform", "whatsapp-queue"],
+    queryFn: () => platformSettingsService.getWhatsAppQueue(),
+    refetchInterval: 15_000,
+  });
+
+  const flushQueueMutation = useMutation({
+    mutationFn: () =>
+      platformSettingsService.flushWhatsAppQueue({
+        include_failed: true,
+        include_mixed: false,
+      }),
+    onSuccess: (response) => {
+      setFlushError(null);
+      setFlushMessage(
+        `Purged ${response.flush.deleted_jobs} pending/reserved and ${response.flush.deleted_failed_jobs} failed WhatsApp job(s). New messages can enqueue cleanly.`,
+      );
+      queryClient.setQueryData(["platform", "whatsapp-queue"], { queue: response.queue });
+    },
+    onError: (err) => {
+      setFlushMessage(null);
+      setFlushError(
+        err instanceof ApiClientError ? err.message : "Failed to purge WhatsApp queue.",
+      );
+    },
+  });
+
   const modules = modulesData?.modules ?? [];
   const comingSoon = modules.filter((m) => m.status === "coming-soon");
+  const queue = queueData?.queue;
+  const backlog = (queue?.pending ?? 0) + (queue?.reserved ?? 0) + (queue?.failed ?? 0);
 
   return (
     <BackendPage>
@@ -34,6 +71,54 @@ export default function PlatformDashboardPage() {
           Cross-tenant overview — does not affect restaurant runtime
         </p>
       </header>
+
+      <Card className="mb-8 border-violet-500/15 bg-[#0f1117]">
+        <CardHeader>
+          <CardTitle>WhatsApp queue</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-violet-200/70">
+            Purge stale signup/order WhatsApp jobs before reconnecting Genius after a quota outage,
+            so backlog does not burn monthly message credits.
+          </p>
+          {queueLoading ? (
+            <p className="text-sm text-muted">Loading queue…</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[var(--radius)] border border-border/50 px-3 py-2">
+                <p className="text-xs uppercase tracking-wide text-muted">Pending</p>
+                <p className="mt-1 text-xl font-semibold text-violet-50">{queue?.pending ?? 0}</p>
+              </div>
+              <div className="rounded-[var(--radius)] border border-border/50 px-3 py-2">
+                <p className="text-xs uppercase tracking-wide text-muted">Reserved / stuck</p>
+                <p className="mt-1 text-xl font-semibold text-violet-50">{queue?.reserved ?? 0}</p>
+              </div>
+              <div className="rounded-[var(--radius)] border border-border/50 px-3 py-2">
+                <p className="text-xs uppercase tracking-wide text-muted">Failed</p>
+                <p className="mt-1 text-xl font-semibold text-violet-50">{queue?.failed ?? 0}</p>
+              </div>
+            </div>
+          )}
+          {flushError ? <p className="text-sm text-danger">{flushError}</p> : null}
+          {flushMessage ? <p className="text-sm text-emerald-400">{flushMessage}</p> : null}
+          <Button
+            variant="danger"
+            isLoading={flushQueueMutation.isPending}
+            disabled={queueLoading || backlog === 0}
+            onClick={() => {
+              const ok = window.confirm(
+                `Purge ${backlog} WhatsApp queue row(s) (pending, reserved, and failed)? This cannot be undone. Stop replaying backlog so only new messages send after Genius is ready.`,
+              );
+              if (!ok) return;
+              setFlushError(null);
+              setFlushMessage(null);
+              flushQueueMutation.mutate();
+            }}
+          >
+            Purge pending WhatsApp queue
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {overviewLoading ? (

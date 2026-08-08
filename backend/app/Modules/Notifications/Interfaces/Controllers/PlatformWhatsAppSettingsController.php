@@ -76,4 +76,33 @@ class PlatformWhatsAppSettingsController extends Controller
 
         return ApiResponse::success($result);
     }
+
+    public function queueStatus(Request $request)
+    {
+        $includeMixed = $request->boolean('include_mixed');
+
+        return ApiResponse::success([
+            'queue' => $this->settingsService->queueStatus($includeMixed),
+        ]);
+    }
+
+    public function flushQueue(Request $request)
+    {
+        $data = $request->validate([
+            'include_failed' => ['sometimes', 'boolean'],
+            'include_mixed' => ['sometimes', 'boolean'],
+        ]);
+
+        $result = $this->settingsService->flushQueue(
+            array_key_exists('include_failed', $data) ? (bool) $data['include_failed'] : true,
+            array_key_exists('include_mixed', $data) ? (bool) $data['include_mixed'] : false,
+        );
+
+        return ApiResponse::success([
+            'flush' => $result,
+            'queue' => $this->settingsService->queueStatus(
+                array_key_exists('include_mixed', $data) ? (bool) $data['include_mixed'] : false,
+            ),
+        ]);
+    }
 }

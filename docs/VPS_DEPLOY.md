@@ -103,6 +103,22 @@ bash /www/wwwroot/khayaos.prohost.cloud/scripts/vps-queue-health.sh
 pm2 logs khayaos-queue --lines 80
 ```
 
+### Flush WhatsApp backlog (protect Genius monthly quota)
+
+If Genius was down / over quota and jobs piled up, clear WhatsApp jobs **before** reconnecting so reconnect does not replay the backlog:
+
+```bash
+cd /www/wwwroot/khayaos.prohost.cloud/backend
+pm2 stop khayaos-queue
+/www/server/php/83/bin/php artisan whatsapp:flush-queue --dry-run
+/www/server/php/83/bin/php artisan whatsapp:flush-queue --failed --force
+pm2 start khayaos-queue
+```
+
+- Default flushes only `SendWhatsAppMessageJob` + `SendSignupWelcomeWhatsAppJob`.
+- Add `--include-mixed` to also flush promo/campaign/revenue jobs that may WhatsApp (those can also carry email/push).
+- Do **not** run `queue:retry all` after a quota outage unless you intend to resend.
+
 Confirm:
 
 1. `QUEUE_CONNECTION=database` and worker args include `queue:work database` (not `redis`).

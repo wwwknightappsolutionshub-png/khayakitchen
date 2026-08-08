@@ -784,6 +784,22 @@ export interface PlatformWhatsAppSettings {
   active_source: "platform";
 }
 
+export interface PlatformWhatsAppQueueStatus {
+  pending: number;
+  reserved: number;
+  failed: number;
+  markers: string[];
+  include_mixed: boolean;
+}
+
+export interface PlatformWhatsAppQueueFlushResult {
+  deleted_jobs: number;
+  deleted_failed_jobs: number;
+  before: PlatformWhatsAppQueueStatus;
+  include_failed: boolean;
+  include_mixed: boolean;
+}
+
 export interface StorefrontWorkspace {
   tenant_id: string;
   slug: string;

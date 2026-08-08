@@ -23,6 +23,7 @@ class PlatformWhatsAppSettingsService
         private WhatsAppCredentialResolver $credentialResolver,
         private WhatsAppProviderInterface $whatsAppProvider,
         private GeniusWhatsAppProvider $geniusProvider,
+        private WhatsAppQueueFlushService $queueFlushService,
     ) {}
 
     /**
@@ -232,6 +233,61 @@ class PlatformWhatsAppSettingsService
         Log::info('Platform WhatsApp test result', $payload);
 
         return $payload;
+    }
+
+    /**
+     * @return array{
+     *     pending: int,
+     *     reserved: int,
+     *     failed: int,
+     *     markers: list<string>,
+     *     include_mixed: bool
+     * }
+     */
+    public function queueStatus(bool $includeMixed = false): array
+    {
+        return $this->queueFlushService->status($includeMixed);
+    }
+
+    /**
+     * Purge pending/reserved (and optionally failed) WhatsApp queue jobs.
+     *
+     * @return array{
+     *     deleted_jobs: int,
+     *     deleted_failed_jobs: int,
+     *     before: array{pending: int, reserved: int, failed: int, markers: list<string>, include_mixed: bool},
+     *     include_failed: bool,
+     *     include_mixed: bool
+     * }
+     */
+    public function flushQueue(bool $includeFailed = true, bool $includeMixed = false): array
+    {
+        $result = $this->queueFlushService->flush($includeFailed, $includeMixed);
+
+        try {
+            $this->auditLogService->log(
+                'platform.whatsapp_queue.flushed',
+                null,
+                $this->tenantContext->user()?->id,
+                'platform_whatsapp_queue',
+                null,
+                [
+                    'deleted_jobs' => $result['deleted_jobs'],
+                    'deleted_failed_jobs' => $result['deleted_failed_jobs'],
+                    'include_failed' => $result['include_failed'],
+                    'include_mixed' => $result['include_mixed'],
+                    'before' => $result['before'],
+                ],
+            );
+        } catch (Throwable $e) {
+            Log::error('Platform WhatsApp queue flush audit failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        Log::warning('Platform WhatsApp queue flushed from Super Admin UI', $result);
+
+        return $result;
     }
 
     /**
