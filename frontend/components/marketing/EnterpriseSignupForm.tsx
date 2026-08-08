@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { ColorField } from "@/components/ui/ColorField";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -129,7 +129,7 @@ const SIGNUP_PHASES = [
   { id: "location", short: "Location", title: "Location & locale", description: "Where you operate and how you price orders." },
   { id: "owner", short: "Account", title: "Owner account", description: "Primary administrator credentials for your tenant." },
   { id: "operations", short: "Profile", title: "Operations profile", description: "How your kitchen runs day to day." },
-  { id: "launch", short: "Launch", title: "Branding & launch", description: "Define your workspace color, brand logo and others." },
+  { id: "launch", short: "Launch", title: "Branding & launch", description: "Optional logo and tagline, workspace colors, and your plan." },
 ] as const;
 
 const TOTAL_STEPS = FEATURE_COUNT + SIGNUP_PHASES.length;
@@ -343,6 +343,7 @@ export function EnterpriseSignupForm({
   const [logoError, setLogoError] = useState<string | null>(null);
   const [submitValidationError, setSubmitValidationError] = useState<string | null>(null);
   const slugManuallyEditedRef = useRef(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -666,6 +667,16 @@ export function EnterpriseSignupForm({
     };
     reader.readAsDataURL(file);
   };
+
+  const clearLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
+    if (logoInputRef.current) {
+      logoInputRef.current.value = "";
+    }
+  };
+
   return (
     <form
       onSubmit={handleSubmit(onValidSubmit, (fieldErrors) => jumpToFirstError(fieldErrors))}
@@ -893,34 +904,57 @@ export function EnterpriseSignupForm({
                 <Input label="Tagline (optional)" error={errors.tagline?.message} {...register("tagline")} />
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5">
-                    <label className="text-sm font-medium text-foreground">Upload your logo</label>
+                    <label className="text-sm font-medium text-foreground">Upload your logo (optional)</label>
                     <InfoTooltip
                       label="Upload your logo"
-                      text="JPEG, JPG, PNG, or SVG only. Max 2MB. Used as your kitchen profile avatar and customer menu header logo."
+                      text="Optional. JPEG, JPG, PNG, or SVG only. Max 2MB. Used as your kitchen profile avatar and customer menu header logo. You can remove a selected file with the clear control."
                     />
                   </div>
                   <input
+                    ref={logoInputRef}
                     type="file"
                     accept={LOGO_ACCEPT}
                     onChange={handleLogoChange}
                     className="block w-full text-sm text-foreground file:mr-3 file:rounded-[var(--radius)] file:border-0 file:bg-primary/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
                   />
-                  {logoPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={logoPreview}
-                      alt="Logo preview"
-                      className="mt-2 h-16 w-16 rounded-xl border border-border object-contain bg-surface-elevated"
-                      onError={() => {
-                        setLogoError(
-                          "Preview failed for this file. Use a standard JPEG, PNG, or SVG under 2MB.",
-                        );
-                        setLogoPreview(null);
-                      }}
-                    />
+                  {logoPreview || logoFile ? (
+                    <div className="mt-2 flex items-center gap-3">
+                      {logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
+                          className="h-16 w-16 rounded-xl border border-border object-contain bg-surface-elevated"
+                          onError={() => {
+                            setLogoError(
+                              "Preview failed for this file. Use a standard JPEG, PNG, or SVG under 2MB.",
+                            );
+                            setLogoPreview(null);
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-surface-elevated px-1 text-center text-[10px] text-muted">
+                          {logoFile?.name ?? "Selected"}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={clearLogo}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground hover:bg-danger/10 hover:text-danger"
+                        aria-label="Remove uploaded logo"
+                        title="Remove logo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      {logoFile ? (
+                        <p className={cn("min-w-0 flex-1 truncate text-xs", theme.muted)}>
+                          {logoFile.name}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                   {logoError ? <p className="text-xs text-danger">{logoError}</p> : null}
-                  <p className={cn("text-xs", theme.muted)}>JPEG, JPG, PNG, SVG · max 2MB</p>
+                  <p className={cn("text-xs", theme.muted)}>Optional · JPEG, JPG, PNG, SVG · max 2MB</p>
                 </div>
                 <ColorField
                   label="Primary color"

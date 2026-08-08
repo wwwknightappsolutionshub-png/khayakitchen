@@ -31,11 +31,29 @@ class PlatformTenantService
     public function listTenants(): array
     {
         $stats = $this->presenceService->statsByTenantId();
+        $tenants = Tenant::query()->orderBy('name')->get();
+        $tenantIds = $tenants->pluck('id')->all();
 
-        return Tenant::query()
-            ->orderBy('name')
+        $ownersByTenant = User::withoutGlobalScopes()
+            ->whereIn('tenant_id', $tenantIds)
+            ->where('role', 'owner')
+            ->orderBy('created_at')
             ->get()
-            ->map(fn (Tenant $tenant) => $this->formatTenant($tenant, $stats))
+            ->groupBy('tenant_id')
+            ->map(fn ($group) => $group->first());
+
+        $brandingsByTenant = TenantBranding::withoutGlobalScopes()
+            ->whereIn('tenant_id', $tenantIds)
+            ->get()
+            ->keyBy('tenant_id');
+
+        return $tenants
+            ->map(fn (Tenant $tenant) => $this->formatTenant(
+                $tenant,
+                $stats,
+                $ownersByTenant->get($tenant->id),
+                $brandingsByTenant->get($tenant->id),
+            ))
             ->values()
             ->all();
     }
@@ -345,16 +363,36 @@ class PlatformTenantService
     /**
      * @param  array<string, object>  $statsByTenant
      */
-    private function formatTenant(Tenant $tenant, array $statsByTenant = []): array
-    {
+    private function formatTenant(
+        Tenant $tenant,
+        array $statsByTenant = [],
+        ?User $owner = null,
+        ?TenantBranding $branding = null,
+    ): array {
+        $meta = is_array($tenant->signup_metadata) ? $tenant->signup_metadata : [];
+
         return array_merge([
             'id' => $tenant->id,
             'name' => $tenant->name,
             'slug' => $tenant->slug,
             'status' => $tenant->status,
-            'logo_url' => $tenant->logo_url,
-            'primary_color' => $tenant->primary_color,
+            'logo_url' => $tenant->logo_url ?? $branding?->logo_url,
+            'primary_color' => $tenant->primary_color ?? $branding?->primary_color,
+            'secondary_color' => $branding?->secondary_color,
+            'currency' => $tenant->currency,
+            'country' => $tenant->country,
+            'country_iso' => $tenant->country_iso,
+            'timezone' => $tenant->timezone,
             'created_at' => $tenant->created_at?->toIso8601String(),
+            'signup_metadata' => $meta,
+            'owner' => $owner ? [
+                'id' => $owner->id,
+                'name' => $owner->name,
+                'email' => $owner->email,
+                'phone' => $meta['owner_phone'] ?? null,
+                'role_title' => $meta['owner_role_title'] ?? null,
+                'email_verified_at' => $owner->email_verified_at?->toIso8601String(),
+            ] : null,
         ], $this->presenceService->formatPresenceFields(
             $tenant->id,
             $statsByTenant,

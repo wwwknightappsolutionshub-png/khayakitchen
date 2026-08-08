@@ -119,6 +119,24 @@ class PublicSignupTest extends TestCase
                 && str_contains($mail->verifyUrl, 'email=ada%40sunrisekitchen.test');
         });
         Mail::assertNotSent(WelcomeOwnerMail::class);
+
+        $tenant->refresh();
+        $this->assertIsArray($tenant->signup_metadata);
+        $this->assertSame('Managing Director', $tenant->signup_metadata['owner_role_title'] ?? null);
+        $this->assertSame('+447700900123', $tenant->signup_metadata['owner_phone'] ?? null);
+        $this->assertSame('Fresh food, fast service', $tenant->signup_metadata['tagline'] ?? null);
+        $this->assertArrayHasKey('company_registration_number', $tenant->signup_metadata);
+
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+        $list = $this->getJson('/api/v1/platform/tenants', [
+            'Authorization' => "Bearer {$token}",
+        ]);
+        $list->assertOk();
+        $row = collect($list->json('tenants'))->firstWhere('slug', 'sunrise-kitchen');
+        $this->assertNotNull($row);
+        $this->assertSame('Managing Director', data_get($row, 'signup_metadata.owner_role_title'));
+        $this->assertSame('ada@sunrisekitchen.test', data_get($row, 'owner.email'));
     }
 
     public function test_signup_owner_can_login_after_email_verification(): void

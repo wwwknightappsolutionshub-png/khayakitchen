@@ -374,6 +374,11 @@ export interface PlatformTenant {
   created_at?: string;
   logo_url?: string | null;
   primary_color?: string | null;
+  secondary_color?: string | null;
+  currency?: string | null;
+  country?: string | null;
+  country_iso?: string | null;
+  timezone?: string | null;
   presence?: "online" | "away" | "offline";
   last_seen_at?: string | null;
   last_login_at?: string | null;
@@ -381,6 +386,15 @@ export interface PlatformTenant {
   staff_pwa_installs?: number;
   customer_pwa_installs?: number;
   last_poked_at?: string | null;
+  signup_metadata?: Record<string, unknown> | null;
+  owner?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role_title?: string | null;
+    email_verified_at?: string | null;
+  } | null;
 }
 
 export interface PlatformTenantFlags {

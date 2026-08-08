@@ -376,6 +376,8 @@ class PublicSignupService
             'average_order_value' => $data['average_order_value'] ?? null,
             // Optional launch field — metadata only. Never write to tenant_brandings (no column).
             'tagline' => filled($data['tagline'] ?? null) ? trim((string) $data['tagline']) : null,
+            'primary_color' => $data['primary_color'] ?? null,
+            'secondary_color' => $data['secondary_color'] ?? null,
             'marketing_opt_in' => (bool) ($data['marketing_opt_in'] ?? false),
             'referral_code' => isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null,
             'submitted_at' => now()->toIso8601String(),

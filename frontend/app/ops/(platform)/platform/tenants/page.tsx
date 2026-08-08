@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Hand, Trash2 } from "lucide-react";
+import { Plus, Hand, Trash2, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -45,6 +45,41 @@ function formatRelative(iso?: string | null): string {
   return formatDate(iso);
 }
 
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "Not provided";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "Not provided";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+const SIGNUP_DETAIL_FIELDS: { key: string; label: string }[] = [
+  { key: "legal_business_name", label: "Legal business name" },
+  { key: "business_type", label: "Business type" },
+  { key: "company_registration_number", label: "Company registration" },
+  { key: "tax_vat_number", label: "Tax / VAT" },
+  { key: "country", label: "Country" },
+  { key: "state", label: "State / province" },
+  { key: "city", label: "City" },
+  { key: "street_address", label: "Street address" },
+  { key: "postal_code", label: "Postal code" },
+  { key: "timezone", label: "Timezone" },
+  { key: "currency", label: "Currency" },
+  { key: "owner_phone", label: "Owner phone" },
+  { key: "owner_role_title", label: "Owner role title" },
+  { key: "order_types", label: "Order types" },
+  { key: "estimated_daily_orders", label: "Est. daily orders" },
+  { key: "staff_count", label: "Staff count" },
+  { key: "branch_count", label: "Branch count" },
+  { key: "average_order_value", label: "Average order value" },
+  { key: "tagline", label: "Tagline" },
+  { key: "primary_color", label: "Primary color" },
+  { key: "secondary_color", label: "Secondary color" },
+  { key: "marketing_opt_in", label: "Marketing opt-in" },
+  { key: "referral_code", label: "Referral code" },
+  { key: "submitted_at", label: "Signup submitted" },
+];
+
 export default function PlatformTenantsPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -78,6 +113,7 @@ export default function PlatformTenantsPage() {
   const [entitlementsTenantId, setEntitlementsTenantId] = useState<string | null>(null);
   const [purgeTenant, setPurgeTenant] = useState<PlatformTenant | null>(null);
   const [purgeSlugConfirm, setPurgeSlugConfirm] = useState("");
+  const [detailsTenant, setDetailsTenant] = useState<PlatformTenant | null>(null);
   const [overrideFeatureKey, setOverrideFeatureKey] = useState("");
   const [overrideFeatureEnabled, setOverrideFeatureEnabled] = useState(true);
   const [overrideLimitKey, setOverrideLimitKey] = useState("max_menu_items");
@@ -336,6 +372,15 @@ export default function PlatformTenantsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="gap-1"
+                            onClick={() => setDetailsTenant(tenant)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View details
+                          </Button>
                           <Button
                             size="sm"
                             variant="secondary"
@@ -796,6 +841,127 @@ export default function PlatformTenantsPage() {
               </div>
             </CardContent>
           </Card>
+      </ModalFrame>
+
+      <ModalFrame open={!!detailsTenant} onClose={() => setDetailsTenant(null)}>
+        <Card className="max-h-[85vh] w-full max-w-2xl overflow-y-auto border-violet-500/20 bg-[#0f1117]">
+          <CardHeader>
+            <CardTitle>Tenant registration details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {detailsTenant ? (
+              <>
+                <div className="flex flex-wrap items-start gap-4">
+                  {detailsTenant.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={detailsTenant.logo_url}
+                      alt=""
+                      className="h-16 w-16 rounded-xl border border-border object-contain bg-surface-elevated"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-surface-elevated text-xs text-muted">
+                      No logo
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-lg font-semibold text-violet-50">{detailsTenant.name}</p>
+                    <p className="font-mono text-xs text-muted">{detailsTenant.slug}</p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Badge variant={detailsTenant.status === "active" ? "secondary" : "warning"}>
+                        {detailsTenant.status}
+                      </Badge>
+                      <Badge variant={presenceBadgeVariant(detailsTenant.presence)}>
+                        {detailsTenant.presence ?? "offline"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-violet-100">Workspace</h3>
+                  <dl className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      ["Created", detailsTenant.created_at ? formatDate(detailsTenant.created_at) : "Not provided"],
+                      ["Currency", displayValue(detailsTenant.currency)],
+                      ["Country", displayValue(detailsTenant.country)],
+                      ["Country ISO", displayValue(detailsTenant.country_iso)],
+                      ["Timezone", displayValue(detailsTenant.timezone)],
+                      ["Primary color", displayValue(detailsTenant.primary_color)],
+                      ["Secondary color", displayValue(detailsTenant.secondary_color)],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border border-border/60 bg-surface-elevated/40 px-3 py-2"
+                      >
+                        <dt className="text-xs text-muted">{label}</dt>
+                        <dd className="mt-0.5 break-words text-sm text-foreground">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-violet-100">Owner</h3>
+                  <dl className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      ["Name", displayValue(detailsTenant.owner?.name)],
+                      ["Email", displayValue(detailsTenant.owner?.email)],
+                      ["Phone", displayValue(detailsTenant.owner?.phone)],
+                      ["Role title", displayValue(detailsTenant.owner?.role_title)],
+                      [
+                        "Email verified",
+                        detailsTenant.owner?.email_verified_at
+                          ? formatDate(detailsTenant.owner.email_verified_at)
+                          : "Not verified",
+                      ],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border border-border/60 bg-surface-elevated/40 px-3 py-2"
+                      >
+                        <dt className="text-xs text-muted">{label}</dt>
+                        <dd className="mt-0.5 break-words text-sm text-foreground">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-violet-100">
+                    Registration form (including skipped fields)
+                  </h3>
+                  <p className="mb-3 text-xs text-muted">
+                    Fields left blank at signup show as &quot;Not provided&quot;.
+                  </p>
+                  <dl className="grid gap-2 sm:grid-cols-2">
+                    {SIGNUP_DETAIL_FIELDS.map(({ key, label }) => {
+                      const meta = detailsTenant.signup_metadata ?? {};
+                      const raw = meta[key];
+                      return (
+                        <div
+                          key={key}
+                          className="rounded-lg border border-border/60 bg-surface-elevated/40 px-3 py-2"
+                        >
+                          <dt className="text-xs text-muted">{label}</dt>
+                          <dd className="mt-0.5 break-words text-sm text-foreground">
+                            {key === "submitted_at" && typeof raw === "string"
+                              ? formatDate(raw)
+                              : displayValue(raw)}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+
+                <Button variant="secondary" onClick={() => setDetailsTenant(null)}>
+                  Close
+                </Button>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
       </ModalFrame>
 
       <ModalFrame
