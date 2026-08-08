@@ -169,15 +169,24 @@ export default function PlatformSettingsPage() {
       }),
     onSuccess: (response) => {
       setWhatsappTestError(null);
+      const warning = response.warning ? ` ${response.warning}` : "";
       setWhatsappTestSuccess(
-        `Test message sent via ${response.provider} to ${response.phone}. Check WhatsApp.`,
+        `Test message sent via ${response.provider} to ${response.phone}.${warning}`,
       );
     },
     onError: (err) => {
       setWhatsappTestSuccess(null);
-      setWhatsappTestError(
-        err instanceof ApiClientError ? err.message : "Failed to send WhatsApp test.",
-      );
+      if (err instanceof ApiClientError) {
+        if (err.status >= 500 || err.message === "Server Error") {
+          setWhatsappTestError(
+            "Request failed after send. Check WhatsApp on the phone — the message may already have been delivered. Then check server logs.",
+          );
+          return;
+        }
+        setWhatsappTestError(err.message);
+        return;
+      }
+      setWhatsappTestError("Failed to send WhatsApp test.");
     },
   });
 

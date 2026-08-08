@@ -31,7 +31,7 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
      *
      * @param  array{api_key?: ?string, session_id?: ?string, base_url?: ?string}  $credentials
      * @param  array<string, mixed>  $context
-     * @return array{ok: bool, error?: string, status?: int}
+     * @return array{ok: bool, error?: string, status?: int, warning?: string}
      */
     public function attemptSendWithCredentials(string $toPhone, string $message, array $credentials, array $context = []): array
     {
@@ -69,15 +69,25 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
                 'source' => 'API',
             ]);
         } catch (\Throwable $e) {
+            $errorMessage = $e->getMessage();
             Log::error('WhatsApp (Genius): request failed', [
                 'to' => $number,
-                'error' => $e->getMessage(),
+                'error' => $errorMessage,
                 'context' => $context,
             ]);
 
+            // Genius often delivers before the HTTP response returns. Timeouts after accept
+            // must not become a hard failure for Super Admin diagnostics.
+            if ($this->isTransportTimeout($errorMessage) && ($context['type'] ?? null) === 'platform_test') {
+                return [
+                    'ok' => true,
+                    'warning' => 'Genius timed out after the request was accepted. Check WhatsApp — the message may already be delivered.',
+                ];
+            }
+
             return [
                 'ok' => false,
-                'error' => 'Genius request failed: '.$e->getMessage(),
+                'error' => 'Genius request failed: '.$errorMessage,
             ];
         }
 
@@ -106,5 +116,14 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         ]);
 
         return ['ok' => true];
+    }
+
+    private function isTransportTimeout(string $message): bool
+    {
+        $normalized = strtolower($message);
+
+        return str_contains($normalized, 'timed out')
+            || str_contains($normalized, 'timeout')
+            || str_contains($normalized, 'curl error 28');
     }
 }

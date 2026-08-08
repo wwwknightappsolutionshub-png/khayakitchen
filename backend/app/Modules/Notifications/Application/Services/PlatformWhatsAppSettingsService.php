@@ -7,6 +7,7 @@ use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProvider
 use App\Modules\Notifications\Infrastructure\WhatsApp\Providers\GeniusWhatsAppProvider;
 use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Shared\Tenancy\TenantContext;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -137,7 +138,7 @@ class PlatformWhatsAppSettingsService
     /**
      * Super Admin diagnostic: send one platform WhatsApp using saved credentials.
      *
-     * @return array{sent: bool, phone: string, provider: string, source: string, message: string, error?: string}
+     * @return array{sent: bool, phone: string, provider: string, source: string, message: string, error?: string, warning?: string}
      */
     public function sendTestMessage(string $phone, ?string $message = null): array
     {
@@ -163,58 +164,80 @@ class PlatformWhatsAppSettingsService
 
         $sendResult = ['ok' => false, 'error' => 'Send did not complete.'];
 
-        if ($resolved['provider'] === 'genius') {
-            $sendResult = $this->geniusProvider->attemptSendWithCredentials(
-                $normalizedPhone,
-                $body,
-                $resolved['genius'],
-                $context,
-            );
-        } else {
-            try {
-                $this->whatsAppProvider->send($normalizedPhone, $body, $context);
-                $sendResult = ['ok' => true];
-            } catch (Throwable $e) {
-                $sendResult = [
-                    'ok' => false,
-                    'error' => $e->getMessage(),
-                ];
+        try {
+            if ($resolved['provider'] === 'genius') {
+                $sendResult = $this->geniusProvider->attemptSendWithCredentials(
+                    $normalizedPhone,
+                    $body,
+                    $resolved['genius'],
+                    $context,
+                );
+            } else {
+                try {
+                    $this->whatsAppProvider->send($normalizedPhone, $body, $context);
+                    $sendResult = ['ok' => true];
+                } catch (Throwable $e) {
+                    $sendResult = [
+                        'ok' => false,
+                        'error' => $e->getMessage(),
+                    ];
+                }
             }
-        }
-
-        $this->auditLogService->log(
-            'platform.whatsapp_settings.test_sent',
-            null,
-            $this->tenantContext->user()?->id,
-            'platform_whatsapp_settings',
-            $this->getOrCreate()->id,
-            [
+        } catch (Throwable $e) {
+            // Never let provider/runtime exceptions become HTTP 500 after Genius may already have delivered.
+            Log::error('Platform WhatsApp test send threw', [
                 'phone' => $normalizedPhone,
-                'provider' => $resolved['provider'],
-                'source' => $resolved['source'],
-                'sent' => (bool) ($sendResult['ok'] ?? false),
-                'error' => $sendResult['error'] ?? null,
-            ],
-        );
-
-        if (! ($sendResult['ok'] ?? false)) {
-            return [
-                'sent' => false,
-                'phone' => $normalizedPhone,
-                'provider' => $resolved['provider'],
-                'source' => $resolved['source'],
-                'message' => $body,
-                'error' => (string) ($sendResult['error'] ?? 'WhatsApp provider rejected the test message.'),
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+            $sendResult = [
+                'ok' => false,
+                'error' => 'WhatsApp test failed: '.$e->getMessage().'. If the phone received a message, delivery still worked.',
             ];
         }
 
-        return [
-            'sent' => true,
+        $payload = [
+            'sent' => (bool) ($sendResult['ok'] ?? false),
             'phone' => $normalizedPhone,
             'provider' => $resolved['provider'],
             'source' => $resolved['source'],
             'message' => $body,
         ];
+
+        if (! empty($sendResult['warning'])) {
+            $payload['warning'] = (string) $sendResult['warning'];
+        }
+
+        if (! ($sendResult['ok'] ?? false)) {
+            $payload['error'] = (string) ($sendResult['error'] ?? 'WhatsApp provider rejected the test message.');
+        }
+
+        // Audit must never turn a successful Genius delivery into Server Error.
+        try {
+            $this->auditLogService->log(
+                'platform.whatsapp_settings.test_sent',
+                null,
+                $this->tenantContext->user()?->id,
+                'platform_whatsapp_settings',
+                $this->getOrCreate()->id,
+                [
+                    'phone' => $normalizedPhone,
+                    'provider' => $resolved['provider'],
+                    'source' => $resolved['source'],
+                    'sent' => $payload['sent'],
+                    'error' => $payload['error'] ?? null,
+                    'warning' => $payload['warning'] ?? null,
+                ],
+            );
+        } catch (Throwable $e) {
+            Log::error('Platform WhatsApp test audit log failed', [
+                'phone' => $normalizedPhone,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
+
+        return $payload;
     }
 
     /**

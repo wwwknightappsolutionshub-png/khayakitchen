@@ -45,10 +45,23 @@ class PlatformWhatsAppSettingsController extends Controller
             'message' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $result = $this->settingsService->sendTestMessage(
-            (string) $data['phone'],
-            isset($data['message']) ? (string) $data['message'] : null,
-        );
+        try {
+            $result = $this->settingsService->sendTestMessage(
+                (string) $data['phone'],
+                isset($data['message']) ? (string) $data['message'] : null,
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return ApiResponse::error(
+                'WhatsApp test failed unexpectedly. If the phone received a message, delivery still worked. Check server logs for details.',
+                'WHATSAPP_TEST_FAILED',
+                ['error' => $e->getMessage()],
+                422,
+            );
+        }
 
         if (! ($result['sent'] ?? false)) {
             return ApiResponse::error(

@@ -101,6 +101,72 @@ class PlatformWhatsAppSettingsTest extends TestCase
         });
     }
 
+    public function test_whatsapp_test_survives_audit_log_failure_after_send(): void
+    {
+        Http::fake([
+            'restapi.geniusdevel.com/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $this->patchJson('/api/v1/platform/whatsapp', [
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'api-test-key',
+            'session_id' => 'session_test',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ])->assertOk();
+
+        $audit = \Mockery::mock(\App\Modules\Pricing\Application\Services\AuditLogService::class);
+        $audit->shouldReceive('log')->andThrow(new \RuntimeException('audit boom'));
+        $this->app->instance(\App\Modules\Pricing\Application\Services\AuditLogService::class, $audit);
+
+        $response = $this->postJson('/api/v1/platform/whatsapp/test', [
+            'phone' => '+447756183484',
+            'message' => 'Audit failure should not 500',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('sent', true);
+    }
+
+    public function test_whatsapp_test_treats_genius_timeout_as_soft_success(): void
+    {
+        Http::fake([
+            'restapi.geniusdevel.com/*' => function () {
+                throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: Operation timed out');
+            },
+        ]);
+
+        $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $this->patchJson('/api/v1/platform/whatsapp', [
+            'enabled' => true,
+            'provider' => 'genius',
+            'api_key' => 'api-test-key',
+            'session_id' => 'session_test',
+            'base_url' => 'https://restapi.geniusdevel.com',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ])->assertOk();
+
+        $response = $this->postJson('/api/v1/platform/whatsapp/test', [
+            'phone' => '+447756183484',
+        ], [
+            'Authorization' => "Bearer {$token}",
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('sent', true);
+        $this->assertNotEmpty($response->json('warning'));
+    }
+
     public function test_whatsapp_test_rejects_incomplete_credentials(): void
     {
         $admin = User::where('email', 'admin@khayaos.com')->firstOrFail();
