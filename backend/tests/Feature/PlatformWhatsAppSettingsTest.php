@@ -217,4 +217,25 @@ class PlatformWhatsAppSettingsTest extends TestCase
                 && $request['source'] === 'API';
         });
     }
+
+    public function test_genius_provider_throws_when_api_rejects_send(): void
+    {
+        Http::fake([
+            'restapi.geniusdevel.com/*' => Http::response(['error' => 'rate limited'], 429),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Genius API error');
+
+        app(GeniusWhatsAppProvider::class)->sendWithCredentials(
+            '+447700900123',
+            'Hello from KhayaOS',
+            [
+                'api_key' => 'api-test-key',
+                'session_id' => 'session_abc',
+                'base_url' => 'https://restapi.geniusdevel.com',
+            ],
+            ['type' => 'owner_welcome'],
+        );
+    }
 }

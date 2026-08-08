@@ -23,7 +23,12 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
      */
     public function sendWithCredentials(string $toPhone, string $message, array $credentials, array $context = []): void
     {
-        $this->attemptSendWithCredentials($toPhone, $message, $credentials, $context);
+        $result = $this->attemptSendWithCredentials($toPhone, $message, $credentials, $context);
+        if (! ($result['ok'] ?? false)) {
+            throw new \RuntimeException(
+                (string) ($result['error'] ?? 'Genius WhatsApp send failed.'),
+            );
+        }
     }
 
     /**
@@ -57,7 +62,9 @@ class GeniusWhatsAppProvider implements WhatsAppProviderInterface
         $number = preg_replace('/\D+/', '', $toPhone) ?: $toPhone;
 
         try {
-            $response = Http::timeout(8)->connectTimeout(3)->withHeaders([
+            // Queue workers may send during Genius backlog; allow a bit longer than the
+            // Super Admin interactive test path without blocking signup HTTP (which is queued).
+            $response = Http::timeout(20)->connectTimeout(5)->withHeaders([
                 'x-api-key' => $apiKey,
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',

@@ -6,11 +6,13 @@ use App\Modules\Auth\Mail\EmailVerificationMail;
 use App\Modules\Auth\Domain\Models\Tenant;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
+use App\Modules\Notifications\Jobs\SendSignupWelcomeWhatsAppJob;
 use App\Modules\Platform\Mail\WelcomeOwnerMail;
 use App\Modules\Pricing\Domain\Models\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
@@ -493,5 +495,44 @@ class PublicSignupTest extends TestCase
         ]);
 
         Mail::assertSent(EmailVerificationMail::class);
+    }
+
+    public function test_signup_queues_welcome_whatsapp_job_with_phone_only_payload(): void
+    {
+        Mail::fake();
+        Queue::fake();
+
+        $plan = Plan::where('slug', 'starter')->firstOrFail();
+
+        $this->postJson('/api/v1/signup', [
+            'restaurant_name' => 'Queue Kitchen',
+            'legal_business_name' => 'Queue Kitchen Ltd',
+            'business_type' => 'restaurant',
+            'slug' => 'queue-kitchen',
+            'country' => 'United Arab Emirates',
+            'city' => 'Dubai',
+            'street_address' => '1 Marina Walk',
+            'timezone' => 'Asia/Dubai',
+            'currency' => 'AED',
+            'owner_name' => 'Queue Owner',
+            'owner_email' => 'owner@queuekitchen.test',
+            'owner_phone' => '+971553551606',
+            'owner_role_title' => 'Owner',
+            'owner_password' => 'SecurePass1!',
+            'owner_password_confirmation' => 'SecurePass1!',
+            'plan_id' => $plan->id,
+            'order_types' => ['pickup'],
+            'estimated_daily_orders' => 20,
+            'staff_count' => 2,
+            'branch_count' => 1,
+            'terms_accepted' => true,
+        ])->assertCreated();
+
+        Queue::assertPushed(SendSignupWelcomeWhatsAppJob::class, function (SendSignupWelcomeWhatsAppJob $job) {
+            return $job->tenantSlug === 'queue-kitchen'
+                && ($job->signupData['owner_phone'] ?? null) === '+971553551606'
+                && ! array_key_exists('owner_password', $job->signupData)
+                && ! array_key_exists('logo', $job->signupData);
+        });
     }
 }

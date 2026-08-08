@@ -159,9 +159,14 @@ class PublicSignupService
         $ownerId = (string) $result['owner_id'];
         $tenantSlug = (string) ($data['slug'] ?? $result['tenant']['slug'] ?? '');
         $planName = $plan->name;
-        // Never keep UploadedFile on the payload used for notifications.
-        $signupData = $data;
-        unset($signupData['logo']);
+        // Slim queue payload: only fields needed for welcome WhatsApp (never passwords/logo).
+        $signupData = [
+            'owner_phone' => $data['owner_phone'] ?? null,
+            'owner_name' => $data['owner_name'] ?? null,
+            'owner_email' => $data['owner_email'] ?? null,
+            'restaurant_name' => $data['restaurant_name'] ?? null,
+            'slug' => $data['slug'] ?? null,
+        ];
 
         // Prepare the HTTP payload before side-effects so a notification failure cannot
         // leave the client with Server Error after the tenant already exists.
@@ -192,7 +197,14 @@ class PublicSignupService
             SendSignupWelcomeWhatsAppJob::dispatch(
                 $ownerId,
                 $tenantSlug,
-                $result,
+                [
+                    'tenant' => [
+                        'id' => $result['tenant']['id'] ?? null,
+                        'slug' => $result['tenant']['slug'] ?? $tenantSlug,
+                        'name' => $result['tenant']['name'] ?? ($data['restaurant_name'] ?? null),
+                    ],
+                    'owner_email' => $result['owner_email'] ?? ($data['owner_email'] ?? null),
+                ],
                 $signupData,
                 $planName,
             );
@@ -233,6 +245,8 @@ class PublicSignupService
                 'error' => $e->getMessage(),
             ]);
             report($e);
+            // Rethrow so SendSignupWelcomeWhatsAppJob retries (Genius soft-fails used to mark DONE).
+            throw $e;
         }
     }
 
@@ -275,7 +289,9 @@ class PublicSignupService
                 'phone' => $ownerPhone,
             ]);
 
-            return;
+            throw new \RuntimeException(
+                'Platform WhatsApp credentials incomplete — cannot send signup welcome.',
+            );
         }
 
         $this->whatsAppProvider->send($ownerPhone, $message, [

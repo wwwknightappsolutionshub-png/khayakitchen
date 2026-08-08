@@ -20,9 +20,10 @@ class SendSignupWelcomeWhatsAppJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
+    public int $tries = 5;
 
-    public int $backoff = 20;
+    /** @var list<int> */
+    public array $backoff = [10, 30, 60, 120];
 
     /**
      * @param  array<string, mixed>  $result
