@@ -62,7 +62,7 @@ class BankTransferPaymentAccountsTest extends TestCase
         $this->assertFalse($show->json('order.payment.can_upload_proof'));
 
         Payment::where('order_id', $orderId)->update([
-            'proof_wait_started_at' => now()->subSeconds(241),
+            'proof_wait_started_at' => now()->subSeconds(121),
         ]);
 
         $file = UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf');

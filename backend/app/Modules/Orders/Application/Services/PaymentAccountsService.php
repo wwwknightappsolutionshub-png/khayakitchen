@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentAccountsService
 {
-    public const PROOF_WAIT_SECONDS = 240;
+    public const PROOF_WAIT_SECONDS = 120;
 
     public const PROOF_MAX_KB = 2048;
 
@@ -78,7 +78,7 @@ class PaymentAccountsService
         }
 
         $waitStarted = $payment->proof_wait_started_at ?? $payment->created_at ?? now();
-        $elapsed = $waitStarted->diffInSeconds(now());
+        $elapsed = (int) floor($waitStarted->diffInSeconds(now()));
         if ($elapsed < self::PROOF_WAIT_SECONDS) {
             $remaining = self::PROOF_WAIT_SECONDS - $elapsed;
             throw ValidationException::withMessages([
@@ -265,7 +265,7 @@ class PaymentAccountsService
     public function serializePaymentForCustomer(Payment $payment): array
     {
         $waitStarted = $payment->proof_wait_started_at ?? $payment->created_at;
-        $elapsed = $waitStarted ? $waitStarted->diffInSeconds(now()) : 0;
+        $elapsed = $waitStarted ? (int) floor($waitStarted->diffInSeconds(now())) : 0;
         $remaining = max(0, self::PROOF_WAIT_SECONDS - $elapsed);
 
         return [

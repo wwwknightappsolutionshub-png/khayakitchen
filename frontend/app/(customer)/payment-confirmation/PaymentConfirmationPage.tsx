@@ -12,10 +12,13 @@ import { formatCurrency, cn } from "@/lib/utils";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "application/pdf"];
 const MAX_BYTES = 2 * 1024 * 1024;
+/** Fallback when API has not yet returned wait_remaining_seconds (matches backend PROOF_WAIT_SECONDS). */
+const DEFAULT_WAIT_SECONDS = 120;
 
 function formatCountdown(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
@@ -47,26 +50,28 @@ export default function PaymentConfirmationPage() {
   const payment = order?.payment;
 
   useEffect(() => {
-    if (!payment) return;
-    setRemaining(payment.wait_remaining_seconds);
-  }, [payment?.id, payment?.wait_remaining_seconds]);
+    if (!payment?.id) return;
 
-  useEffect(() => {
-    if (!payment?.id || remaining === null) return;
-    if (remaining <= 0) return;
-    const timer = window.setInterval(() => {
-      setRemaining((prev) => {
-        if (prev === null || prev <= 0) return 0;
-        return prev - 1;
-      });
-    }, 1000);
+    const initial = Math.max(0, Math.floor(Number(payment.wait_remaining_seconds) || 0));
+    if (initial <= 0) {
+      setRemaining(0);
+      return;
+    }
+
+    const deadlineMs = Date.now() + initial * 1000;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+      setRemaining(left);
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
     return () => window.clearInterval(timer);
-  }, [payment?.id]);
+  }, [payment?.id, payment?.wait_remaining_seconds]);
 
   const canUpload = useMemo(() => {
     if (!payment) return false;
     if (payment.proof_uploaded || payment.verified) return false;
-    return (remaining ?? payment.wait_remaining_seconds) === 0;
+    return (remaining ?? Math.floor(Number(payment.wait_remaining_seconds) || 0)) === 0;
   }, [payment, remaining]);
 
   const onPaid = async () => {
@@ -174,8 +179,8 @@ export default function PaymentConfirmationPage() {
         )}
       >
         <p className="text-sm font-medium text-[var(--muted)]">Countdown</p>
-        <p className="mt-2 font-mono text-4xl font-bold tracking-tight">
-          {formatCountdown(remaining ?? payment?.wait_remaining_seconds ?? 240)}
+        <p className="mt-2 font-mono text-4xl font-bold tracking-tight tabular-nums">
+          {formatCountdown(remaining ?? payment?.wait_remaining_seconds ?? DEFAULT_WAIT_SECONDS)}
         </p>
         {!canUpload && (
           <p className="mt-3 text-xs text-[var(--muted)]">
