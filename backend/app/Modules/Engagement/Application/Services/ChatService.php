@@ -100,7 +100,7 @@ class ChatService
         }
 
         if (! $this->featureAccessService->canAccess(self::FEATURE_PLATFORM_TENANT, $tenantId)) {
-            abort(403, "Feature '".self::FEATURE_PLATFORM_TENANT."' is not available for this tenant");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage(self::FEATURE_PLATFORM_TENANT));
         }
 
         $thread = ChatThread::withoutGlobalScopes()
@@ -345,7 +345,7 @@ class ChatService
         }
 
         if (! $this->featureAccessService->canAccess(self::FEATURE_PLATFORM_TENANT, $thread->tenant_id)) {
-            abort(403, "Feature '".self::FEATURE_PLATFORM_TENANT."' is not available for this tenant");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage(self::FEATURE_PLATFORM_TENANT));
         }
 
         $message = $this->createMessage(
@@ -725,7 +725,7 @@ class ChatService
     {
         $tenantId = $this->tenantContext->id();
         if (! $tenantId || ! $this->featureAccessService->canAccess($featureKey, $tenantId)) {
-            abort(403, "Feature '{$featureKey}' is not available on your plan");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage($featureKey));
         }
     }
 

@@ -23,7 +23,9 @@ class ApplyFeatureFlags
             $request->user(),
         )) {
             return ApiResponse::error(
-                "Module '{$module}' is disabled for this tenant",
+                FeatureAccessService::formatUnavailableForKitchenMessage(
+                    FeatureAccessService::humanizeFeatureKey($module),
+                ),
                 'FEATURE_DISABLED',
                 ['module' => $module],
                 403,

@@ -47,7 +47,22 @@ class CustomerAuthService
 
         $customer = Customer::where('phone', $phone)->first();
 
-        if ($mode === 'signup' && ! $customer) {
+        if ($mode === 'signup') {
+            if ($customer) {
+                throw ValidationException::withMessages([
+                    'phone' => ['An account already exists with this phone number. Sign in instead.'],
+                ]);
+            }
+
+            if ($email) {
+                $emailTaken = Customer::whereRaw('LOWER(email) = ?', [$email])->exists();
+                if ($emailTaken) {
+                    throw ValidationException::withMessages([
+                        'email' => ['An account already exists with this email address. Sign in instead.'],
+                    ]);
+                }
+            }
+
             $this->planLimitService->assertCustomerLimit($tenantId);
             $customer = Customer::create([
                 'tenant_id' => $tenantId,
@@ -55,6 +70,8 @@ class CustomerAuthService
                 'phone' => $phone,
                 'email' => $email,
             ]);
+            app(\App\Modules\NotificationsCampaign\Application\Services\CustomerNotificationPreferenceService::class)
+                ->ensureDefaultOptIns($tenantId, $customer);
         }
 
         if (! $customer) {
@@ -164,7 +181,7 @@ class CustomerAuthService
         ];
     }
 
-    public function verifyOtp(string $phone, string $otp, ?string $email = null): array
+    public function verifyOtp(string $phone, string $otp, ?string $email = null, ?string $password = null): array
     {
         $tenantId = $this->tenantContext->id();
         $phone = $this->normalizePhone($phone);
@@ -202,6 +219,12 @@ class CustomerAuthService
 
         $customer = Customer::where('phone', $phone)->firstOrFail();
 
+        if ($password !== null && $password !== '') {
+            $this->assertPasswordStrength($password);
+            $customer->password = $password;
+            $customer->save();
+        }
+
         CustomerEmailOtp::where('tenant_id', $tenantId)
             ->where('phone', $phone)
             ->where('purpose', 'account')
@@ -215,6 +238,45 @@ class CustomerAuthService
             null,
             'customer',
             $customer->id,
+            ['session_id' => $session->id, 'via' => 'otp'],
+        );
+
+        return [
+            'session_token' => $session->getAttribute('_plain_token'),
+            'expires_at' => $session->expires_at->toIso8601String(),
+            'customer' => $this->customerPayload($customer->fresh()),
+        ];
+    }
+
+    /**
+     * @return array{session_token: string, expires_at: string, customer: array<string, mixed>}
+     */
+    public function loginWithPassword(string $phone, string $password): array
+    {
+        $tenantId = $this->tenantContext->id();
+        $phone = $this->normalizePhone($phone);
+        $customer = Customer::where('phone', $phone)->first();
+
+        if (! $customer || ! $customer->password) {
+            throw ValidationException::withMessages([
+                'password' => ['Invalid phone or password. Use a one-time code if you have not set a password yet.'],
+            ]);
+        }
+
+        if (! Hash::check($password, $customer->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Invalid phone or password.'],
+            ]);
+        }
+
+        $session = $this->issueSession($customer, $customer->email ?: '', 'account');
+
+        $this->auditLogService->log(
+            'customer.auth.password_login',
+            $tenantId,
+            null,
+            'customer',
+            $customer->id,
             ['session_id' => $session->id],
         );
 
@@ -223,6 +285,210 @@ class CustomerAuthService
             'expires_at' => $session->expires_at->toIso8601String(),
             'customer' => $this->customerPayload($customer),
         ];
+    }
+
+    /**
+     * @return array{sent: bool, channel: string, channels: list<string>, expires_in_seconds: int}
+     */
+    public function forgotPassword(string $phone, ?string $email = null): array
+    {
+        $tenantId = $this->tenantContext->id();
+        $phone = $this->normalizePhone($phone);
+        $email = $email ? strtolower(trim($email)) : null;
+
+        $customer = Customer::where('phone', $phone)->first();
+        if (! $customer) {
+            throw ValidationException::withMessages([
+                'phone' => ['No account found for this phone.'],
+            ]);
+        }
+
+        $deliveryEmail = $email ?: $customer->email;
+        if ($deliveryEmail && ! filter_var($deliveryEmail, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages(['email' => ['Enter a valid email address.']]);
+        }
+
+        CustomerEmailOtp::where('tenant_id', $tenantId)
+            ->where('phone', $phone)
+            ->where('purpose', 'password_reset')
+            ->delete();
+
+        $otp = (string) random_int(100000, 999999);
+        $branding = $this->brandingService->getForTenant($tenantId);
+        $restaurant = $branding->restaurant_name ?? 'Our kitchen';
+        $channels = [];
+        $emailSent = false;
+        $whatsappSent = false;
+
+        if ($deliveryEmail) {
+            try {
+                Mail::to($deliveryEmail)->send(new CustomerProximityOtpMail(
+                    $customer->name ?: 'there',
+                    $otp,
+                    $restaurant,
+                ));
+                $emailSent = true;
+                $channels[] = 'email';
+            } catch (\Throwable) {
+                // Parallel delivery — WhatsApp may still succeed.
+            }
+        }
+
+        if ($customer->phone && ! app()->runningUnitTests()) {
+            try {
+                $this->whatsAppProvider->send(
+                    $customer->phone,
+                    "Your {$restaurant} password reset code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
+                    ['type' => 'customer_password_reset', 'tenant_id' => $tenantId],
+                );
+                $whatsappSent = true;
+                $channels[] = 'whatsapp';
+            } catch (\Throwable) {
+                // Parallel delivery — email may still succeed.
+            }
+        } elseif ($customer->phone && app()->runningUnitTests()) {
+            $whatsappSent = true;
+            $channels[] = 'whatsapp';
+        }
+
+        if (! $emailSent && ! $whatsappSent) {
+            throw ValidationException::withMessages([
+                'phone' => ['Could not send a reset code. Add an email on file or try again.'],
+            ]);
+        }
+
+        $channel = implode('+', $channels);
+
+        CustomerEmailOtp::create([
+            'tenant_id' => $tenantId,
+            'phone' => $phone,
+            'email' => $deliveryEmail ?: '',
+            'channel' => $channel,
+            'purpose' => 'password_reset',
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
+            'attempts' => 0,
+            'created_at' => now(),
+        ]);
+
+        $this->auditLogService->log(
+            'customer.auth.password_reset_requested',
+            $tenantId,
+            null,
+            'customer',
+            $customer->id,
+            ['channel' => $channel],
+        );
+
+        return [
+            'sent' => true,
+            'channel' => $channel,
+            'channels' => $channels,
+            'expires_in_seconds' => self::OTP_TTL_MINUTES * 60,
+        ];
+    }
+
+    /**
+     * @return array{session_token: string, expires_at: string, customer: array<string, mixed>}
+     */
+    public function resetPassword(string $phone, string $otp, string $password): array
+    {
+        $tenantId = $this->tenantContext->id();
+        $phone = $this->normalizePhone($phone);
+        $otp = trim($otp);
+        $this->assertPasswordStrength($password);
+
+        $record = CustomerEmailOtp::where('tenant_id', $tenantId)
+            ->where('phone', $phone)
+            ->where('purpose', 'password_reset')
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $record || $record->expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'otp' => ['This code has expired. Request a new one.'],
+            ]);
+        }
+
+        if ($record->attempts >= self::MAX_OTP_ATTEMPTS) {
+            throw ValidationException::withMessages([
+                'otp' => ['Too many attempts. Request a new code.'],
+            ]);
+        }
+
+        $record->increment('attempts');
+
+        if (! Hash::check($otp, $record->otp_hash)) {
+            throw ValidationException::withMessages([
+                'otp' => ['Invalid verification code.'],
+            ]);
+        }
+
+        $customer = Customer::where('phone', $phone)->firstOrFail();
+        $customer->password = $password;
+        $customer->save();
+
+        CustomerEmailOtp::where('tenant_id', $tenantId)
+            ->where('phone', $phone)
+            ->where('purpose', 'password_reset')
+            ->delete();
+
+        $session = $this->issueSession($customer, $customer->email ?: '', 'account');
+
+        $this->auditLogService->log(
+            'customer.auth.password_set',
+            $tenantId,
+            null,
+            'customer',
+            $customer->id,
+            ['via' => 'reset'],
+        );
+
+        return [
+            'session_token' => $session->getAttribute('_plain_token'),
+            'expires_at' => $session->expires_at->toIso8601String(),
+            'customer' => $this->customerPayload($customer->fresh()),
+        ];
+    }
+
+    /**
+     * Set or change password while authenticated (optional current password when already set).
+     */
+    public function setPassword(CustomerSession $session, string $password, ?string $currentPassword = null): Customer
+    {
+        $customer = Customer::findOrFail($session->customer_id);
+        $this->assertPasswordStrength($password);
+
+        if ($customer->password) {
+            if (! $currentPassword || ! Hash::check($currentPassword, $customer->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Enter your current password to change it.'],
+                ]);
+            }
+        }
+
+        $customer->password = $password;
+        $customer->save();
+
+        $this->auditLogService->log(
+            'customer.auth.password_set',
+            $this->tenantContext->id(),
+            null,
+            'customer',
+            $customer->id,
+            ['via' => 'account'],
+        );
+
+        return $customer->fresh();
+    }
+
+    public function assertPasswordStrength(string $password): void
+    {
+        if (strlen($password) < 8) {
+            throw ValidationException::withMessages([
+                'password' => ['Password must be at least 8 characters.'],
+            ]);
+        }
     }
 
     public function issueSession(Customer $customer, string $email = '', string $purpose = 'account'): CustomerSession
@@ -335,6 +601,8 @@ class CustomerAuthService
             'email' => $customer->email,
             'app_installed' => $customer->app_installed_at !== null,
             'app_installed_at' => $customer->app_installed_at?->toIso8601String(),
+            'has_password' => filled($customer->password),
+            'has_passkeys' => $customer->webauthnCredentials()->exists(),
         ];
     }
 

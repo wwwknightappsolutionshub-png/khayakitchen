@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="WEBAUTHN_FAKE_CEREMONY" value="true"/>
+        <env name="WEBAUTHN_RP_ID" value="localhost"/>
+        <env name="WEBAUTHN_ORIGINS" value="http://localhost:3000"/>
     </php>
 </phpunit>

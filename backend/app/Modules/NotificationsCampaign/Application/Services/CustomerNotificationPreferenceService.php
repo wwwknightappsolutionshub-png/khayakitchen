@@ -18,13 +18,36 @@ class CustomerNotificationPreferenceService
         private PlanLimitService $planLimitService,
     ) {}
 
+    /**
+     * Create opt-in preferences (all channels on) when the customer has none yet.
+     */
+    public function ensureDefaultOptIns(string $tenantId, Customer $customer): CustomerNotificationPreference
+    {
+        $existing = CustomerNotificationPreference::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('customer_id', $customer->id)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return CustomerNotificationPreference::create([
+            'tenant_id' => $tenantId,
+            'customer_id' => $customer->id,
+            'push_enabled' => true,
+            'whatsapp_enabled' => true,
+            'email_enabled' => true,
+        ]);
+    }
+
     public function upsertByPhone(
         string $tenantId,
         string $phone,
         ?string $name,
         bool $pushEnabled,
         bool $whatsappEnabled,
-        bool $emailEnabled = false,
+        bool $emailEnabled = true,
     ): CustomerNotificationPreference {
         return DB::transaction(function () use ($tenantId, $phone, $name, $pushEnabled, $whatsappEnabled, $emailEnabled) {
             $customer = Customer::withoutGlobalScopes()
@@ -82,18 +105,30 @@ class CustomerNotificationPreferenceService
 
     public function isWhatsAppOptedIn(string $tenantId, string $customerId): bool
     {
-        return (bool) CustomerNotificationPreference::withoutGlobalScopes()
+        $pref = CustomerNotificationPreference::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('customer_id', $customerId)
-            ->value('whatsapp_enabled');
+            ->first();
+
+        if (! $pref) {
+            return true;
+        }
+
+        return (bool) $pref->whatsapp_enabled;
     }
 
     public function isPushOptedIn(string $tenantId, string $customerId): bool
     {
-        return (bool) CustomerNotificationPreference::withoutGlobalScopes()
+        $pref = CustomerNotificationPreference::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('customer_id', $customerId)
-            ->value('push_enabled');
+            ->first();
+
+        if (! $pref) {
+            return true;
+        }
+
+        return (bool) $pref->push_enabled;
     }
 
     /**

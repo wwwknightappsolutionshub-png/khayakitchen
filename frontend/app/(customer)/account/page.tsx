@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,6 +13,8 @@ import {
   Copy,
   Smartphone,
   Utensils,
+  Fingerprint,
+  KeyRound,
 } from "lucide-react";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { CustomerInput } from "@/components/customer/CustomerInput";
@@ -24,10 +25,22 @@ import { useStorefront } from "@/hooks/useStorefront";
 import { customerAuthService } from "@/services/customer-auth.service";
 import { customerOrdersService } from "@/services/customer-orders.service";
 import { loyaltyService } from "@/services/loyalty.service";
-import { requestPwaInstallUi } from "@/lib/pwa-install";
+import { detectPwaInstalled, isStandaloneDisplay, requestPwaInstallUi } from "@/lib/pwa-install";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ApiClientError } from "@/lib/api-client";
+import { ApiClientError, getOrderingTenantSlug } from "@/lib/api-client";
+import {
+  authenticatePasskey,
+  passkeyHintKey,
+  passkeyOfferDismissKey,
+  passkeySupported,
+  registerPasskey,
+} from "@/lib/customer-passkey";
+import { ModalPortal } from "@/components/ui/ModalPortal";
 import type { CustomerAddress } from "@/lib/types";
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from "@simplewebauthn/browser";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
 const NAME_STORAGE_KEY = "khayaos-customer-name";
@@ -49,6 +62,19 @@ function referralAbsoluteUrl(menuUrl: string): string {
   return `${window.location.origin}${menuUrl.startsWith("/") ? "" : "/"}${menuUrl}`;
 }
 
+function validationPopupMessage(err: Error): string {
+  if (err instanceof ApiClientError && err.details) {
+    for (const key of ["phone", "email", "password", "otp"]) {
+      const value = err.details[key];
+      if (Array.isArray(value) && typeof value[0] === "string" && value[0]) {
+        return value[0];
+      }
+      if (typeof value === "string" && value) return value;
+    }
+  }
+  return err.message || "Something went wrong. Please try again.";
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,6 +90,7 @@ export default function AccountPage() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">(
     searchParams.get("signup") === "1" ? "signup" : "signin",
   );
+  const [authPanel, setAuthPanel] = useState<"main" | "otp" | "forgot">("main");
   const [authStep, setAuthStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState(readStoredPhone);
   const [name, setName] = useState(() => {
@@ -74,9 +101,19 @@ export default function AccountPage() {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(EMAIL_STORAGE_KEY) ?? "";
   });
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [otp, setOtp] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authInfo, setAuthInfo] = useState<string | null>(null);
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+  const [showPasskeyOffer, setShowPasskeyOffer] = useState(false);
+  const [securityPassword, setSecurityPassword] = useState("");
+  const [securityPasswordConfirm, setSecurityPasswordConfirm] = useState("");
+  const [securityCurrentPassword, setSecurityCurrentPassword] = useState("");
+  const [securityMsg, setSecurityMsg] = useState<string | null>(null);
+  const [authPopup, setAuthPopup] = useState<string | null>(null);
+  const [pwaInstalledHere, setPwaInstalledHere] = useState(false);
 
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(() => {
     const stored = readStoredPhone();
@@ -108,7 +145,45 @@ export default function AccountPage() {
 
   useEffect(() => {
     setHasSession(!!customerAuthService.getSessionToken());
+    setPasskeyAvailable(passkeySupported());
+    if (searchParams.get("signup") === "1") {
+      setName("");
+      setEmail("");
+      setPhone("");
+      setPassword("");
+      setPasswordConfirm("");
+    }
+    // Clear prefilled signup fields once on entry; do not re-run on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const installed =
+        isStandaloneDisplay() || (await detectPwaInstalled("customer"));
+      if (!cancelled) setPwaInstalledHere(installed);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const tenantSlug = getOrderingTenantSlug();
+
+  const afterLoginSuccess = () => {
+    localStorage.setItem(WELCOME_STORAGE_KEY, "1");
+    setHasSession(true);
+    setGuestMode(false);
+    setAuthError(null);
+    setAuthInfo(null);
+    setPassword("");
+    setPasswordConfirm("");
+    setOtp("");
+    setAuthPanel("main");
+    setAuthStep("phone");
+    void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+  };
 
   const {
     data: me,
@@ -137,7 +212,16 @@ export default function AccountPage() {
     if (me.customer.phone) localStorage.setItem(PHONE_STORAGE_KEY, me.customer.phone);
     if (me.customer.name) localStorage.setItem(NAME_STORAGE_KEY, me.customer.name);
     if (me.customer.email) localStorage.setItem(EMAIL_STORAGE_KEY, me.customer.email);
-  }, [me?.customer]);
+    if (
+      passkeyAvailable &&
+      !me.customer.has_passkeys &&
+      localStorage.getItem(passkeyOfferDismissKey(tenantSlug)) !== "1"
+    ) {
+      setShowPasskeyOffer(true);
+    } else {
+      setShowPasskeyOffer(false);
+    }
+  }, [me?.customer, passkeyAvailable, tenantSlug]);
 
   const { data: notifPrefs } = useQuery({
     queryKey: ["customer-notif-prefs"],
@@ -176,13 +260,18 @@ export default function AccountPage() {
       setAuthError(null);
       setAuthInfo(`Code sent via ${res.channel}. Expires in ${res.expires_in_seconds}s.`);
       setAuthStep("otp");
+      setAuthPanel("otp");
       localStorage.setItem(PHONE_STORAGE_KEY, phone.trim());
       if (name.trim()) localStorage.setItem(NAME_STORAGE_KEY, name.trim());
       if (email.trim()) localStorage.setItem(EMAIL_STORAGE_KEY, email.trim());
     },
     onError: (err: Error) => {
       setAuthInfo(null);
-      setAuthError(err.message || "Could not send code.");
+      const message = validationPopupMessage(err);
+      setAuthError(message);
+      if (authMode === "signup") {
+        setAuthPopup(message);
+      }
     },
   });
 
@@ -192,20 +281,133 @@ export default function AccountPage() {
         phone: phone.trim(),
         otp: otp.trim(),
         email: email.trim() || undefined,
+        ...(authMode === "signup"
+          ? { password: password, password_confirmation: passwordConfirm }
+          : {}),
       }),
     onSuccess: () => {
-      localStorage.setItem(WELCOME_STORAGE_KEY, "1");
-      setHasSession(true);
-      setGuestMode(false);
-      setAuthStep("phone");
-      setOtp("");
-      setAuthError(null);
-      setAuthInfo(null);
-      queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+      afterLoginSuccess();
     },
     onError: (err: Error) => {
       setAuthError(err.message || "Invalid code.");
     },
+  });
+
+  const passwordLoginMutation = useMutation({
+    mutationFn: () =>
+      customerAuthService.loginWithPassword({
+        phone: phone.trim(),
+        password,
+      }),
+    onSuccess: () => {
+      localStorage.setItem(PHONE_STORAGE_KEY, phone.trim());
+      afterLoginSuccess();
+    },
+    onError: (err: Error) => setAuthError(err.message || "Could not sign in."),
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: () =>
+      customerAuthService.forgotPassword({
+        phone: phone.trim(),
+        email: email.trim() || undefined,
+      }),
+    onSuccess: (res) => {
+      setAuthError(null);
+      setAuthInfo(`Reset code sent via ${res.channel}.`);
+      setAuthStep("otp");
+    },
+    onError: (err: Error) => setAuthError(err.message || "Could not send reset code."),
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: () =>
+      customerAuthService.resetPassword({
+        phone: phone.trim(),
+        otp: otp.trim(),
+        password,
+        password_confirmation: passwordConfirm,
+      }),
+    onSuccess: () => {
+      localStorage.setItem(PHONE_STORAGE_KEY, phone.trim());
+      afterLoginSuccess();
+    },
+    onError: (err: Error) => setAuthError(err.message || "Could not reset password."),
+  });
+
+  const passkeyLoginMutation = useMutation({
+    mutationFn: async () => {
+      const options = await customerAuthService.passkeyLoginOptions(phone.trim() || undefined);
+      const { challengeId, ...optionsJSON } = options;
+      const credential = await authenticatePasskey(
+        optionsJSON as unknown as PublicKeyCredentialRequestOptionsJSON,
+      );
+      return customerAuthService.passkeyLoginVerify({
+        challengeId,
+        credential: credential as unknown as Record<string, unknown>,
+      });
+    },
+    onSuccess: () => {
+      localStorage.setItem(passkeyHintKey(tenantSlug), "1");
+      afterLoginSuccess();
+    },
+    onError: (err: Error) => setAuthError(err.message || "Passkey sign-in failed."),
+  });
+
+  const enrollPasskeyMutation = useMutation({
+    mutationFn: async () => {
+      const options = await customerAuthService.passkeyRegisterOptions();
+      const { challengeId, ...optionsJSON } = options;
+      const credential = await registerPasskey(
+        optionsJSON as unknown as PublicKeyCredentialCreationOptionsJSON,
+      );
+      return customerAuthService.passkeyRegisterVerify({
+        challengeId,
+        credential: credential as unknown as Record<string, unknown>,
+        device_label: "This device",
+      });
+    },
+    onSuccess: () => {
+      localStorage.setItem(passkeyHintKey(tenantSlug), "1");
+      setShowPasskeyOffer(false);
+      setSecurityMsg("Fingerprint / Face ID enabled.");
+      void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer-passkeys"] });
+    },
+    onError: (err: Error) => setSecurityMsg(err.message || "Could not enable passkey."),
+  });
+
+  const setPasswordMutation = useMutation({
+    mutationFn: () =>
+      customerAuthService.setPassword({
+        password: securityPassword,
+        password_confirmation: securityPasswordConfirm,
+        current_password: securityCurrentPassword || undefined,
+      }),
+    onSuccess: () => {
+      setSecurityMsg("Password saved.");
+      setSecurityPassword("");
+      setSecurityPasswordConfirm("");
+      setSecurityCurrentPassword("");
+      void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+    },
+    onError: (err: Error) => setSecurityMsg(err.message || "Could not save password."),
+  });
+
+  const { data: passkeysData } = useQuery({
+    queryKey: ["customer-passkeys"],
+    queryFn: () => customerAuthService.listPasskeys(),
+    enabled: hasSession,
+  });
+
+  const deletePasskeyMutation = useMutation({
+    mutationFn: (id: string) => customerAuthService.deletePasskey(id),
+    onSuccess: () => {
+      setSecurityMsg("Passkey removed.");
+      void queryClient.invalidateQueries({ queryKey: ["customer-passkeys"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+    },
+    onError: (err: Error) => setSecurityMsg(err.message || "Could not remove passkey."),
   });
 
   const redeemMutation = useMutation({
@@ -361,99 +563,158 @@ export default function AccountPage() {
 
   // ——— Auth (no session) ———
   if (!hasSession && !guestMode) {
+    const signupReady =
+      !!name.trim() &&
+      !!email.trim() &&
+      !!phone.trim() &&
+      password.length >= 8 &&
+      password === passwordConfirm;
+    const showPasskeyCta = authMode === "signin" && authPanel === "main" && passkeyAvailable;
+
     return (
       <div className="customer-animate-in px-4 pt-6 pb-10">
         <header className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight">
-            {authMode === "signup" ? "Create your account" : "Welcome back"}
+            {authPanel === "forgot"
+              ? "Reset password"
+              : authMode === "signup"
+                ? "Create your account"
+                : "Welcome back"}
           </h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Sign in to {restaurantName} for loyalty, addresses, and faster checkout
+            {authPanel === "forgot"
+              ? `We will send a code to verify your ${restaurantName} account`
+              : `Sign in to ${restaurantName} for loyalty, addresses, and faster checkout`}
           </p>
         </header>
 
-        <div className="mb-4 flex gap-2">
-          <CustomerButton
-            variant={authMode === "signin" ? "primary" : "secondary"}
-            className="flex-1"
-            onClick={() => {
-              setAuthMode("signin");
-              setAuthStep("phone");
-              setAuthError(null);
-            }}
-          >
-            Sign in
-          </CustomerButton>
-          <CustomerButton
-            variant={authMode === "signup" ? "primary" : "secondary"}
-            className="flex-1"
-            onClick={() => {
-              setAuthMode("signup");
-              setAuthStep("phone");
-              setAuthError(null);
-            }}
-          >
-            Sign up
-          </CustomerButton>
-        </div>
+        {authPanel !== "forgot" && (
+          <div className="mb-4 flex gap-2">
+            <CustomerButton
+              variant={authMode === "signin" ? "primary" : "secondary"}
+              className="flex-1"
+              onClick={() => {
+                setAuthMode("signin");
+                setAuthPanel("main");
+                setAuthStep("phone");
+                setAuthError(null);
+                setAuthInfo(null);
+              }}
+            >
+              Sign in
+            </CustomerButton>
+            <CustomerButton
+              variant={authMode === "signup" ? "primary" : "secondary"}
+              className="flex-1"
+              onClick={() => {
+                setAuthMode("signup");
+                setAuthPanel("main");
+                setAuthStep("phone");
+                setName("");
+                setEmail("");
+                setPhone("");
+                setPassword("");
+                setPasswordConfirm("");
+                setOtp("");
+                setAuthError(null);
+                setAuthInfo(null);
+                setAuthPopup(null);
+              }}
+            >
+              Sign up
+            </CustomerButton>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-          {authStep === "phone" ? (
-            <>
-              {authMode === "signup" && (
-                <>
-                  <CustomerInput
-                    label="Your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
-                    autoComplete="name"
-                  />
-                  <CustomerInput
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                  />
-                </>
-              )}
-              {authMode === "signin" && (
+          {authPanel === "forgot" ? (
+            authStep === "phone" ? (
+              <>
                 <CustomerInput
-                  label="Email (if used for OTP)"
+                  label="Phone number"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+44..."
+                  autoComplete="tel"
+                />
+                <CustomerInput
+                  label="Email (optional)"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
                 />
-              )}
-              <CustomerInput
-                label="Phone number"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+44..."
-                autoComplete="tel"
-              />
-              <CustomerButton
-                className="w-full"
-                isLoading={requestOtpMutation.isPending}
-                disabled={
-                  !phone.trim() ||
-                  (authMode === "signup" && (!name.trim() || !email.trim()))
-                }
-                onClick={() => requestOtpMutation.mutate()}
-              >
-                Send code
-              </CustomerButton>
-            </>
-          ) : (
+                <CustomerButton
+                  className="w-full"
+                  isLoading={forgotPasswordMutation.isPending}
+                  disabled={!phone.trim()}
+                  onClick={() => forgotPasswordMutation.mutate()}
+                >
+                  Send reset code
+                </CustomerButton>
+                <CustomerButton
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setAuthPanel("main");
+                    setAuthError(null);
+                    setAuthInfo(null);
+                  }}
+                >
+                  Back to sign in
+                </CustomerButton>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--muted)]">Enter the code sent for {phone.trim()}</p>
+                <CustomerInput
+                  label="One-time code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="6-digit code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                />
+                <CustomerInput
+                  label="New password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <CustomerInput
+                  label="Confirm password"
+                  type="password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <CustomerButton
+                  className="w-full"
+                  isLoading={resetPasswordMutation.isPending}
+                  disabled={!otp.trim() || password.length < 8 || password !== passwordConfirm}
+                  onClick={() => resetPasswordMutation.mutate()}
+                >
+                  Save password &amp; continue
+                </CustomerButton>
+                <CustomerButton
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setAuthStep("phone");
+                    setOtp("");
+                    setAuthError(null);
+                  }}
+                >
+                  Back
+                </CustomerButton>
+              </>
+            )
+          ) : authStep === "otp" ? (
             <>
-              <p className="text-sm text-[var(--muted)]">
-                Enter the code sent for {phone.trim()}
-              </p>
+              <p className="text-sm text-[var(--muted)]">Enter the code sent for {phone.trim()}</p>
               <CustomerInput
                 label="One-time code"
                 value={otp}
@@ -465,7 +726,10 @@ export default function AccountPage() {
               <CustomerButton
                 className="w-full"
                 isLoading={verifyOtpMutation.isPending}
-                disabled={!otp.trim()}
+                disabled={
+                  !otp.trim() ||
+                  (authMode === "signup" && (password.length < 8 || password !== passwordConfirm))
+                }
                 onClick={() => verifyOtpMutation.mutate()}
               >
                 Verify &amp; continue
@@ -474,6 +738,7 @@ export default function AccountPage() {
                 variant="ghost"
                 className="w-full"
                 onClick={() => {
+                  setAuthPanel(authMode === "signin" ? "otp" : "main");
                   setAuthStep("phone");
                   setOtp("");
                   setAuthError(null);
@@ -482,8 +747,161 @@ export default function AccountPage() {
                 Back
               </CustomerButton>
             </>
+          ) : authPanel === "otp" ? (
+            <>
+              <CustomerInput
+                label="Email (if used for OTP)"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+              <CustomerInput
+                label="Phone number"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+44..."
+                autoComplete="tel"
+              />
+              <CustomerButton
+                className="w-full"
+                isLoading={requestOtpMutation.isPending}
+                disabled={!phone.trim()}
+                onClick={() => requestOtpMutation.mutate()}
+              >
+                Send code
+              </CustomerButton>
+              <CustomerButton
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setAuthPanel("main");
+                  setAuthError(null);
+                  setAuthInfo(null);
+                }}
+              >
+                Back to password
+              </CustomerButton>
+            </>
+          ) : authMode === "signup" ? (
+            <>
+              <CustomerInput
+                label="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Jane Doe"
+                autoComplete="name"
+              />
+              <CustomerInput
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+              <CustomerInput
+                label="Phone number"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+44..."
+                autoComplete="tel"
+              />
+              <CustomerInput
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <CustomerInput
+                label="Confirm password"
+                type="password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
+              <CustomerButton
+                className="w-full"
+                isLoading={requestOtpMutation.isPending}
+                disabled={!signupReady}
+                onClick={() => requestOtpMutation.mutate()}
+              >
+                Send code
+              </CustomerButton>
+            </>
+          ) : (
+            <>
+              {showPasskeyCta && (
+                <CustomerButton
+                  className="w-full"
+                  variant="secondary"
+                  isLoading={passkeyLoginMutation.isPending}
+                  onClick={() => passkeyLoginMutation.mutate()}
+                >
+                  <Fingerprint className="h-4 w-4" />
+                  Use fingerprint / Face ID
+                </CustomerButton>
+              )}
+              <CustomerInput
+                label="Phone number"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+44..."
+                autoComplete="tel"
+              />
+              <CustomerInput
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <CustomerButton
+                className="w-full"
+                isLoading={passwordLoginMutation.isPending}
+                disabled={!phone.trim() || !password}
+                onClick={() => passwordLoginMutation.mutate()}
+              >
+                Sign in
+              </CustomerButton>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  className="text-center text-xs text-[var(--muted)] underline-offset-2 hover:underline"
+                  onClick={() => {
+                    setAuthPanel("otp");
+                    setAuthMode("signin");
+                    setAuthStep("phone");
+                    setAuthError(null);
+                    setAuthInfo(null);
+                  }}
+                >
+                  Use a one-time code instead
+                </button>
+                <button
+                  type="button"
+                  className="text-center text-xs text-[var(--muted)] underline-offset-2 hover:underline"
+                  onClick={() => {
+                    setAuthPanel("forgot");
+                    setAuthStep("phone");
+                    setOtp("");
+                    setPassword("");
+                    setPasswordConfirm("");
+                    setAuthError(null);
+                    setAuthInfo(null);
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </>
           )}
-          {authInfo && <p className="text-sm text-emerald-400">{authInfo}</p>}
+          {authInfo && <p className="text-sm text-emerald-600">{authInfo}</p>}
           {authError && <p className="text-sm text-red-400">{authError}</p>}
         </div>
 
@@ -495,12 +913,38 @@ export default function AccountPage() {
           Just load order history by phone (no login)
         </button>
 
-        <p className="mt-8 text-center text-xs text-[var(--muted)]">
-          Business owner?{" "}
-          <Link href="/ops/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
-            Admin login
-          </Link>
-        </p>
+        <ModalPortal open={!!authPopup} onClose={() => setAuthPopup(null)}>
+          <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-popup-title"
+              className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
+            >
+              <h2 id="auth-popup-title" className="text-lg font-semibold tracking-tight">
+                Account already exists
+              </h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">{authPopup}</p>
+              <div className="mt-5 flex flex-col gap-2">
+                <CustomerButton
+                  className="w-full"
+                  onClick={() => {
+                    setAuthPopup(null);
+                    setAuthMode("signin");
+                    setAuthPanel("main");
+                    setAuthStep("phone");
+                    setAuthError(null);
+                  }}
+                >
+                  Go to sign in
+                </CustomerButton>
+                <CustomerButton variant="ghost" className="w-full" onClick={() => setAuthPopup(null)}>
+                  Close
+                </CustomerButton>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
       </div>
     );
   }
@@ -682,6 +1126,37 @@ export default function AccountPage() {
         </CustomerRouteLink>
       )}
 
+      {showPasskeyOffer && passkeyAvailable && (
+        <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Fingerprint className="h-5 w-5 text-[var(--primary)]" />
+            <h2 className="font-semibold">Enable fingerprint / Face ID</h2>
+          </div>
+          <p className="mb-3 text-xs text-[var(--muted)]">
+            Sign in faster next time without waiting for a code.
+          </p>
+          <div className="flex gap-2">
+            <CustomerButton
+              className="flex-1"
+              isLoading={enrollPasskeyMutation.isPending}
+              onClick={() => enrollPasskeyMutation.mutate()}
+            >
+              Enable
+            </CustomerButton>
+            <CustomerButton
+              variant="ghost"
+              className="flex-1"
+              onClick={() => {
+                localStorage.setItem(passkeyOfferDismissKey(tenantSlug), "1");
+                setShowPasskeyOffer(false);
+              }}
+            >
+              Not now
+            </CustomerButton>
+          </div>
+        </div>
+      )}
+
       {/* Loyalty */}
       {loyaltyBlock && (
         <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -757,25 +1232,27 @@ export default function AccountPage() {
         </div>
       )}
 
-      {/* App install */}
+      {/* App install — hide when this device already runs / has the customer PWA */}
+      {!pwaInstalledHere && !(me.app_installed || install?.app_installed) && (
       <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <div className="mb-2 flex items-center gap-2">
           <Smartphone className="h-5 w-5 text-[var(--primary)]" />
           <h2 className="font-semibold">App on this device</h2>
         </div>
         <p className="text-sm text-[var(--muted)]">
-          {me.app_installed || install?.app_installed
-            ? "Installed — you’re set for push updates and loyalty perks."
-            : "Not installed yet. Add the app for a faster experience."}
+          Not installed yet. Add the app for a faster experience.
         </p>
-        {install?.eligible && !install.app_installed && (
+        {install?.eligible && (
           <CustomerButton className="mt-3 w-full" onClick={() => requestPwaInstallUi()}>
             Install &amp; claim {install.points} points
           </CustomerButton>
         )}
-        {install?.eligible && install.app_installed && !install.claimed && (
+      </div>
+      )}
+      {!pwaInstalledHere && install?.eligible && install.app_installed && !install.claimed && (
+        <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <CustomerButton
-            className="mt-3 w-full"
+            className="w-full"
             onClick={() => {
               void import("@/lib/pwa-install").then((m) => m.tryClaimPwaInstallReward()).then(() => {
                 queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
@@ -784,8 +1261,8 @@ export default function AccountPage() {
           >
             Claim {install.points} install points
           </CustomerButton>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Orders */}
       <div className="mb-4">
@@ -881,7 +1358,7 @@ export default function AccountPage() {
           <input
             type="checkbox"
             className="h-4 w-4 accent-[var(--secondary)]"
-            checked={!!prefs?.push_enabled}
+            checked={prefs?.push_enabled ?? true}
             onChange={(e) => {
               setPrefsMsg(null);
               prefsMutation.mutate({ push_enabled: e.target.checked });
@@ -893,7 +1370,7 @@ export default function AccountPage() {
           <input
             type="checkbox"
             className="h-4 w-4 accent-[var(--secondary)]"
-            checked={!!prefs?.whatsapp_enabled}
+            checked={prefs?.whatsapp_enabled ?? true}
             onChange={(e) => {
               setPrefsMsg(null);
               prefsMutation.mutate({ whatsapp_enabled: e.target.checked });
@@ -905,7 +1382,7 @@ export default function AccountPage() {
           <input
             type="checkbox"
             className="h-4 w-4 accent-[var(--secondary)]"
-            checked={!!prefs?.email_enabled}
+            checked={prefs?.email_enabled ?? true}
             onChange={(e) => {
               setPrefsMsg(null);
               prefsMutation.mutate({ email_enabled: e.target.checked });
@@ -1068,6 +1545,99 @@ export default function AccountPage() {
         </div>
 
         <div className="mt-6 border-t border-[var(--border)] pt-4">
+          <div className="mb-3 flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-[var(--primary)]" />
+            <h3 className="text-sm font-medium">Sign-in security</h3>
+          </div>
+          {customer.has_password ? (
+            <CustomerInput
+              label="Current password"
+              type="password"
+              value={securityCurrentPassword}
+              onChange={(e) => setSecurityCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+              className="mb-2"
+            />
+          ) : (
+            <p className="mb-2 text-xs text-[var(--muted)]">
+              Set a password so you can sign in without a one-time code.
+            </p>
+          )}
+          <CustomerInput
+            label={customer.has_password ? "New password" : "Password"}
+            type="password"
+            value={securityPassword}
+            onChange={(e) => setSecurityPassword(e.target.value)}
+            autoComplete="new-password"
+            className="mb-2"
+          />
+          <CustomerInput
+            label="Confirm password"
+            type="password"
+            value={securityPasswordConfirm}
+            onChange={(e) => setSecurityPasswordConfirm(e.target.value)}
+            autoComplete="new-password"
+            className="mb-2"
+          />
+          <CustomerButton
+            className="mb-4 w-full"
+            isLoading={setPasswordMutation.isPending}
+            disabled={
+              securityPassword.length < 8 ||
+              securityPassword !== securityPasswordConfirm ||
+              (!!customer.has_password && !securityCurrentPassword)
+            }
+            onClick={() => {
+              setSecurityMsg(null);
+              setPasswordMutation.mutate();
+            }}
+          >
+            {customer.has_password ? "Change password" : "Set password"}
+          </CustomerButton>
+
+          {passkeyAvailable && (
+            <>
+              <p className="mb-2 text-xs text-[var(--muted)]">Passkeys on this account</p>
+              <ul className="mb-3 space-y-2">
+                {(passkeysData?.credentials ?? []).map((cred) => (
+                  <li
+                    key={cred.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm"
+                  >
+                    <span className="truncate">{cred.device_label || "Passkey"}</span>
+                    <CustomerButton
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-xs"
+                      disabled={deletePasskeyMutation.isPending}
+                      onClick={() => deletePasskeyMutation.mutate(cred.id)}
+                    >
+                      Remove
+                    </CustomerButton>
+                  </li>
+                ))}
+                {(passkeysData?.credentials?.length ?? 0) === 0 && (
+                  <li className="text-xs text-[var(--muted)]">No passkeys yet</li>
+                )}
+              </ul>
+              <CustomerButton
+                variant="secondary"
+                className="w-full"
+                isLoading={enrollPasskeyMutation.isPending}
+                onClick={() => {
+                  setSecurityMsg(null);
+                  enrollPasskeyMutation.mutate();
+                }}
+              >
+                <Fingerprint className="h-4 w-4" />
+                Add fingerprint / Face ID
+              </CustomerButton>
+            </>
+          )}
+          {securityMsg && <p className="mt-2 text-xs text-[var(--muted)]">{securityMsg}</p>}
+        </div>
+
+        <div className="mt-6 border-t border-[var(--border)] pt-4">
           <h3 className="mb-2 text-sm font-medium">Change phone</h3>
           <p className="mb-2 text-xs text-[var(--muted)]">Current: {customer.phone ?? "—"}</p>
           {phoneStep === "idle" ? (
@@ -1131,13 +1701,6 @@ export default function AccountPage() {
           Track Orders
         </CustomerButton>
       </CustomerRouteLink>
-
-      <p className="mt-8 text-center text-xs text-[var(--muted)]">
-        Business owner?{" "}
-        <Link href="/ops/login" className="text-[var(--secondary)] underline-offset-2 hover:underline">
-          Admin login
-        </Link>
-      </p>
 
       {reorderTarget && reorderPhone && (
         <ReorderModal

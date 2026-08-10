@@ -218,7 +218,15 @@ export interface Customer {
   phone?: string;
   app_installed?: boolean;
   app_installed_at?: string | null;
+  has_password?: boolean;
+  has_passkeys?: boolean;
   profile?: CustomerProfile;
+}
+
+export interface CustomerPasskeyCredential {
+  id: string;
+  device_label?: string | null;
+  created_at?: string | null;
 }
 
 export interface CustomerAddress {

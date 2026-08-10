@@ -46,7 +46,7 @@ class CustomerNotificationController extends Controller
             $data['name'] ?? null,
             $data['push_enabled'],
             $data['whatsapp_enabled'],
-            $data['email_enabled'] ?? false,
+            $data['email_enabled'] ?? true,
         );
 
         return ApiResponse::success([

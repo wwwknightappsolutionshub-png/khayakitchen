@@ -141,14 +141,24 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'throttle:6,1'])->group(function () {
         Route::post('/customer/auth/request-otp', [CustomerAccountController::class, 'requestOtp']);
+        Route::post('/customer/auth/forgot-password', [CustomerAccountController::class, 'forgotPassword']);
+        Route::post('/customer/auth/passkey/login/options', [CustomerAccountController::class, 'passkeyLoginOptions']);
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'throttle:10,1'])->group(function () {
         Route::post('/customer/auth/verify-otp', [CustomerAccountController::class, 'verifyOtp']);
+        Route::post('/customer/auth/login-password', [CustomerAccountController::class, 'loginPassword']);
+        Route::post('/customer/auth/reset-password', [CustomerAccountController::class, 'resetPassword']);
+        Route::post('/customer/auth/passkey/login/verify', [CustomerAccountController::class, 'passkeyLoginVerify']);
     });
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'customer.session', 'throttle:api'])->group(function () {
         Route::post('/customer/auth/logout', [CustomerAccountController::class, 'logout']);
+        Route::post('/customer/auth/set-password', [CustomerAccountController::class, 'setPassword']);
+        Route::post('/customer/auth/passkey/register/options', [CustomerAccountController::class, 'passkeyRegisterOptions']);
+        Route::post('/customer/auth/passkey/register/verify', [CustomerAccountController::class, 'passkeyRegisterVerify']);
+        Route::get('/customer/auth/passkeys', [CustomerAccountController::class, 'listPasskeys']);
+        Route::delete('/customer/auth/passkeys/{id}', [CustomerAccountController::class, 'destroyPasskey']);
         Route::get('/customer/account/me', [CustomerAccountController::class, 'me']);
         Route::patch('/customer/account/me', [CustomerAccountController::class, 'updateMe']);
         Route::post('/customer/account/phone/request-otp', [CustomerAccountController::class, 'requestPhoneChange']);

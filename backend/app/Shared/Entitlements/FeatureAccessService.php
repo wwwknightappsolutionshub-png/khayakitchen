@@ -12,6 +12,7 @@ use App\Modules\Pricing\Domain\Models\TenantSubscription;
 use App\Modules\Pricing\Domain\ValueObjects\PlanLimits;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class FeatureAccessService
 {
@@ -219,8 +220,43 @@ class FeatureAccessService
     public function assertAccess(string $featureKey, ?string $tenantId = null, ?User $user = null): void
     {
         if (! $this->canAccess($featureKey, $tenantId, $user)) {
-            abort(403, "Feature '{$featureKey}' is not available on your plan");
+            abort(403, $this->unavailableForKitchenMessage($featureKey));
         }
+    }
+
+    /**
+     * Customer-facing copy when a kitchen has not enabled / entitled a feature.
+     */
+    public function unavailableForKitchenMessage(string $featureKey): string
+    {
+        return self::formatUnavailableForKitchenMessage(
+            $this->featureDisplayName($featureKey),
+        );
+    }
+
+    public function featureDisplayName(string $featureKey): string
+    {
+        $name = Feature::query()->where('key', $featureKey)->value('name');
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        return self::humanizeFeatureKey($featureKey);
+    }
+
+    public static function formatUnavailableForKitchenMessage(string $featureName): string
+    {
+        return 'This feature "'.$featureName.'" is not yet activated for the kitchen';
+    }
+
+    public static function humanizeFeatureKey(string $featureKey): string
+    {
+        return Str::title(str_replace(['_', '.'], ' ', $featureKey));
+    }
+
+    public static function unavailableMessageForKey(string $featureKey): string
+    {
+        return self::formatUnavailableForKitchenMessage(self::humanizeFeatureKey($featureKey));
     }
 
     public function getLimits(?string $tenantId = null): ?PlanLimits

@@ -40,11 +40,8 @@ export default function OrderingEntryPage() {
     if (review === "1") qs.set("review", "1");
     const query = qs.toString();
 
-    if (meal || review === "1") {
-      router.replace(query ? `/menu?${query}` : "/menu");
-    } else {
-      router.replace(ref ? `/?ref=${encodeURIComponent(ref)}` : "/");
-    }
+    // PWA / kitchen link entry: always land on the menu (not home/login splash).
+    router.replace(query ? `/menu?${query}` : "/menu");
   }, [slug, router, queryClient, clearCart, searchParams]);
 
   return (

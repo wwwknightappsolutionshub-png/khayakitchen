@@ -200,4 +200,34 @@ class CustomerAccountSystemTest extends TestCase
             'email' => 'newacct@example.com',
         ]);
     }
+
+    public function test_signup_rejects_duplicate_phone_and_email(): void
+    {
+        Mail::fake();
+
+        Customer::create([
+            'tenant_id' => \App\Modules\Auth\Domain\Models\Tenant::where('slug', 'pilot')->value('id'),
+            'name' => 'Existing',
+            'phone' => '+15551237777',
+            'email' => 'taken@example.com',
+        ]);
+
+        $this->postJson('/api/v1/customer/auth/request-otp', [
+            'phone' => '+15551237777',
+            'email' => 'fresh@example.com',
+            'name' => 'Dup Phone',
+            'mode' => 'signup',
+        ], ['X-Tenant-Slug' => 'pilot'])
+            ->assertStatus(422)
+            ->assertJsonPath('details.phone.0', 'An account already exists with this phone number. Sign in instead.');
+
+        $this->postJson('/api/v1/customer/auth/request-otp', [
+            'phone' => '+15551239999',
+            'email' => 'taken@example.com',
+            'name' => 'Dup Email',
+            'mode' => 'signup',
+        ], ['X-Tenant-Slug' => 'pilot'])
+            ->assertStatus(422)
+            ->assertJsonPath('details.email.0', 'An account already exists with this email address. Sign in instead.');
+    }
 }

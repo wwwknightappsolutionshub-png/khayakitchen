@@ -536,7 +536,7 @@ class RevenueRecoveryCampaignService
         if (! $this->featureAccessService->canAccess(self::FEATURE_KEY)
             && ! $this->featureAccessService->canAccess(TenantRevenueRecoverySettingsService::FEATURE_TIME_BASED)
             && ! $this->featureAccessService->canAccess(TenantRevenueRecoverySettingsService::FEATURE_PROXIMITY)) {
-            abort(403, 'Revenue Recovery is not available on your plan');
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage('revenue_recovery'));
         }
     }
 

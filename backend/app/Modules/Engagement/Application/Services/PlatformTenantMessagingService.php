@@ -37,7 +37,7 @@ class PlatformTenantMessagingService
 
         $featureKey = $channel === 'push' ? self::FEATURE_PUSH : self::FEATURE_EMAIL;
         if (! $this->featureAccessService->canAccess($featureKey, $tenantId)) {
-            abort(403, "Feature '{$featureKey}' is not available for this tenant");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage($featureKey));
         }
 
         $tenant = Tenant::withoutGlobalScopes()->findOrFail($tenantId);

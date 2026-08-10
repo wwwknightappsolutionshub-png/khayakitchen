@@ -108,6 +108,7 @@ export function WelcomeSplashGate() {
   const handleGuest = () => {
     markWelcomeSeen();
     finishSplash();
+    router.push("/menu");
   };
 
   const handleSignup = () => {

@@ -28,7 +28,7 @@ class MealLikeService
     {
         $tenantId = $this->tenantContext->id();
         if (! $tenantId || ! $this->featureAccessService->canAccess(self::FEATURE_KEY, $tenantId)) {
-            abort(403, "Feature '".self::FEATURE_KEY."' is not available on your plan");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage(self::FEATURE_KEY));
         }
     }
 

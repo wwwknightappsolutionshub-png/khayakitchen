@@ -41,7 +41,13 @@ export const customerAuthService = {
     );
   },
 
-  async verifyOtp(payload: { phone: string; otp: string; email?: string }) {
+  async verifyOtp(payload: {
+    phone: string;
+    otp: string;
+    email?: string;
+    password?: string;
+    password_confirmation?: string;
+  }) {
     const result = await api.post<{
       session_token: string;
       expires_at: string;
@@ -53,6 +59,117 @@ export const customerAuthService = {
     if (result.customer.name) localStorage.setItem("khayaos-customer-name", result.customer.name);
     if (result.customer.email) localStorage.setItem("khayaos-customer-email", result.customer.email);
     return result;
+  },
+
+  async loginWithPassword(payload: { phone: string; password: string }) {
+    const result = await api.post<{
+      session_token: string;
+      expires_at: string;
+      customer: Customer;
+    }>("/customer/auth/login-password", payload, { skipAuth: true });
+    this.setSessionToken(result.session_token);
+    if (result.customer.id) localStorage.setItem("khayaos-customer-id", result.customer.id);
+    if (result.customer.phone) localStorage.setItem("khayaos-customer-phone", result.customer.phone);
+    if (result.customer.name) localStorage.setItem("khayaos-customer-name", result.customer.name);
+    if (result.customer.email) localStorage.setItem("khayaos-customer-email", result.customer.email);
+    return result;
+  },
+
+  async forgotPassword(payload: { phone: string; email?: string }) {
+    return api.post<{ sent: boolean; channel: string; expires_in_seconds: number }>(
+      "/customer/auth/forgot-password",
+      payload,
+      { skipAuth: true },
+    );
+  },
+
+  async resetPassword(payload: {
+    phone: string;
+    otp: string;
+    password: string;
+    password_confirmation: string;
+  }) {
+    const result = await api.post<{
+      session_token: string;
+      expires_at: string;
+      customer: Customer;
+    }>("/customer/auth/reset-password", payload, { skipAuth: true });
+    this.setSessionToken(result.session_token);
+    if (result.customer.id) localStorage.setItem("khayaos-customer-id", result.customer.id);
+    if (result.customer.phone) localStorage.setItem("khayaos-customer-phone", result.customer.phone);
+    if (result.customer.name) localStorage.setItem("khayaos-customer-name", result.customer.name);
+    if (result.customer.email) localStorage.setItem("khayaos-customer-email", result.customer.email);
+    return result;
+  },
+
+  async setPassword(payload: {
+    password: string;
+    password_confirmation: string;
+    current_password?: string;
+  }) {
+    return api.post<{ customer: Customer }>("/customer/auth/set-password", payload, {
+      skipAuth: true,
+      headers: this.sessionHeaders(),
+    });
+  },
+
+  async passkeyRegisterOptions() {
+    return api.post<Record<string, unknown> & { challengeId: string }>(
+      "/customer/auth/passkey/register/options",
+      {},
+      { skipAuth: true, headers: this.sessionHeaders() },
+    );
+  },
+
+  async passkeyRegisterVerify(payload: {
+    challengeId: string;
+    credential: Record<string, unknown>;
+    device_label?: string;
+  }) {
+    return api.post<{ credential: { id: string; device_label?: string | null; created_at?: string } }>(
+      "/customer/auth/passkey/register/verify",
+      payload,
+      { skipAuth: true, headers: this.sessionHeaders() },
+    );
+  },
+
+  async passkeyLoginOptions(phone?: string) {
+    return api.post<Record<string, unknown> & { challengeId: string }>(
+      "/customer/auth/passkey/login/options",
+      { phone },
+      { skipAuth: true },
+    );
+  },
+
+  async passkeyLoginVerify(payload: {
+    challengeId: string;
+    credential: Record<string, unknown>;
+  }) {
+    const result = await api.post<{
+      session_token: string;
+      expires_at: string;
+      customer: Customer;
+    }>("/customer/auth/passkey/login/verify", payload, { skipAuth: true });
+    this.setSessionToken(result.session_token);
+    if (result.customer.id) localStorage.setItem("khayaos-customer-id", result.customer.id);
+    if (result.customer.phone) localStorage.setItem("khayaos-customer-phone", result.customer.phone);
+    if (result.customer.name) localStorage.setItem("khayaos-customer-name", result.customer.name);
+    if (result.customer.email) localStorage.setItem("khayaos-customer-email", result.customer.email);
+    return result;
+  },
+
+  async listPasskeys() {
+    return api.get<{ credentials: Array<{ id: string; device_label?: string | null; created_at?: string }> }>(
+      "/customer/auth/passkeys",
+      { skipAuth: true, headers: this.sessionHeaders() },
+    );
+  },
+
+  async deletePasskey(id: string) {
+    return api.delete<{ deleted: boolean }>(`/customer/auth/passkeys/${id}`, {
+      skipAuth: true,
+      headers: this.sessionHeaders(),
+    });
   },
 
   async logout() {

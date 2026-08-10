@@ -19,17 +19,28 @@ class Customer extends Model
         'name',
         'email',
         'phone',
+        'password',
         'referred_by_customer_id',
         'app_installed_at',
         'created_by',
         'updated_by',
     ];
 
+    protected $hidden = [
+        'password',
+    ];
+
     protected function casts(): array
     {
         return [
             'app_installed_at' => 'datetime',
+            'password' => 'hashed',
         ];
+    }
+
+    public function webauthnCredentials(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerWebAuthnCredential::class, 'customer_id');
     }
 
     public function profile(): HasOne

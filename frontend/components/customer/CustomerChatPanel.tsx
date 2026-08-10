@@ -10,6 +10,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useChatTyping, useTypingPublisher } from "@/hooks/useChatTyping";
 import { cn } from "@/lib/utils";
+import { ApiClientError } from "@/lib/api-client";
 import type { ChatMessage } from "@/lib/types";
 
 const PHONE_STORAGE_KEY = "khayaos-customer-phone";
@@ -106,9 +107,13 @@ export function CustomerChatPanel() {
   const [error, setError] = useState<string | null>(null);
   const pollInterval = useHybridInterval(3_000, 8_000);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const autoOpenAttempted = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      autoOpenAttempted.current = false;
+      return;
+    }
     setPhone(localStorage.getItem(PHONE_STORAGE_KEY) ?? "");
     setName(localStorage.getItem(NAME_STORAGE_KEY) ?? "");
   }, [open]);
@@ -133,15 +138,6 @@ export function CustomerChatPanel() {
     retry: false,
   });
 
-  useEffect(() => {
-    // Clear sticky errors after a successful poll/refetch (isSuccess alone won't re-fire).
-    if (thread.isSuccess && thread.dataUpdatedAt) {
-      setError(null);
-    } else if (thread.isError && thread.error) {
-      setError(thread.error instanceof Error ? thread.error.message : "Chat failed");
-    }
-  }, [thread.isSuccess, thread.isError, thread.error, thread.dataUpdatedAt]);
-
   const openChat = useMutation({
     mutationFn: () =>
       engagementService.openCustomerChat({
@@ -159,6 +155,36 @@ export function CustomerChatPanel() {
     },
     onError: (err: Error) => setError(err.message),
   });
+
+  // Stale localStorage thread IDs 404 after DB reset / tenant switch / ownership change.
+  useEffect(() => {
+    if (!open || !threadId || !thread.isError || !thread.error) return;
+
+    const status = thread.error instanceof ApiClientError ? thread.error.status : 0;
+    if (status === 404 || status === 403) {
+      localStorage.removeItem(THREAD_STORAGE_KEY);
+      setThreadId(null);
+      setError(null);
+      autoOpenAttempted.current = false;
+      queryClient.removeQueries({ queryKey: ["customer-chat", threadId] });
+      return;
+    }
+
+    setError(thread.error instanceof Error ? thread.error.message : "Chat failed");
+  }, [open, threadId, thread.isError, thread.error, queryClient]);
+
+  useEffect(() => {
+    if (thread.isSuccess && thread.dataUpdatedAt) {
+      setError(null);
+    }
+  }, [thread.isSuccess, thread.dataUpdatedAt]);
+
+  // Logged-in / returning customers: open (or reopen) a thread automatically.
+  useEffect(() => {
+    if (!open || threadId || openChat.isPending || autoOpenAttempted.current) return;
+    autoOpenAttempted.current = true;
+    openChat.mutate();
+  }, [open, threadId, openChat.isPending, openChat.mutate]);
 
   const send = useMutation({
     mutationFn: () => {
@@ -224,28 +250,37 @@ export function CustomerChatPanel() {
 
             {!threadId && (
               <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm text-[var(--muted)]">
-                  Guests can chat without a phone. Add a phone if you already ordered with one.
-                </p>
-                <input
-                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm"
-                  placeholder="Your name (optional)"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <input
-                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm"
-                  placeholder="Phone (optional for guests)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-                <Button
-                  className="w-full"
-                  disabled={openChat.isPending}
-                  onClick={() => openChat.mutate()}
-                >
-                  Start chat
-                </Button>
+                {openChat.isPending || (autoOpenAttempted.current && !openChat.isError) ? (
+                  <p className="text-sm text-[var(--muted)]">Connecting to chat…</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-[var(--muted)]">
+                      Guests can chat without a phone. Add a phone if you already ordered with one.
+                    </p>
+                    <input
+                      className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm"
+                      placeholder="Your name (optional)"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    <input
+                      className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm"
+                      placeholder="Phone (optional for guests)"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                    <Button
+                      className="w-full"
+                      disabled={openChat.isPending}
+                      onClick={() => {
+                        autoOpenAttempted.current = true;
+                        openChat.mutate();
+                      }}
+                    >
+                      Start chat
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 

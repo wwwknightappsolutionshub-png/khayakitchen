@@ -47,7 +47,7 @@ class StaffPerformanceService
         $entitled = $this->featureAccessService->canAccess(self::FEATURE_KEY, $tenantId);
 
         if (! $entitled) {
-            abort(403, "Feature '".self::FEATURE_KEY."' is not available on your plan");
+            abort(403, $this->featureAccessService->unavailableForKitchenMessage(self::FEATURE_KEY));
         }
 
         $roles = match ($role) {
