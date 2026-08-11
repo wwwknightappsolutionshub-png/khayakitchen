@@ -1,42 +1,42 @@
 {
-  "name": "KhayaOS Ops",
-  "short_name": "Khaya Ops",
-  "description": "Kitchen and staff operating system for KhayaOS",
-  "id": "/ops",
-  "start_url": "/ops/login",
-  "scope": "/ops/",
+  "name": "KhayaOS Order",
+  "short_name": "Order",
+  "description": "Order from your kitchen on KhayaOS",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0F0F10",
-  "theme_color": "#2D6A4F",
+  "background_color": "#F7F6F3",
+  "theme_color": "#E07A5F",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "related_applications": [
     {
       "platform": "webapp",
-      "url": "/manifest-ops.json"
+      "url": "/manifest.json"
     }
   ],
   "icons": [
     {
-      "src": "/icon-ops-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-ops-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-ops-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-ops.svg",
+      "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

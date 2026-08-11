@@ -84,4 +84,23 @@ class TenantPwaManifestTest extends TestCase
             'Ops PNG must be visually distinct from customer PNG',
         );
     }
+
+    public function test_root_manifest_json_is_order_not_ops(): void
+    {
+        $path = dirname(__DIR__, 3).DIRECTORY_SEPARATOR.'frontend'.DIRECTORY_SEPARATOR.'public'.DIRECTORY_SEPARATOR.'manifest.json';
+        $this->assertFileExists($path);
+
+        $manifest = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('/', $manifest['id']);
+        $this->assertSame('/', $manifest['start_url']);
+        $this->assertSame('/', $manifest['scope']);
+        $this->assertSame('standalone', $manifest['display']);
+        $this->assertStringNotContainsStringIgnoringCase('Ops', (string) $manifest['name']);
+        $this->assertStringNotContainsStringIgnoringCase('Ops', (string) $manifest['short_name']);
+        $this->assertNotSame('/ops/login', $manifest['start_url']);
+
+        $iconSrcs = collect($manifest['icons'] ?? [])->pluck('src')->implode(' ');
+        $this->assertStringContainsString('icon-192.png', $iconSrcs);
+        $this->assertStringNotContainsString('icon-ops', $iconSrcs);
+    }
 }

@@ -258,7 +258,15 @@ export default function AccountPage() {
       }),
     onSuccess: (res) => {
       setAuthError(null);
-      setAuthInfo(`Code sent via ${res.channel}. Expires in ${res.expires_in_seconds}s.`);
+      const destinations: string[] = [];
+      if (res.email_sent !== false && (res.channels?.includes("email") || res.channel?.includes("email"))) {
+        destinations.push("email");
+      }
+      if (res.whatsapp_sent !== false && (res.channels?.includes("whatsapp") || res.channel?.includes("whatsapp"))) {
+        destinations.push("WhatsApp");
+      }
+      const via = destinations.length > 0 ? destinations.join(" and ") : res.channel;
+      setAuthInfo(`Code sent to ${via}. It expires in 10 minutes.`);
       setAuthStep("otp");
       setAuthPanel("otp");
       localStorage.setItem(PHONE_STORAGE_KEY, phone.trim());

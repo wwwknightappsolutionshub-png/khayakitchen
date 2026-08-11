@@ -26,7 +26,11 @@ class CustomerAccountController extends Controller
     {
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                ($request->input('mode') === 'signup') ? 'required' : 'nullable',
+                'email',
+                'max:255',
+            ],
             'name' => ['nullable', 'string', 'max:255'],
             'mode' => ['nullable', 'in:signin,signup'],
         ]);

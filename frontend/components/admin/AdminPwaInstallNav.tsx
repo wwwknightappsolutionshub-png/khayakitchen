@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ModalFrame } from "@/components/ui/ModalFrame";
 import {
   type BeforeInstallPromptEvent,
+  activeManifestMatchesSurface,
   clearDeferredInstallPrompt,
   detectPwaInstalled,
   isAndroidDevice,
@@ -122,6 +123,12 @@ export function AdminPwaInstallNav({ onNavigate, className }: AdminPwaInstallNav
 
   const install = async () => {
     if (!deferredPrompt) return;
+    if (!activeManifestMatchesSurface("ops")) {
+      clearDeferredInstallPrompt();
+      setDeferredPrompt(null);
+      setError("Open Ops from /ops/login before installing the kitchen app.");
+      return;
+    }
 
     setBusy(true);
     setError(null);

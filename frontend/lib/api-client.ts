@@ -31,6 +31,10 @@ function getStoredToken(): string | null {
   return localStorage.getItem("khayaos_token");
 }
 
+export function getToken(): string | null {
+  return getStoredToken();
+}
+
 function getStaffTenantId(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(STAFF_TENANT_ID_KEY);

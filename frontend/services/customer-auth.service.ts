@@ -34,11 +34,14 @@ export const customerAuthService = {
     name?: string;
     mode?: "signin" | "signup";
   }) {
-    return api.post<{ sent: boolean; channel: string; expires_in_seconds: number }>(
-      "/customer/auth/request-otp",
-      payload,
-      { skipAuth: true },
-    );
+    return api.post<{
+      sent: boolean;
+      channel: string;
+      channels?: string[];
+      email_sent?: boolean;
+      whatsapp_sent?: boolean;
+      expires_in_seconds: number;
+    }>("/customer/auth/request-otp", payload, { skipAuth: true });
   },
 
   async verifyOtp(payload: {

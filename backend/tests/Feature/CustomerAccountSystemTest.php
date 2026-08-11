@@ -187,14 +187,24 @@ class CustomerAccountSystemTest extends TestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/v1/customer/auth/request-otp', [
+        $response = $this->postJson('/api/v1/customer/auth/request-otp', [
             'phone' => '+15551238888',
             'email' => 'newacct@example.com',
             'name' => 'Brand New',
             'mode' => 'signup',
-        ], ['X-Tenant-Slug' => 'pilot'])->assertOk();
+        ], ['X-Tenant-Slug' => 'pilot']);
 
-        Mail::assertSent(CustomerProximityOtpMail::class);
+        $response->assertOk();
+        $response->assertJsonPath('email_sent', true);
+        $response->assertJsonPath('whatsapp_sent', true);
+        $this->assertStringContainsString('email', (string) $response->json('channel'));
+        $this->assertStringContainsString('whatsapp', (string) $response->json('channel'));
+
+        Mail::assertSent(CustomerProximityOtpMail::class, function (CustomerProximityOtpMail $mail) {
+            return $mail->hasTo('newacct@example.com')
+                && $mail->otpCode !== ''
+                && $mail->purpose === 'verification';
+        });
         $this->assertDatabaseHas('customers', [
             'phone' => '+15551238888',
             'email' => 'newacct@example.com',

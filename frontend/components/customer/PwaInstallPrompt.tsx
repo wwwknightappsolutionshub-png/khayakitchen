@@ -8,6 +8,7 @@ import { useStorefront } from "@/hooks/useStorefront";
 import { SPLASH_COMPLETE_EVENT } from "@/lib/splash-events";
 import {
   type BeforeInstallPromptEvent,
+  activeManifestMatchesSurface,
   clearDeferredInstallPrompt,
   detectPwaInstalled,
   getDeferredInstallPrompt,
@@ -160,6 +161,11 @@ export function PwaInstallPrompt() {
 
   const install = async () => {
     if (!deferredPrompt) return;
+    if (!activeManifestMatchesSurface("customer")) {
+      clearDeferredInstallPrompt();
+      setDeferredPrompt(null);
+      return;
+    }
     setInstalling(true);
     try {
       await deferredPrompt.prompt();

@@ -15,6 +15,7 @@ use App\Modules\RevenueRecovery\Mail\CustomerProximityOtpMail;
 use App\Modules\TenantBranding\Application\Services\BrandingService;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -48,19 +49,23 @@ class CustomerAuthService
         $customer = Customer::where('phone', $phone)->first();
 
         if ($mode === 'signup') {
+            if (! $email) {
+                throw ValidationException::withMessages([
+                    'email' => ['Enter your email so we can send your verification code.'],
+                ]);
+            }
+
             if ($customer) {
                 throw ValidationException::withMessages([
                     'phone' => ['An account already exists with this phone number. Sign in instead.'],
                 ]);
             }
 
-            if ($email) {
-                $emailTaken = Customer::whereRaw('LOWER(email) = ?', [$email])->exists();
-                if ($emailTaken) {
-                    throw ValidationException::withMessages([
-                        'email' => ['An account already exists with this email address. Sign in instead.'],
-                    ]);
-                }
+            $emailTaken = Customer::whereRaw('LOWER(email) = ?', [$email])->exists();
+            if ($emailTaken) {
+                throw ValidationException::withMessages([
+                    'email' => ['An account already exists with this email address. Sign in instead.'],
+                ]);
             }
 
             $this->planLimitService->assertCustomerLimit($tenantId);
@@ -103,47 +108,19 @@ class CustomerAuthService
         $otp = (string) random_int(100000, 999999);
         $branding = $this->brandingService->getForTenant($tenantId);
         $restaurant = $branding->restaurant_name ?? 'Our kitchen';
-        $channels = [];
-        $emailSent = false;
-        $whatsappSent = false;
-
-        if ($deliveryEmail) {
-            try {
-                Mail::to($deliveryEmail)->send(new CustomerProximityOtpMail(
-                    $customer->name ?: 'there',
-                    $otp,
-                    $restaurant,
-                ));
-                $emailSent = true;
-                $channels[] = 'email';
-            } catch (\Throwable) {
-                // Parallel delivery — WhatsApp may still succeed.
-            }
-        }
-
-        if ($customer->phone && ! app()->runningUnitTests()) {
-            try {
-                $this->whatsAppProvider->send(
-                    $customer->phone,
-                    "Your {$restaurant} login code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
-                    ['type' => 'customer_otp', 'tenant_id' => $tenantId],
-                );
-                $whatsappSent = true;
-                $channels[] = 'whatsapp';
-            } catch (\Throwable) {
-                // Parallel delivery — email may still succeed.
-            }
-        } elseif ($customer->phone && app()->runningUnitTests()) {
-            $whatsappSent = true;
-            $channels[] = 'whatsapp';
-        }
-
-        if (! $emailSent && ! $whatsappSent) {
-            throw ValidationException::withMessages([
-                'phone' => ['Could not send a login code. Add an email on file or try again.'],
-            ]);
-        }
-
+        $delivered = $this->deliverOtpToEmailAndWhatsApp(
+            $customer,
+            $otp,
+            $restaurant,
+            $deliveryEmail,
+            $tenantId,
+            'verification',
+            'customer_otp',
+            "Your {$restaurant} verification code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
+        );
+        $channels = $delivered['channels'];
+        $emailSent = $delivered['email_sent'];
+        $whatsappSent = $delivered['whatsapp_sent'];
         $channel = implode('+', $channels);
 
         CustomerEmailOtp::create([
@@ -176,6 +153,8 @@ class CustomerAuthService
             'sent' => true,
             'channel' => $channel,
             'channels' => $channels,
+            'email_sent' => $emailSent,
+            'whatsapp_sent' => $whatsappSent,
             'expires_in_seconds' => self::OTP_TTL_MINUTES * 60,
             'customer_id' => $customer->id,
         ];
@@ -316,47 +295,19 @@ class CustomerAuthService
         $otp = (string) random_int(100000, 999999);
         $branding = $this->brandingService->getForTenant($tenantId);
         $restaurant = $branding->restaurant_name ?? 'Our kitchen';
-        $channels = [];
-        $emailSent = false;
-        $whatsappSent = false;
-
-        if ($deliveryEmail) {
-            try {
-                Mail::to($deliveryEmail)->send(new CustomerProximityOtpMail(
-                    $customer->name ?: 'there',
-                    $otp,
-                    $restaurant,
-                ));
-                $emailSent = true;
-                $channels[] = 'email';
-            } catch (\Throwable) {
-                // Parallel delivery — WhatsApp may still succeed.
-            }
-        }
-
-        if ($customer->phone && ! app()->runningUnitTests()) {
-            try {
-                $this->whatsAppProvider->send(
-                    $customer->phone,
-                    "Your {$restaurant} password reset code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
-                    ['type' => 'customer_password_reset', 'tenant_id' => $tenantId],
-                );
-                $whatsappSent = true;
-                $channels[] = 'whatsapp';
-            } catch (\Throwable) {
-                // Parallel delivery — email may still succeed.
-            }
-        } elseif ($customer->phone && app()->runningUnitTests()) {
-            $whatsappSent = true;
-            $channels[] = 'whatsapp';
-        }
-
-        if (! $emailSent && ! $whatsappSent) {
-            throw ValidationException::withMessages([
-                'phone' => ['Could not send a reset code. Add an email on file or try again.'],
-            ]);
-        }
-
+        $delivered = $this->deliverOtpToEmailAndWhatsApp(
+            $customer,
+            $otp,
+            $restaurant,
+            $deliveryEmail,
+            $tenantId,
+            'password reset',
+            'customer_password_reset',
+            "Your {$restaurant} password reset code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
+        );
+        $channels = $delivered['channels'];
+        $emailSent = $delivered['email_sent'];
+        $whatsappSent = $delivered['whatsapp_sent'];
         $channel = implode('+', $channels);
 
         CustomerEmailOtp::create([
@@ -611,6 +562,113 @@ class CustomerAuthService
         return preg_replace('/\s+/', '', trim($phone)) ?? '';
     }
 
+    /**
+     * Always attempt email (when address present) and WhatsApp in parallel.
+     *
+     * @return array{channels: list<string>, email_sent: bool, whatsapp_sent: bool}
+     */
+    private function deliverOtpToEmailAndWhatsApp(
+        Customer $customer,
+        string $otp,
+        string $restaurant,
+        ?string $deliveryEmail,
+        string $tenantId,
+        string $purpose,
+        string $whatsAppType,
+        string $whatsAppMessage,
+    ): array {
+        $channels = [];
+        $emailSent = false;
+        $whatsappSent = false;
+        $emailError = null;
+        $whatsappError = null;
+
+        if ($deliveryEmail) {
+            try {
+                $this->sendOtpMail(
+                    $deliveryEmail,
+                    new CustomerProximityOtpMail(
+                        $customer->name ?: 'there',
+                        $otp,
+                        $restaurant,
+                        $purpose,
+                    ),
+                );
+                $emailSent = true;
+                $channels[] = 'email';
+            } catch (\Throwable $e) {
+                $emailError = $e->getMessage();
+                Log::error('customer.auth.otp_email_failed', [
+                    'tenant_id' => $tenantId,
+                    'customer_id' => $customer->id,
+                    'email' => $deliveryEmail,
+                    'purpose' => $purpose,
+                    'error' => $emailError,
+                ]);
+            }
+        }
+
+        if ($customer->phone && app()->runningUnitTests()) {
+            $whatsappSent = true;
+            $channels[] = 'whatsapp';
+        } elseif ($customer->phone) {
+            try {
+                $this->whatsAppProvider->send(
+                    $customer->phone,
+                    $whatsAppMessage,
+                    ['type' => $whatsAppType, 'tenant_id' => $tenantId],
+                );
+                $whatsappSent = true;
+                $channels[] = 'whatsapp';
+            } catch (\Throwable $e) {
+                $whatsappError = $e->getMessage();
+                Log::error('customer.auth.otp_whatsapp_failed', [
+                    'tenant_id' => $tenantId,
+                    'customer_id' => $customer->id,
+                    'phone' => $customer->phone,
+                    'purpose' => $purpose,
+                    'error' => $whatsappError,
+                ]);
+            }
+        }
+
+        if (! $emailSent && ! $whatsappSent) {
+            $detail = trim(implode(' ', array_filter([$emailError, $whatsappError])));
+            throw ValidationException::withMessages([
+                'phone' => [
+                    $detail !== ''
+                        ? 'Could not send a verification code. '.$detail
+                        : 'Could not send a verification code to email or WhatsApp. Try again.',
+                ],
+            ]);
+        }
+
+        return [
+            'channels' => $channels,
+            'email_sent' => $emailSent,
+            'whatsapp_sent' => $whatsappSent,
+        ];
+    }
+
+    private function sendOtpMail(string $to, CustomerProximityOtpMail $mail): void
+    {
+        $mailer = (string) config('mail.default');
+        if ($mailer === 'log' && ! app()->runningUnitTests()) {
+            $smtpHost = (string) config('mail.mailers.smtp.host');
+            if ($smtpHost !== '' && ! in_array($smtpHost, ['127.0.0.1', 'localhost'], true)) {
+                Mail::mailer('smtp')->to($to)->send($mail);
+
+                return;
+            }
+
+            throw new \RuntimeException(
+                'Email delivery is set to log only. Set MAIL_MAILER=smtp on the server to send verification codes.',
+            );
+        }
+
+        Mail::to($to)->send($mail);
+    }
+
     public function requestPhoneChangeOtp(Customer $customer, string $newPhone): array
     {
         $tenantId = $this->tenantContext->id();
@@ -625,47 +683,19 @@ class CustomerAuthService
         $deliveryEmail = $customer->email;
         $branding = $this->brandingService->getForTenant($tenantId);
         $restaurant = $branding->restaurant_name ?? 'Our kitchen';
-        $channels = [];
-        $emailSent = false;
-        $whatsappSent = false;
-
-        if ($deliveryEmail) {
-            try {
-                Mail::to($deliveryEmail)->send(new CustomerProximityOtpMail(
-                    $customer->name ?: 'there',
-                    $otp,
-                    $restaurant,
-                ));
-                $emailSent = true;
-                $channels[] = 'email';
-            } catch (\Throwable) {
-                // Parallel delivery — WhatsApp may still succeed.
-            }
-        }
-
-        if (! app()->runningUnitTests()) {
-            try {
-                $this->whatsAppProvider->send(
-                    $customer->phone,
-                    "Your {$restaurant} phone-change code is {$otp}.",
-                    ['type' => 'phone_change_otp', 'tenant_id' => $tenantId],
-                );
-                $whatsappSent = true;
-                $channels[] = 'whatsapp';
-            } catch (\Throwable) {
-                // Parallel delivery — email may still succeed.
-            }
-        } else {
-            $whatsappSent = true;
-            $channels[] = 'whatsapp';
-        }
-
-        if (! $emailSent && ! $whatsappSent) {
-            throw ValidationException::withMessages([
-                'phone' => ['Could not send a verification code. Try again.'],
-            ]);
-        }
-
+        $delivered = $this->deliverOtpToEmailAndWhatsApp(
+            $customer,
+            $otp,
+            $restaurant,
+            $deliveryEmail,
+            $tenantId,
+            'phone-change',
+            'phone_change_otp',
+            "Your {$restaurant} phone-change code is {$otp}. It expires in ".self::OTP_TTL_MINUTES.' minutes.',
+        );
+        $channels = $delivered['channels'];
+        $emailSent = $delivered['email_sent'];
+        $whatsappSent = $delivered['whatsapp_sent'];
         $channel = implode('+', $channels);
 
         CustomerEmailOtp::create([

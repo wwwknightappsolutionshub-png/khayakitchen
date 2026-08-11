@@ -9,6 +9,7 @@ import { PwaBootGate } from "@/components/shared/PwaBootGate";
 import { PwaLifecycle } from "@/components/shared/PwaLifecycle";
 import { WrongSurfaceBanner } from "@/components/shared/WrongSurfaceBanner";
 import { ChunkLoadRecovery } from "@/components/shared/ChunkLoadRecovery";
+import { CustomerPwaLaunchRecovery } from "@/components/shared/CustomerPwaLaunchRecovery";
 import { getBuildId } from "@/lib/build-id";
 import "./globals.css";
 
@@ -97,6 +98,7 @@ export default function RootLayout({
             <PwaLifecycle />
             <WrongSurfaceBanner />
             <ChunkLoadRecovery />
+            <CustomerPwaLaunchRecovery />
             <AuthHydration>{children}</AuthHydration>
           </ToastProvider>
         </QueryProvider>

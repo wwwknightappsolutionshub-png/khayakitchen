@@ -115,6 +115,22 @@ export function clearDeferredInstallPrompt(): void {
   notifyInstallPromptListeners();
 }
 
+/** Active document manifest must match the surface about to call prompt(). */
+export function activeManifestMatchesSurface(surface: PwaSurface): boolean {
+  if (typeof document === "undefined") return false;
+  const links = Array.from(
+    document.querySelectorAll('link[rel="manifest"]'),
+  ) as HTMLLinkElement[];
+  if (links.length === 0) return false;
+  return links.some((link) => {
+    const href = link.href || link.getAttribute("href") || "";
+    if (surface === "ops") {
+      return href.includes("manifest-ops");
+    }
+    return href.includes("pwa-manifest");
+  });
+}
+
 /** True while the customer PWA install modal is visible (blocks Stay-in-the-loop). */
 export function isPwaInstallUiOpen(): boolean {
   return pwaInstallUiOpen;
