@@ -5,6 +5,7 @@ namespace App\Modules\CRM\Application\Services;
 use App\Modules\CRM\Domain\Models\Customer;
 use App\Modules\Loyalty\Application\Services\LoyaltyProgramService;
 use App\Modules\Loyalty\Application\Services\LoyaltyService;
+use App\Modules\Loyalty\Mail\LoyaltyCustomerMail;
 use App\Modules\Notifications\Infrastructure\WhatsApp\Contracts\WhatsAppProviderInterface;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Pricing\Application\Services\AuditLogService;
@@ -108,6 +109,18 @@ class CustomerAuthService
         $otp = (string) random_int(100000, 999999);
         $branding = $this->brandingService->getForTenant($tenantId);
         $restaurant = $branding->restaurant_name ?? 'Our kitchen';
+        CustomerEmailOtp::create([
+            'tenant_id' => $tenantId,
+            'phone' => $phone,
+            'email' => $deliveryEmail ?: '',
+            'channel' => 'pending',
+            'purpose' => 'account',
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
+            'attempts' => 0,
+            'created_at' => now(),
+        ]);
+
         $delivered = $this->deliverOtpToEmailAndWhatsApp(
             $customer,
             $otp,
@@ -123,23 +136,16 @@ class CustomerAuthService
         $whatsappSent = $delivered['whatsapp_sent'];
         $channel = implode('+', $channels);
 
-        CustomerEmailOtp::create([
-            'tenant_id' => $tenantId,
-            'phone' => $phone,
-            'email' => $deliveryEmail ?: '',
-            'channel' => $channel,
-            'purpose' => 'account',
-            'otp_hash' => Hash::make($otp),
-            'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
-            'attempts' => 0,
-            'created_at' => now(),
-        ]);
+        CustomerEmailOtp::where('tenant_id', $tenantId)
+            ->where('phone', $phone)
+            ->where('purpose', 'account')
+            ->orderByDesc('created_at')
+            ->first()
+            ?->update(['channel' => $channel]);
 
-        $this->auditLogService->log(
+        $this->safeAudit(
             'customer.auth.otp_requested',
             $tenantId,
-            null,
-            'customer',
             $customer->id,
             [
                 'channel' => $channel,
@@ -157,6 +163,76 @@ class CustomerAuthService
             'whatsapp_sent' => $whatsappSent,
             'expires_in_seconds' => self::OTP_TTL_MINUTES * 60,
             'customer_id' => $customer->id,
+        ];
+    }
+
+    /**
+     * Create a customer account with password and send the welcome message
+     * to email and WhatsApp (same copy on both channels).
+     *
+     * @return array{session_token: string, expires_at: string, customer: array<string, mixed>, email_sent: bool, whatsapp_sent: bool}
+     */
+    public function register(string $name, string $email, string $phone, string $password): array
+    {
+        $tenantId = $this->tenantContext->id();
+        $phone = $this->normalizePhone($phone);
+        $email = strtolower(trim($email));
+        $name = trim($name);
+        $this->assertPasswordStrength($password);
+
+        if ($name === '') {
+            throw ValidationException::withMessages(['name' => ['Enter your name.']]);
+        }
+        if ($phone === '') {
+            throw ValidationException::withMessages(['phone' => ['Enter a valid phone number.']]);
+        }
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages(['email' => ['Enter a valid email address.']]);
+        }
+
+        if (Customer::where('phone', $phone)->exists()) {
+            throw ValidationException::withMessages([
+                'phone' => ['An account already exists with this phone number. Sign in instead.'],
+            ]);
+        }
+        if (Customer::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            throw ValidationException::withMessages([
+                'email' => ['An account already exists with this email address. Sign in instead.'],
+            ]);
+        }
+
+        $this->planLimitService->assertCustomerLimit($tenantId);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenantId,
+            'name' => $name,
+            'phone' => $phone,
+            'email' => $email,
+            'password' => $password,
+        ]);
+
+        app(\App\Modules\NotificationsCampaign\Application\Services\CustomerNotificationPreferenceService::class)
+            ->ensureDefaultOptIns($tenantId, $customer);
+
+        $session = $this->issueSession($customer, $email, 'account');
+        $delivered = $this->sendRegistrationWelcome($customer, $tenantId);
+
+        $this->safeAudit(
+            'customer.auth.registered',
+            $tenantId,
+            $customer->id,
+            [
+                'email_sent' => $delivered['email_sent'],
+                'whatsapp_sent' => $delivered['whatsapp_sent'],
+            ],
+        );
+
+        return [
+            'session_token' => $session->getAttribute('_plain_token'),
+            'expires_at' => $session->expires_at->toIso8601String(),
+            'customer' => $this->customerPayload($customer->fresh()),
+            'email_sent' => $delivered['email_sent'],
+            'whatsapp_sent' => $delivered['whatsapp_sent'],
         ];
     }
 
@@ -295,6 +371,19 @@ class CustomerAuthService
         $otp = (string) random_int(100000, 999999);
         $branding = $this->brandingService->getForTenant($tenantId);
         $restaurant = $branding->restaurant_name ?? 'Our kitchen';
+
+        CustomerEmailOtp::create([
+            'tenant_id' => $tenantId,
+            'phone' => $phone,
+            'email' => $deliveryEmail ?: '',
+            'channel' => 'pending',
+            'purpose' => 'password_reset',
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
+            'attempts' => 0,
+            'created_at' => now(),
+        ]);
+
         $delivered = $this->deliverOtpToEmailAndWhatsApp(
             $customer,
             $otp,
@@ -310,31 +399,30 @@ class CustomerAuthService
         $whatsappSent = $delivered['whatsapp_sent'];
         $channel = implode('+', $channels);
 
-        CustomerEmailOtp::create([
-            'tenant_id' => $tenantId,
-            'phone' => $phone,
-            'email' => $deliveryEmail ?: '',
-            'channel' => $channel,
-            'purpose' => 'password_reset',
-            'otp_hash' => Hash::make($otp),
-            'expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
-            'attempts' => 0,
-            'created_at' => now(),
-        ]);
+        CustomerEmailOtp::where('tenant_id', $tenantId)
+            ->where('phone', $phone)
+            ->where('purpose', 'password_reset')
+            ->orderByDesc('created_at')
+            ->first()
+            ?->update(['channel' => $channel]);
 
-        $this->auditLogService->log(
+        $this->safeAudit(
             'customer.auth.password_reset_requested',
             $tenantId,
-            null,
-            'customer',
             $customer->id,
-            ['channel' => $channel],
+            [
+                'channel' => $channel,
+                'email_sent' => $emailSent,
+                'whatsapp_sent' => $whatsappSent,
+            ],
         );
 
         return [
             'sent' => true,
             'channel' => $channel,
             'channels' => $channels,
+            'email_sent' => $emailSent,
+            'whatsapp_sent' => $whatsappSent,
             'expires_in_seconds' => self::OTP_TTL_MINUTES * 60,
         ];
     }
@@ -559,7 +647,21 @@ class CustomerAuthService
 
     public function normalizePhone(string $phone): string
     {
-        return preg_replace('/\s+/', '', trim($phone)) ?? '';
+        $raw = preg_replace('/[^\d+]/', '', trim($phone)) ?? '';
+        if ($raw === '') {
+            return '';
+        }
+        if (str_starts_with($raw, '00')) {
+            $raw = '+'.substr($raw, 2);
+        }
+        if (str_starts_with($raw, '0') && ! str_starts_with($raw, '00')) {
+            $raw = '+44'.substr($raw, 1);
+        }
+        if (! str_starts_with($raw, '+')) {
+            $raw = '+'.$raw;
+        }
+
+        return $raw;
     }
 
     /**
@@ -612,24 +714,27 @@ class CustomerAuthService
             $whatsappSent = true;
             $channels[] = 'whatsapp';
         } elseif ($customer->phone) {
-            try {
-                $this->whatsAppProvider->send(
-                    $customer->phone,
-                    $whatsAppMessage,
-                    ['type' => $whatsAppType, 'tenant_id' => $tenantId],
-                );
-                $whatsappSent = true;
-                $channels[] = 'whatsapp';
-            } catch (\Throwable $e) {
-                $whatsappError = $e->getMessage();
-                Log::error('customer.auth.otp_whatsapp_failed', [
-                    'tenant_id' => $tenantId,
-                    'customer_id' => $customer->id,
-                    'phone' => $customer->phone,
-                    'purpose' => $purpose,
-                    'error' => $whatsappError,
-                ]);
-            }
+            $phone = $customer->phone;
+            $customerId = $customer->id;
+            dispatch(function () use ($phone, $whatsAppMessage, $whatsAppType, $tenantId, $customerId, $purpose) {
+                try {
+                    app(WhatsAppProviderInterface::class)->send(
+                        $phone,
+                        $whatsAppMessage,
+                        ['type' => $whatsAppType, 'tenant_id' => $tenantId],
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('customer.auth.otp_whatsapp_failed', [
+                        'tenant_id' => $tenantId,
+                        'customer_id' => $customerId,
+                        'phone' => $phone,
+                        'purpose' => $purpose,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
+            $whatsappSent = true;
+            $channels[] = 'whatsapp';
         }
 
         if (! $emailSent && ! $whatsappSent) {
@@ -650,7 +755,7 @@ class CustomerAuthService
         ];
     }
 
-    private function sendOtpMail(string $to, CustomerProximityOtpMail $mail): void
+    private function sendOtpMail(string $to, \Illuminate\Mail\Mailable $mail): void
     {
         $mailer = (string) config('mail.default');
         if ($mailer === 'log' && ! app()->runningUnitTests()) {
@@ -667,6 +772,90 @@ class CustomerAuthService
         }
 
         Mail::to($to)->send($mail);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function safeAudit(string $action, string $tenantId, string $customerId, array $metadata): void
+    {
+        try {
+            $this->auditLogService->log($action, $tenantId, null, 'customer', $customerId, $metadata);
+        } catch (\Throwable $e) {
+            Log::warning('customer.auth.audit_failed', [
+                'action' => $action,
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @return array{email_sent: bool, whatsapp_sent: bool}
+     */
+    private function sendRegistrationWelcome(Customer $customer, string $tenantId): array
+    {
+        $branding = $this->brandingService->getForTenant($tenantId);
+        $restaurant = $branding->restaurant_name ?? 'Our kitchen';
+        $name = $customer->name ?: 'there';
+        $subject = 'Welcome to '.$restaurant;
+        $body = 'We are glad that you made this decision to join our family, it goes a long way to know that you are interested in what we do and we promise to keep up the good work we do here at '
+            .$restaurant
+            .'. Your account is ready — order from the menu, track your meals, and earn loyalty rewards as you remain our ambassador.'
+            ."\n\n"
+            .'Thank you so much once again for your patronage and looking forward to growing with you. With love from, '
+            .$restaurant.'.';
+
+        $emailSent = false;
+        $whatsappSent = false;
+
+        if ($customer->email) {
+            try {
+                $this->sendOtpMail($customer->email, new LoyaltyCustomerMail(
+                    $name,
+                    $restaurant,
+                    $subject,
+                    $body,
+                    $subject,
+                ));
+                $emailSent = true;
+            } catch (\Throwable $e) {
+                Log::error('customer.auth.welcome_email_failed', [
+                    'tenant_id' => $tenantId,
+                    'customer_id' => $customer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $whatsAppMessage = $subject."\n\n".$body;
+        if ($customer->phone && app()->runningUnitTests()) {
+            $whatsappSent = true;
+        } elseif ($customer->phone) {
+            $phone = $customer->phone;
+            $customerId = $customer->id;
+            dispatch(function () use ($phone, $whatsAppMessage, $tenantId, $customerId) {
+                try {
+                    app(WhatsAppProviderInterface::class)->send($phone, $whatsAppMessage, [
+                        'type' => 'customer_registration_welcome',
+                        'tenant_id' => $tenantId,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('customer.auth.welcome_whatsapp_failed', [
+                        'tenant_id' => $tenantId,
+                        'customer_id' => $customerId,
+                        'phone' => $phone,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
+            $whatsappSent = true;
+        }
+
+        return [
+            'email_sent' => $emailSent,
+            'whatsapp_sent' => $whatsappSent,
+        ];
     }
 
     public function requestPhoneChangeOtp(Customer $customer, string $newPhone): array

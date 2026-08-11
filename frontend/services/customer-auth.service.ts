@@ -64,6 +64,28 @@ export const customerAuthService = {
     return result;
   },
 
+  async register(payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    password_confirmation: string;
+  }) {
+    const result = await api.post<{
+      session_token: string;
+      expires_at: string;
+      customer: Customer;
+      email_sent?: boolean;
+      whatsapp_sent?: boolean;
+    }>("/customer/auth/register", payload, { skipAuth: true });
+    this.setSessionToken(result.session_token);
+    if (result.customer.id) localStorage.setItem("khayaos-customer-id", result.customer.id);
+    if (result.customer.phone) localStorage.setItem("khayaos-customer-phone", result.customer.phone);
+    if (result.customer.name) localStorage.setItem("khayaos-customer-name", result.customer.name);
+    if (result.customer.email) localStorage.setItem("khayaos-customer-email", result.customer.email);
+    return result;
+  },
+
   async loginWithPassword(payload: { phone: string; password: string }) {
     const result = await api.post<{
       session_token: string;
@@ -79,11 +101,14 @@ export const customerAuthService = {
   },
 
   async forgotPassword(payload: { phone: string; email?: string }) {
-    return api.post<{ sent: boolean; channel: string; expires_in_seconds: number }>(
-      "/customer/auth/forgot-password",
-      payload,
-      { skipAuth: true },
-    );
+    return api.post<{
+      sent: boolean;
+      channel: string;
+      channels?: string[];
+      email_sent?: boolean;
+      whatsapp_sent?: boolean;
+      expires_in_seconds: number;
+    }>("/customer/auth/forgot-password", payload, { skipAuth: true });
   },
 
   async resetPassword(payload: {

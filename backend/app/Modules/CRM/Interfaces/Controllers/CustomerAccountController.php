@@ -64,6 +64,25 @@ class CustomerAccountController extends Controller
         );
     }
 
+    public function register(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
+        ]);
+
+        return ApiResponse::success(
+            $this->authService->register(
+                $data['name'],
+                $data['email'],
+                $data['phone'],
+                $data['password'],
+            ),
+        );
+    }
+
     public function loginPassword(Request $request)
     {
         $data = $request->validate([

@@ -301,6 +301,28 @@ export default function AccountPage() {
     },
   });
 
+  const registerMutation = useMutation({
+    mutationFn: () =>
+      customerAuthService.register({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+        password_confirmation: passwordConfirm,
+      }),
+    onSuccess: () => {
+      localStorage.setItem(PHONE_STORAGE_KEY, phone.trim());
+      if (name.trim()) localStorage.setItem(NAME_STORAGE_KEY, name.trim());
+      if (email.trim()) localStorage.setItem(EMAIL_STORAGE_KEY, email.trim());
+      afterLoginSuccess();
+    },
+    onError: (err: Error) => {
+      const message = validationPopupMessage(err);
+      setAuthError(message);
+      setAuthPopup(message);
+    },
+  });
+
   const passwordLoginMutation = useMutation({
     mutationFn: () =>
       customerAuthService.loginWithPassword({
@@ -322,10 +344,17 @@ export default function AccountPage() {
       }),
     onSuccess: (res) => {
       setAuthError(null);
-      setAuthInfo(`Reset code sent via ${res.channel}.`);
+      const destinations: string[] = [];
+      if (res.email_sent !== false && (res.channels?.includes("email") || res.channel?.includes("email"))) {
+        destinations.push("email");
+      }
+      if (res.whatsapp_sent !== false && (res.channels?.includes("whatsapp") || res.channel?.includes("whatsapp"))) {
+        destinations.push("WhatsApp");
+      }
+      setAuthInfo(`Reset code sent to ${destinations.length ? destinations.join(" and ") : res.channel}.`);
       setAuthStep("otp");
     },
-    onError: (err: Error) => setAuthError(err.message || "Could not send reset code."),
+    onError: (err: Error) => setAuthError(validationPopupMessage(err)),
   });
 
   const resetPasswordMutation = useMutation({
@@ -834,11 +863,11 @@ export default function AccountPage() {
               />
               <CustomerButton
                 className="w-full"
-                isLoading={requestOtpMutation.isPending}
+                isLoading={registerMutation.isPending}
                 disabled={!signupReady}
-                onClick={() => requestOtpMutation.mutate()}
+                onClick={() => registerMutation.mutate()}
               >
-                Send code
+                Register
               </CustomerButton>
             </>
           ) : (

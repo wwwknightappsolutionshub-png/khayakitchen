@@ -141,6 +141,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware(['tenant.resolve', 'tenant.access', 'throttle:6,1'])->group(function () {
         Route::post('/customer/auth/request-otp', [CustomerAccountController::class, 'requestOtp']);
+        Route::post('/customer/auth/register', [CustomerAccountController::class, 'register']);
         Route::post('/customer/auth/forgot-password', [CustomerAccountController::class, 'forgotPassword']);
         Route::post('/customer/auth/passkey/login/options', [CustomerAccountController::class, 'passkeyLoginOptions']);
     });

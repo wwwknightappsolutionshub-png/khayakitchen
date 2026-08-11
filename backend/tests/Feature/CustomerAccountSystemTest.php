@@ -8,6 +8,7 @@ use App\Modules\CRM\Domain\Models\CustomerAddress;
 use App\Modules\CRM\Domain\Models\CustomerCustomMealRequest;
 use App\Modules\Loyalty\Domain\Models\LoyaltyAccount;
 use App\Modules\RevenueRecovery\Domain\Models\CustomerEmailOtp;
+use App\Modules\Loyalty\Mail\LoyaltyCustomerMail;
 use App\Modules\RevenueRecovery\Mail\CustomerProximityOtpMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -239,5 +240,79 @@ class CustomerAccountSystemTest extends TestCase
         ], ['X-Tenant-Slug' => 'pilot'])
             ->assertStatus(422)
             ->assertJsonPath('details.email.0', 'An account already exists with this email address. Sign in instead.');
+    }
+
+    public function test_register_creates_account_sends_welcome_and_issues_session(): void
+    {
+        Mail::fake();
+
+        $response = $this->postJson('/api/v1/customer/auth/register', [
+            'name' => 'Olufemi',
+            'email' => 'newdiner@example.com',
+            'phone' => '07756183484',
+            'password' => 'SecretPass1',
+            'password_confirmation' => 'SecretPass1',
+        ], ['X-Tenant-Slug' => 'pilot']);
+
+        $response->assertOk();
+        $response->assertJsonPath('email_sent', true);
+        $response->assertJsonPath('whatsapp_sent', true);
+        $this->assertNotEmpty($response->json('session_token'));
+        $this->assertDatabaseHas('customers', [
+            'phone' => '+447756183484',
+            'email' => 'newdiner@example.com',
+        ]);
+        Mail::assertSent(LoyaltyCustomerMail::class, function (LoyaltyCustomerMail $mail) {
+            return $mail->hasTo('newdiner@example.com')
+                && str_contains($mail->bodyText, 'Your account is ready');
+        });
+    }
+
+    public function test_register_rejects_duplicate_phone_and_email(): void
+    {
+        Mail::fake();
+
+        Customer::create([
+            'tenant_id' => \App\Modules\Auth\Domain\Models\Tenant::where('slug', 'pilot')->value('id'),
+            'name' => 'Existing',
+            'phone' => '+447756183484',
+            'email' => 'taken2@example.com',
+        ]);
+
+        $this->postJson('/api/v1/customer/auth/register', [
+            'name' => 'Dup',
+            'email' => 'fresh2@example.com',
+            'phone' => '07756183484',
+            'password' => 'SecretPass1',
+            'password_confirmation' => 'SecretPass1',
+        ], ['X-Tenant-Slug' => 'pilot'])
+            ->assertStatus(422)
+            ->assertJsonPath('details.phone.0', 'An account already exists with this phone number. Sign in instead.');
+    }
+
+    public function test_forgot_password_returns_ok_after_storing_otp(): void
+    {
+        Mail::fake();
+
+        Customer::create([
+            'tenant_id' => \App\Modules\Auth\Domain\Models\Tenant::where('slug', 'pilot')->value('id'),
+            'name' => 'Reset Me',
+            'phone' => '+447756183484',
+            'email' => 'reset-ok@example.com',
+            'password' => 'OldPass123',
+        ]);
+
+        $this->postJson('/api/v1/customer/auth/forgot-password', [
+            'phone' => '+447756183484',
+            'email' => 'reset-ok@example.com',
+        ], ['X-Tenant-Slug' => 'pilot'])
+            ->assertOk()
+            ->assertJsonPath('email_sent', true)
+            ->assertJsonPath('whatsapp_sent', true);
+
+        $this->assertDatabaseHas('customer_email_otps', [
+            'phone' => '+447756183484',
+            'purpose' => 'password_reset',
+        ]);
     }
 }
