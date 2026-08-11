@@ -24,7 +24,7 @@ class TenantPwaManifestTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/manifest+json');
-        $response->assertJsonPath('start_url', '/r/pilot');
+        $response->assertJsonPath('start_url', '/');
         $response->assertJsonPath('id', '/r/pilot');
         $response->assertJsonPath('display', 'standalone');
         $this->assertNotEmpty($response->json('name'));
@@ -53,7 +53,7 @@ class TenantPwaManifestTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('pwa.manifest_path', '/pwa-manifest/pilot');
-        $response->assertJsonPath('pwa.start_url', '/r/pilot');
+        $response->assertJsonPath('pwa.start_url', '/');
         $response->assertJsonPath('pwa.installable', true);
     }
 

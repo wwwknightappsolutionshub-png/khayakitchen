@@ -15,6 +15,7 @@ import {
   Utensils,
   Fingerprint,
   KeyRound,
+  ChevronDown,
 } from "lucide-react";
 import { CustomerButton } from "@/components/customer/CustomerButton";
 import { CustomerInput } from "@/components/customer/CustomerInput";
@@ -60,6 +61,14 @@ function referralAbsoluteUrl(menuUrl: string): string {
   if (typeof window === "undefined") return menuUrl;
   if (menuUrl.startsWith("http")) return menuUrl;
   return `${window.location.origin}${menuUrl.startsWith("/") ? "" : "/"}${menuUrl}`;
+}
+
+function passkeyFeedback(err: Error, fallback: string): string | null {
+  const message = err.message || "";
+  if (/timed out or was not allowed|privacy-considerations-client|NotAllowedError/i.test(message)) {
+    return null;
+  }
+  return message || fallback;
 }
 
 function validationPopupMessage(err: Error): string {
@@ -114,6 +123,7 @@ export default function AccountPage() {
   const [securityMsg, setSecurityMsg] = useState<string | null>(null);
   const [authPopup, setAuthPopup] = useState<string | null>(null);
   const [pwaInstalledHere, setPwaInstalledHere] = useState(false);
+  const [recentOrdersOpen, setRecentOrdersOpen] = useState(true);
 
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(() => {
     const stored = readStoredPhone();
@@ -411,7 +421,7 @@ export default function AccountPage() {
       void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
       void queryClient.invalidateQueries({ queryKey: ["customer-passkeys"] });
     },
-    onError: (err: Error) => setSecurityMsg(err.message || "Could not enable passkey."),
+    onError: (err: Error) => setSecurityMsg(passkeyFeedback(err, "Could not enable passkey.")),
   });
 
   const setPasswordMutation = useMutation({
@@ -444,7 +454,7 @@ export default function AccountPage() {
       void queryClient.invalidateQueries({ queryKey: ["customer-passkeys"] });
       void queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
     },
-    onError: (err: Error) => setSecurityMsg(err.message || "Could not remove passkey."),
+    onError: (err: Error) => setSecurityMsg(passkeyFeedback(err, "Could not remove passkey.")),
   });
 
   const redeemMutation = useMutation({
@@ -1199,16 +1209,33 @@ export default function AccountPage() {
         <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex items-center gap-2">
             <Gift className="h-5 w-5 text-[var(--secondary)]" />
-            <h2 className="font-semibold">Loyalty rewards</h2>
+            <h2 className="font-semibold">Your Available Loyalty Reward</h2>
           </div>
           <p className="mb-2 text-xs capitalize text-[var(--muted)]">
             Status: {loyalty?.membership_status ?? "prospect"}
             {loyalty?.tier ? ` · Tier ${loyalty.tier}` : ""}
           </p>
-          <div className="mb-3 flex flex-wrap gap-4 text-sm">
-            <span>{points} points</span>
-            <span>{stamps} stamps</span>
-            <span>{loyaltyBlock.completed_orders ?? 0} completed orders</span>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--secondary)_18%,transparent)] px-2 py-2 text-center">
+              <p className="text-base font-bold text-[var(--secondary)]">{points}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--secondary)]">
+                Points
+              </p>
+            </div>
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--primary)_18%,transparent)] px-2 py-2 text-center">
+              <p className="text-base font-bold text-[var(--primary)]">{stamps}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--primary)]">
+                Stamps
+              </p>
+            </div>
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--secondary)_18%,transparent)] px-2 py-2 text-center">
+              <p className="text-base font-bold text-[var(--secondary)]">
+                {loyaltyBlock.completed_orders ?? 0}
+              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--secondary)]">
+                Completed orders
+              </p>
+            </div>
           </div>
           {loyaltyBlock.can_opt_in && (
             <CustomerButton
@@ -1303,10 +1330,21 @@ export default function AccountPage() {
 
       {/* Orders */}
       <div className="mb-4">
-        <h2 className="mb-3 font-semibold">Recent orders</h2>
-        {orders.length === 0 && (
+        <button
+          type="button"
+          className="mb-3 flex w-full items-center justify-between gap-2 text-left"
+          aria-expanded={recentOrdersOpen}
+          onClick={() => setRecentOrdersOpen((open) => !open)}
+        >
+          <h2 className="font-semibold">Recent orders</h2>
+          <ChevronDown
+            className={`h-5 w-5 shrink-0 text-[var(--muted)] transition-transform ${recentOrdersOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {recentOrdersOpen && orders.length === 0 && (
           <p className="text-sm text-[var(--muted)]">No orders yet</p>
         )}
+        {recentOrdersOpen && (
         <div className="space-y-2">
           {orders.map((order) => (
             <div
@@ -1348,6 +1386,7 @@ export default function AccountPage() {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {/* Referral */}

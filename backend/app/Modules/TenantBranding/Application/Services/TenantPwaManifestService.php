@@ -77,7 +77,9 @@ class TenantPwaManifestService
             'short_name' => $shortName,
             'description' => 'Order from '.$name,
             'id' => $orderingPath,
-            'start_url' => $orderingPath,
+            // Installed Order app opens featured Home. Footer Menu is `/menu`.
+            // `/r/{slug}` remains the shared-link entry and still binds the kitchen.
+            'start_url' => '/',
             'scope' => '/',
             'display' => 'standalone',
             'background_color' => '#F7F6F3',

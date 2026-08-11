@@ -6,6 +6,7 @@ import { CustomerRouteLink } from "@/components/customer/CustomerRouteLink";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 
+/** Installed PWA and browser: Home = featured landing, Menu = full catalog. */
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/menu", label: "Menu", icon: UtensilsCrossed },

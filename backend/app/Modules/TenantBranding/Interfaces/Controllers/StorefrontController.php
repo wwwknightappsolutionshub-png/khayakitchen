@@ -34,7 +34,7 @@ class StorefrontController extends Controller
         $payload['seasonal_promo'] = $this->seasonalPromoService->activePublicSplash();
         $payload['pwa'] = [
             'manifest_path' => '/pwa-manifest/'.$payload['workspace']['slug'],
-            'start_url' => $payload['workspace']['ordering_path'],
+            'start_url' => '/',
             'installable' => true,
         ];
 
