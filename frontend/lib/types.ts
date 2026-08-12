@@ -303,6 +303,24 @@ export interface LoyaltyPackageProgress {
   package?: LoyaltyPackage;
 }
 
+export interface LoyaltyRedemptionVoucher {
+  id: string;
+  code: string;
+  kind: "points" | "package" | string;
+  status: "pending" | "fulfilled" | "cancelled" | "expired" | string;
+  points: number;
+  stamps: number;
+  reward_type: string;
+  reward_value?: number | null;
+  reward_label: string;
+  package_id?: string | null;
+  expires_at?: string | null;
+  fulfilled_at?: string | null;
+  cancelled_at?: string | null;
+  created_at?: string | null;
+  customer?: { id: string; name?: string | null; phone?: string | null } | null;
+}
+
 export interface Notification {
   id: string;
   title: string;

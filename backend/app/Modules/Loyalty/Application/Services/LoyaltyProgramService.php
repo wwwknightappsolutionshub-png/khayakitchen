@@ -42,6 +42,7 @@ class LoyaltyProgramService
         $accounts = LoyaltyAccount::query()->get();
         $active = $accounts->where('membership_status', 'active')->count();
         $eligible = $accounts->where('membership_status', 'eligible')->count();
+        $pendingVouchers = $this->loyaltyService->listPendingVouchers($permissions);
 
         return [
             'settings' => $settings,
@@ -54,8 +55,10 @@ class LoyaltyProgramService
                 'stamps_outstanding' => (int) $accounts->sum('stamps_balance'),
                 'referrals_credited' => LoyaltyReferral::query()->where('status', 'credited')->count(),
                 'packages_active' => LoyaltyPackage::query()->where('is_active', true)->count(),
+                'vouchers_pending' => count($pendingVouchers),
                 'free_until' => $this->featureAccessService->sharedFreeTrialEndsAt()?->toDateString(),
             ],
+            'pending_vouchers' => $pendingVouchers,
             'members' => LoyaltyAccount::query()
                 ->orderByDesc('enrolled_at')
                 ->orderByDesc('created_at')
@@ -243,6 +246,8 @@ class LoyaltyProgramService
                 ->where('loyalty_account_id', $account->id)
                 ->with('package')
                 ->get(),
+            'pending_voucher' => $this->loyaltyService->pendingVoucherForCustomer($customer->id),
+            'vouchers' => $this->loyaltyService->vouchersForCustomer($customer->id),
             'enrollments_paused' => $settings->enrollments_paused,
             'install_claim_eligible' => $account->install_claimed_at === null,
             'install_claim_points' => (int) ($settings->install_claim_points ?: 200),

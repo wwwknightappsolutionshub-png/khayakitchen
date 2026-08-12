@@ -319,20 +319,31 @@ class CustomerAccountController extends Controller
     {
         $session = $request->attributes->get('customer_session');
         $data = $request->validate([
-            'points' => ['required', 'integer', 'min:1', 'max:100000'],
+            'points' => ['nullable', 'integer', 'min:1', 'max:100000', 'required_without:package_id'],
+            'package_id' => ['nullable', 'uuid', 'required_without:points'],
             'reference_id' => ['nullable', 'string', 'max:80'],
         ]);
 
         $customer = \App\Modules\CRM\Domain\Models\Customer::findOrFail($session->customer_id);
 
-        return ApiResponse::success([
-            'loyalty' => $this->loyaltyService->redeemForCustomer(
+        return ApiResponse::success(
+            $this->loyaltyService->requestRedemptionVoucher(
                 $customer->id,
                 $customer->phone,
-                (int) $data['points'],
-                $data['reference_id'] ?? null,
+                isset($data['points']) ? (int) $data['points'] : null,
+                $data['package_id'] ?? null,
             ),
-        ]);
+        );
+    }
+
+    public function cancelVoucher(Request $request, string $id)
+    {
+        $session = $request->attributes->get('customer_session');
+        $customer = \App\Modules\CRM\Domain\Models\Customer::findOrFail($session->customer_id);
+
+        return ApiResponse::success(
+            $this->loyaltyService->cancelVoucherForCustomer($customer->id, $customer->phone, $id),
+        );
     }
 
     public function submitCustomMeal(Request $request)

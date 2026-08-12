@@ -148,6 +148,9 @@ class CustomerAccountSystemTest extends TestCase
         ]);
         $redeem->assertOk();
         $this->assertSame(450, (int) $redeem->json('loyalty.points_balance'));
+        $this->assertSame('pending', $redeem->json('voucher.status'));
+        $this->assertNotEmpty($redeem->json('voucher.code'));
+        $this->assertSame(50, (int) $redeem->json('voucher.points'));
     }
 
     public function test_custom_meal_request_create_and_staff_status_update(): void

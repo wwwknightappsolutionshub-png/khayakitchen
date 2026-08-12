@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,10 +12,14 @@ import { BackendPage } from "@/components/shared/BackendPage";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCard";
+import { OrderStatusPipeline } from "@/components/admin/OrderStatusPipeline";
+import { ReconnectingIndicator } from "@/components/shared/ReconnectingIndicator";
 import { ordersService } from "@/services/orders.service";
 import { engagementService } from "@/services/engagement.service";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useHybridInterval } from "@/hooks/useHybridInterval";
+import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import {
   dayKeyFromIso,
@@ -27,6 +31,7 @@ import {
 import type { Order } from "@/lib/types";
 
 const statusFilters = [
+  "active",
   "pending",
   "accepted",
   "preparing",
@@ -44,7 +49,9 @@ export default function OrdersPage() {
   const { user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const chatEnabled = isEnabled("tenant_customer_chat");
+  const pollInterval = useHybridInterval(4_000, 8_000);
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [filterReady, setFilterReady] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [chatBusyId, setChatBusyId] = useState<string | null>(null);
@@ -56,10 +63,43 @@ export default function OrdersPage() {
     return () => window.clearInterval(id);
   }, []);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  useEffect(() => {
+    if (!user?.role || filterReady) return;
+    if (user.role === "staff") {
+      setStatusFilter("active");
+    }
+    setFilterReady(true);
+  }, [user?.role, filterReady]);
+
+  const onRealtimeEvent = useCallback(
+    (event: string) => {
+      if (
+        event === "OrderCreated" ||
+        event === "OrderStatusChanged" ||
+        event === "OrderCancelled" ||
+        event === "NewKitchenTicket"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["engagement", "notification-badges"] });
+      }
+    },
+    [queryClient],
+  );
+  useRealtimeEvent(onRealtimeEvent);
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["orders", statusFilter],
-    queryFn: () =>
-      ordersService.getOrders(statusFilter === "all" ? undefined : statusFilter),
+    queryFn: async () => {
+      if (statusFilter === "active") {
+        const res = await ordersService.getOrders();
+        return {
+          orders: (res.orders ?? []).filter((order) => OPEN.has(order.status)),
+        };
+      }
+      return ordersService.getOrders(statusFilter === "all" ? undefined : statusFilter);
+    },
+    refetchInterval: pollInterval,
+    staleTime: 2_000,
   });
 
   const updateMutation = useMutation({
@@ -73,7 +113,8 @@ export default function OrdersPage() {
 
   const role = user?.role;
   const isFloor = role === "staff" || role === "owner" || role === "manager";
-  const isManager = role === "owner" || role === "manager";
+  const isKitchenDriver = role === "kitchen" || role === "owner" || role === "manager";
+  const showPipeline = role === "staff" || role === "owner" || role === "manager";
 
   const orders = Array.isArray(data?.orders) ? data.orders : [];
   const loadError =
@@ -151,7 +192,7 @@ export default function OrdersPage() {
           )}
         </>
       )}
-      {order.status === "accepted" && isManager && (
+      {order.status === "accepted" && isKitchenDriver && (
         <Button
           size="sm"
           variant="secondary"
@@ -161,7 +202,7 @@ export default function OrdersPage() {
           Preparing
         </Button>
       )}
-      {order.status === "preparing" && isManager && (
+      {order.status === "preparing" && isKitchenDriver && (
         <Button
           size="sm"
           onClick={() => updateMutation.mutate({ id: order.id, status: "ready" })}
@@ -210,12 +251,20 @@ export default function OrdersPage() {
             Floor accept → kitchen cook → floor complete · today stays open
           </p>
         </div>
-        <div className="backend-header-actions">
+        <div className="backend-header-actions flex items-center gap-2">
+          <ReconnectingIndicator />
           <Link href="/ops/accounts">
             <Button variant="secondary">Accounts</Button>
           </Link>
         </div>
       </header>
+
+      {role === "staff" && (
+        <p className="mb-3 text-xs text-muted">
+          Accept new orders here. Kitchen moves accepted orders to preparing and ready — watch the
+          Active tab for live progress, then complete when ready.
+        </p>
+      )}
 
       <div className="mb-3 flex flex-wrap gap-3 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
@@ -242,10 +291,12 @@ export default function OrdersPage() {
                 : "bg-surface-elevated text-muted hover:text-foreground",
             )}
           >
-            {status}
+            {status === "active" ? "Active" : status}
           </button>
         ))}
       </div>
+
+      {isFetching && !isLoading && <p className="mb-3 text-xs text-muted">Syncing orders…</p>}
 
       {loadError && (
         <div className="mb-4 rounded-[var(--radius)] border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -319,7 +370,14 @@ export default function OrdersPage() {
                             className={ageClass(order)}
                             title={`#${order.id.slice(0, 8).toUpperCase()}`}
                             subtitle={order.customer_name || "Guest"}
-                            meta={<StatusBadge status={order.status} />}
+                            meta={
+                              <div className="flex flex-col items-end gap-1">
+                                <StatusBadge status={order.status} />
+                                {showPipeline && OPEN.has(order.status) && (
+                                  <OrderStatusPipeline status={order.status} />
+                                )}
+                              </div>
+                            }
                             rows={[
                               {
                                 label: "Meal",
@@ -452,7 +510,12 @@ export default function OrdersPage() {
                               </td>
                               <td className="px-4 py-3 capitalize">{order.order_type}</td>
                               <td className="px-4 py-3">
-                                <StatusBadge status={order.status} />
+                                <div className="flex flex-col gap-1">
+                                  <StatusBadge status={order.status} />
+                                  {showPipeline && OPEN.has(order.status) && (
+                                    <OrderStatusPipeline status={order.status} />
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-3 text-muted">
                                 {formatDate(order.created_at)}

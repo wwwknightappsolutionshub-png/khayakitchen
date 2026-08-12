@@ -14,7 +14,8 @@ import { useHybridInterval } from "@/hooks/useHybridInterval";
 import { useRealtimeEvent } from "@/hooks/useRealtimeEvent";
 import { formatCurrency, cn, formatDate } from "@/lib/utils";
 import { getOrderAgeCardClass, getOrderAgeTone } from "@/lib/order-age";
-import { ChefHat, Clock, Bell, Utensils } from "lucide-react";
+import { ChefHat, Clock, Bell, Utensils, Gift } from "lucide-react";
+import { LoyaltyVoucherTicket } from "@/components/admin/LoyaltyVoucherTicket";
 import type { CustomMealRequest } from "@/lib/types";
 
 const ACTIVE_STATUSES = new Set(["accepted", "preparing", "ready"]);
@@ -44,6 +45,19 @@ export default function KitchenPage() {
     staleTime: 5_000,
   });
 
+  const { data: voucherData } = useQuery({
+    queryKey: ["kitchen", "loyalty-vouchers"],
+    queryFn: async () => {
+      try {
+        return await kitchenService.getPendingVouchers();
+      } catch {
+        return { vouchers: [] };
+      }
+    },
+    refetchInterval: pollInterval,
+    staleTime: 2_000,
+  });
+
   const onRealtimeEvent = useCallback(
     (event: string, payload: Record<string, unknown>) => {
       if (event === "NewKitchenTicket" || event === "OrderStatusChanged") {
@@ -53,6 +67,13 @@ export default function KitchenPage() {
           setNewTicketId(orderId);
         }
         queryClient.invalidateQueries({ queryKey: ["kitchen"] });
+      }
+      if (
+        event === "LoyaltyVoucherCreated" ||
+        event === "LoyaltyVoucherFulfilled" ||
+        event === "LoyaltyVoucherReleased"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["kitchen", "loyalty-vouchers"] });
       }
     },
     [queryClient],
@@ -77,12 +98,22 @@ export default function KitchenPage() {
     },
   });
 
+  const voucherMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "fulfil" | "cancel" }) =>
+      action === "fulfil" ? kitchenService.fulfilVoucher(id) : kitchenService.cancelVoucher(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kitchen", "loyalty-vouchers"] });
+      queryClient.invalidateQueries({ queryKey: ["loyalty"] });
+    },
+  });
+
   const orders = Array.isArray(data?.orders) ? data.orders : [];
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.has(o.status));
   const recentOrders = orders.filter((o) => !ACTIVE_STATUSES.has(o.status));
   const customRequests = (customMealsData?.requests ?? []).filter(
     (r) => r.status === "submitted" || r.status === "acknowledged",
   );
+  const pendingVouchers = voucherData?.vouchers ?? [];
   const loadError =
     error instanceof Error ? error.message : isError ? "Failed to load kitchen orders." : null;
   const updateError =
@@ -152,6 +183,26 @@ export default function KitchenPage() {
       )}
 
       {isFetching && !isLoading && <p className="mb-3 text-xs text-muted">Syncing…</p>}
+
+      {pendingVouchers.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted">
+            <Gift className="h-4 w-4" />
+            Loyalty rewards to fulfil
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {pendingVouchers.map((voucher) => (
+              <LoyaltyVoucherTicket
+                key={voucher.id}
+                voucher={voucher}
+                isPending={voucherMutation.isPending}
+                onFulfil={() => voucherMutation.mutate({ id: voucher.id, action: "fulfil" })}
+                onCancel={() => voucherMutation.mutate({ id: voucher.id, action: "cancel" })}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {(customMealsLoading || customRequests.length > 0) && (
         <section className="mb-6">

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
+import { LoyaltyVoucherTicket } from "@/components/admin/LoyaltyVoucherTicket";
 import { loyaltyService } from "@/services/loyalty.service";
 import { ApiClientError } from "@/lib/api-client";
 import { useToast } from "@/providers/ToastProvider";
@@ -39,6 +40,7 @@ export default function LoyaltyPage() {
   const program = useQuery({
     queryKey: ["loyalty", "program"],
     queryFn: () => loyaltyService.getProgram(),
+    refetchInterval: 8_000,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["loyalty", "program"] });
@@ -100,6 +102,17 @@ export default function LoyaltyPage() {
     },
     onError: (err) =>
       setError(err instanceof ApiClientError ? err.message : "Failed to update package"),
+  });
+
+  const voucherMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "fulfil" | "cancel" }) =>
+      action === "fulfil" ? loyaltyService.fulfilVoucher(id) : loyaltyService.cancelVoucher(id),
+    onSuccess: (_, vars) => {
+      invalidate();
+      showToast(vars.action === "fulfil" ? "Reward fulfilled" : "Voucher declined");
+    },
+    onError: (err) =>
+      setError(err instanceof ApiClientError ? err.message : "Failed to update voucher"),
   });
 
   const notifyMutation = useMutation({
@@ -174,8 +187,27 @@ export default function LoyaltyPage() {
         <Stat label="Active members" value={analytics?.members_active ?? 0} />
         <Stat label="Eligible" value={analytics?.members_eligible ?? 0} />
         <Stat label="Points out" value={analytics?.points_outstanding ?? 0} />
-        <Stat label="Referrals credited" value={analytics?.referrals_credited ?? 0} />
+        <Stat label="Pending vouchers" value={analytics?.vouchers_pending ?? 0} />
       </div>
+
+      {(program.data?.pending_vouchers ?? []).length > 0 && (
+        <Card className="mb-6 border-secondary/40">
+          <CardHeader>
+            <CardTitle>Pending redemptions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {(program.data?.pending_vouchers ?? []).map((voucher) => (
+              <LoyaltyVoucherTicket
+                key={voucher.id}
+                voucher={voucher}
+                isPending={voucherMutation.isPending}
+                onFulfil={() => voucherMutation.mutate({ id: voucher.id, action: "fulfil" })}
+                onCancel={() => voucherMutation.mutate({ id: voucher.id, action: "cancel" })}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-3">
         <Button

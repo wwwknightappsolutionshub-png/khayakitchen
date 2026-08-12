@@ -6,6 +6,7 @@ import type {
   LoyaltyAccount,
   LoyaltyPackage,
   LoyaltyPackageProgress,
+  LoyaltyRedemptionVoucher,
   Order,
 } from "@/lib/types";
 
@@ -221,6 +222,8 @@ export const customerAuthService = {
         can_opt_in: boolean;
         packages: LoyaltyPackage[];
         progress: LoyaltyPackageProgress[];
+        pending_voucher?: LoyaltyRedemptionVoucher | null;
+        vouchers?: LoyaltyRedemptionVoucher[];
         install_claim_eligible?: boolean;
         install_claim_points?: number;
         enrollments_paused?: boolean;
@@ -294,10 +297,18 @@ export const customerAuthService = {
     });
   },
 
-  async redeem(points: number) {
-    return api.post<{ loyalty: LoyaltyAccount }>(
+  async redeem(payload: { points?: number; package_id?: string }) {
+    return api.post<{ loyalty: LoyaltyAccount; voucher: LoyaltyRedemptionVoucher }>(
       "/customer/loyalty/redeem",
-      { points },
+      payload,
+      { skipAuth: true, headers: this.sessionHeaders() },
+    );
+  },
+
+  async cancelLoyaltyVoucher(id: string) {
+    return api.post<{ loyalty: LoyaltyAccount; voucher: LoyaltyRedemptionVoucher }>(
+      `/customer/loyalty/vouchers/${id}/cancel`,
+      {},
       { skipAuth: true, headers: this.sessionHeaders() },
     );
   },

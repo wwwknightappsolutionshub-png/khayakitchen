@@ -254,6 +254,7 @@ class PlatformTenantService
             'customer_addresses',
             'customer_custom_meal_requests',
             'proximity_offer_events',
+            'loyalty_redemption_vouchers',
             'loyalty_transactions',
             'loyalty_progress',
             'loyalty_referrals',

@@ -3,6 +3,7 @@ import type {
   LoyaltyAccount,
   LoyaltyPackage,
   LoyaltyPackageProgress,
+  LoyaltyRedemptionVoucher,
   LoyaltySettings,
   Customer,
 } from "@/lib/types";
@@ -20,8 +21,10 @@ export const loyaltyService = {
         stamps_outstanding: number;
         referrals_credited: number;
         packages_active: number;
+        vouchers_pending?: number;
         free_until?: string | null;
       };
+      pending_vouchers?: LoyaltyRedemptionVoucher[];
       members: Array<{
         account: LoyaltyAccount;
         customer: { id: string; name: string; phone?: string; email?: string } | null;
@@ -98,11 +101,29 @@ export const loyaltyService = {
   },
 
   /** Logged-in customer redeem via session (X-Customer-Session auto-injected). */
-  async redeemAsCustomer(points: number) {
-    return api.post<{ loyalty: LoyaltyAccount }>(
+  async redeemAsCustomer(payload: { points?: number; package_id?: string }) {
+    return api.post<{ loyalty: LoyaltyAccount; voucher: LoyaltyRedemptionVoucher }>(
       "/customer/loyalty/redeem",
-      { points },
+      payload,
       { skipAuth: true },
+    );
+  },
+
+  async listPendingVouchers() {
+    return api.get<{ vouchers: LoyaltyRedemptionVoucher[] }>("/loyalty/vouchers");
+  },
+
+  async fulfilVoucher(id: string) {
+    return api.post<{ voucher: LoyaltyRedemptionVoucher; loyalty: LoyaltyAccount }>(
+      `/loyalty/vouchers/${id}/fulfil`,
+      {},
+    );
+  },
+
+  async cancelVoucher(id: string) {
+    return api.post<{ voucher: LoyaltyRedemptionVoucher; loyalty: LoyaltyAccount }>(
+      `/loyalty/vouchers/${id}/cancel`,
+      {},
     );
   },
 };

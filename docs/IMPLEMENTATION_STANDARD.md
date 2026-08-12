@@ -8,7 +8,13 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ---
 
-## 1. Last Edit Summary (2026-07-13)
+## 1. Last Edit Summary (2026-08-11)
+
+**Loyalty redeem voucher:** customer Redeem my points / package claim holds balance on a pending kitchen code; staff Fulfil or Decline on KDS and Loyalty. Staff `POST /loyalty/redeem` remains an immediate counter deduct.
+
+Prior summary below.
+
+## 1b. Prior edit summary (2026-07-13)
 
 **Catalog sync fix:** `PricingSeeder` now `updateOrCreate`s features (not `firstOrCreate`) so Feature Library stays aligned with the codebase; VPS deploy always runs `PricingSeeder` after migrate.
 

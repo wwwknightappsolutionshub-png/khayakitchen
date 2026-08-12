@@ -43,4 +43,33 @@ class LoyaltyController extends Controller
             'loyalty' => $this->loyaltyService->redeem($data, $request->get('permissions', [])),
         ]);
     }
+
+    public function pendingVouchers(Request $request)
+    {
+        return ApiResponse::success([
+            'vouchers' => $this->loyaltyService->listPendingVouchers($request->get('permissions', [])),
+        ]);
+    }
+
+    public function fulfilVoucher(Request $request, string $id)
+    {
+        $result = $this->loyaltyService->fulfilVoucher(
+            $id,
+            $request->get('permissions', []),
+            $request->user()?->id,
+        );
+
+        return ApiResponse::success($result);
+    }
+
+    public function cancelVoucher(Request $request, string $id)
+    {
+        $result = $this->loyaltyService->cancelVoucher(
+            $id,
+            $request->get('permissions', []),
+            $request->user()?->id,
+        );
+
+        return ApiResponse::success($result);
+    }
 }

@@ -205,6 +205,7 @@ export default function AccountPage() {
     queryFn: () => customerAuthService.me(),
     enabled: hasSession,
     retry: false,
+    refetchInterval: (query) => (query.state.data?.loyalty?.pending_voucher ? 8_000 : false),
   });
 
   useEffect(() => {
@@ -458,13 +459,27 @@ export default function AccountPage() {
   });
 
   const redeemMutation = useMutation({
-    mutationFn: (points: number) => customerAuthService.redeem(points),
-    onSuccess: () => {
-      setRedeemMsg("Points redeemed.");
+    mutationFn: (payload: { points?: number; package_id?: string }) =>
+      customerAuthService.redeem(payload),
+    onSuccess: (data) => {
+      setRedeemMsg(
+        data.voucher?.code
+          ? `Show code ${data.voucher.code} at the counter.`
+          : "Reward voucher created.",
+      );
       setRedeemPoints("");
       queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
     },
     onError: (err: Error) => setRedeemMsg(err.message || "Redeem failed."),
+  });
+
+  const cancelVoucherMutation = useMutation({
+    mutationFn: (id: string) => customerAuthService.cancelLoyaltyVoucher(id),
+    onSuccess: () => {
+      setRedeemMsg("Voucher cancelled. Points and stamps were returned.");
+      queryClient.invalidateQueries({ queryKey: ["customer-account-me"] });
+    },
+    onError: (err: Error) => setRedeemMsg(err.message || "Could not cancel voucher."),
   });
 
   const optInMutation = useMutation({
@@ -1253,9 +1268,13 @@ export default function AccountPage() {
                 const current = row?.current_progress ?? 0;
                 const goal = pkg.goal_value || 1;
                 const pct = Math.min((current / goal) * 100, 100);
+                const canClaim =
+                  loyalty?.membership_status === "active" &&
+                  current >= goal &&
+                  !loyaltyBlock.pending_voucher;
                 return (
                   <div key={pkg.id}>
-                    <div className="mb-1 flex justify-between text-xs">
+                    <div className="mb-1 flex items-center justify-between gap-2 text-xs">
                       <span>{pkg.name}</span>
                       <span>
                         {current}/{goal} → {pkg.reward_label}
@@ -1267,31 +1286,71 @@ export default function AccountPage() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
+                    {canClaim && (
+                      <CustomerButton
+                        className="mt-2 w-full"
+                        disabled={redeemMutation.isPending}
+                        isLoading={redeemMutation.isPending}
+                        onClick={() => {
+                          setRedeemMsg(null);
+                          redeemMutation.mutate({ package_id: pkg.id });
+                        }}
+                      >
+                        Redeem {pkg.reward_label}
+                      </CustomerButton>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-          <div className="flex gap-2">
-            <CustomerInput
-              type="number"
-              min={1}
-              value={redeemPoints}
-              onChange={(e) => setRedeemPoints(e.target.value)}
-              placeholder="Points to redeem"
-              className="flex-1"
-            />
-            <CustomerButton
-              disabled={!redeemPoints || Number(redeemPoints) < 1 || redeemMutation.isPending}
-              isLoading={redeemMutation.isPending}
-              onClick={() => {
-                setRedeemMsg(null);
-                redeemMutation.mutate(Number(redeemPoints));
-              }}
-            >
-              Redeem
-            </CustomerButton>
-          </div>
+          {loyaltyBlock.pending_voucher ? (
+            <div className="rounded-xl border border-[var(--secondary)] bg-[color-mix(in_srgb,var(--secondary)_14%,transparent)] p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--secondary)]">
+                Show this code at the counter
+              </p>
+              <p className="mt-2 font-mono text-4xl font-bold tracking-[0.18em] text-[var(--primary)]">
+                {loyaltyBlock.pending_voucher.code}
+              </p>
+              <p className="mt-2 text-sm font-medium">{loyaltyBlock.pending_voucher.reward_label}</p>
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                Kitchen will confirm this before releasing your reward.
+              </p>
+              <CustomerButton
+                variant="ghost"
+                className="mt-3 w-full"
+                disabled={cancelVoucherMutation.isPending}
+                isLoading={cancelVoucherMutation.isPending}
+                onClick={() => {
+                  setRedeemMsg(null);
+                  cancelVoucherMutation.mutate(loyaltyBlock.pending_voucher!.id);
+                }}
+              >
+                Cancel voucher
+              </CustomerButton>
+            </div>
+          ) : loyalty?.membership_status === "active" ? (
+            <div className="flex gap-2">
+              <CustomerInput
+                type="number"
+                min={1}
+                value={redeemPoints}
+                onChange={(e) => setRedeemPoints(e.target.value)}
+                placeholder="Points to redeem"
+                className="flex-1"
+              />
+              <CustomerButton
+                disabled={!redeemPoints || Number(redeemPoints) < 1 || redeemMutation.isPending}
+                isLoading={redeemMutation.isPending}
+                onClick={() => {
+                  setRedeemMsg(null);
+                  redeemMutation.mutate({ points: Number(redeemPoints) });
+                }}
+              >
+                Redeem my points
+              </CustomerButton>
+            </div>
+          ) : null}
           {redeemMsg && <p className="mt-2 text-xs text-[var(--muted)]">{redeemMsg}</p>}
         </div>
       )}

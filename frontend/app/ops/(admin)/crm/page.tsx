@@ -115,7 +115,7 @@ export default function CrmPage() {
           {analytics && (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-[var(--radius)] border border-border p-4">
-                <p className="text-sm text-muted">Total amount spent in period</p>
+                <p className="text-sm text-muted">Total revenue within this period</p>
                 <p className="mt-1 font-mono text-2xl font-bold">
                   {formatCurrency(analytics.total_amount_spent)}
                 </p>

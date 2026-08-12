@@ -169,6 +169,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/customer/account/addresses/{id}', [CustomerAccountController::class, 'updateAddress']);
         Route::delete('/customer/account/addresses/{id}', [CustomerAccountController::class, 'destroyAddress']);
         Route::post('/customer/loyalty/redeem', [CustomerAccountController::class, 'redeem']);
+        Route::post('/customer/loyalty/vouchers/{id}/cancel', [CustomerAccountController::class, 'cancelVoucher']);
         Route::get('/customer/account/notifications', [CustomerAccountController::class, 'notificationPreferences']);
         Route::patch('/customer/account/notifications', [CustomerAccountController::class, 'updateNotificationPreferences']);
         Route::get('/customer/account/custom-meals', [CustomerAccountController::class, 'myCustomMeals']);
@@ -243,6 +244,9 @@ Route::prefix('v1')->group(function () {
             Route::patch('/loyalty/packages/{id}', [LoyaltyProgramController::class, 'updatePackage']);
             Route::delete('/loyalty/packages/{id}', [LoyaltyProgramController::class, 'destroyPackage']);
             Route::post('/loyalty/notify-qualified', [LoyaltyProgramController::class, 'notifyQualified']);
+            Route::get('/loyalty/vouchers', [LoyaltyController::class, 'pendingVouchers']);
+            Route::post('/loyalty/vouchers/{id}/fulfil', [LoyaltyController::class, 'fulfilVoucher']);
+            Route::post('/loyalty/vouchers/{id}/cancel', [LoyaltyController::class, 'cancelVoucher']);
             Route::get('/loyalty/{customer_id}', [LoyaltyController::class, 'show']);
             Route::post('/loyalty/earn', [LoyaltyController::class, 'earn']);
             Route::post('/loyalty/redeem', [LoyaltyController::class, 'redeem']);
@@ -257,6 +261,9 @@ Route::prefix('v1')->group(function () {
         Route::middleware('feature:kitchen')->group(function () {
             Route::get('/kitchen/orders', [KitchenController::class, 'index']);
             Route::patch('/kitchen/orders/{id}', [KitchenController::class, 'update']);
+            Route::get('/kitchen/loyalty-vouchers', [KitchenController::class, 'pendingVouchers']);
+            Route::post('/kitchen/loyalty-vouchers/{id}/fulfil', [KitchenController::class, 'fulfilVoucher']);
+            Route::post('/kitchen/loyalty-vouchers/{id}/cancel', [KitchenController::class, 'cancelVoucher']);
         });
 
         Route::middleware('feature:delivery')->group(function () {
