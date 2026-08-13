@@ -1,4 +1,4 @@
-import type { MealOption, MealOptionGroup } from "@/lib/types";
+import type { MealOption, MealOptionGroup } from "./types";
 
 export function getRadioOptionGroups(groups: MealOptionGroup[]): MealOptionGroup[] {
   return groups.filter(

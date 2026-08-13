@@ -307,10 +307,6 @@ export default function MenuPage() {
         kitchenName={storefront.data?.branding?.restaurant_name}
         isAcceptingOrders={storefront.data?.status?.is_accepting_orders !== false}
         getCartPricing={getVoiceCartPricing}
-        onCustomizeMeal={(meal) => {
-          setCustomizingOffer(resolveOfferForMeal(meal.id) ?? null);
-          setCustomizingMeal(meal);
-        }}
       />
     </div>
   );

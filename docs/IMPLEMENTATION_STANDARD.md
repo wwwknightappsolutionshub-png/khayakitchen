@@ -10,6 +10,12 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ## 1. Last Edit Summary (2026-08-13)
 
+**Voice order through checkout:** diner Voice Order Assistant now walks quantity, meal options, pickup/delivery/time, contact, payment, then places the order via the existing customer checkout API (same cart + `usePlaceOrder`).
+
+Prior summary below.
+
+## 1d. Prior edit summary (2026-08-13)
+
 **Ops PWA install nudge:** browser-session popup 60s after Ops login, then every 300s until KhayaOS Ops is installed. Branded email + WhatsApp 300s after new kitchen signup; existing owners without Ops PWA are queued 480s after VPS deploy (`ops-pwa:schedule-existing-nudges`).
 
 Prior summary below.

@@ -174,10 +174,6 @@ export default function CustomerHomePage() {
         kitchenName={storefront.data?.branding?.restaurant_name}
         isAcceptingOrders={!isClosed}
         getCartPricing={getVoiceCartPricing}
-        onCustomizeMeal={(meal) => {
-          setCustomizingOffer(resolveOfferForMeal(meal.id) ?? null);
-          setCustomizingMeal(meal);
-        }}
       />
     </div>
   );
