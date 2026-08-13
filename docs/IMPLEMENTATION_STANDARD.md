@@ -8,7 +8,13 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ---
 
-## 1. Last Edit Summary (2026-08-11)
+## 1. Last Edit Summary (2026-08-13)
+
+**Ops PWA install nudge:** browser-session popup 60s after Ops login, then every 300s until KhayaOS Ops is installed. Branded email + WhatsApp 300s after new kitchen signup; existing owners without Ops PWA are queued 480s after VPS deploy (`ops-pwa:schedule-existing-nudges`).
+
+Prior summary below.
+
+## 1c. Prior edit summary (2026-08-11)
 
 **Loyalty redeem voucher:** customer Redeem my points / package claim holds balance on a pending kitchen code; staff Fulfil or Decline on KDS and Loyalty. Staff `POST /loyalty/redeem` remains an immediate counter deduct.
 
@@ -64,6 +70,7 @@ git -c safe.directory=/www/wwwroot/khayaos.prohost.cloud log -1 --oneline
 cd backend && composer install --no-dev --optimize-autoloader
 /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
+/www/server/php/83/bin/php artisan ops-pwa:schedule-existing-nudges
 /www/server/php/83/bin/php artisan config:clear
 pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build

@@ -217,6 +217,16 @@ class PublicSignupService
             report($e);
         }
 
+        try {
+            app(OpsPwaInstallNudgeService::class)->scheduleForNewOwner($ownerId);
+        } catch (Throwable $e) {
+            Log::error('Ops PWA install nudge dispatch failed (signup still succeeded)', [
+                'owner_id' => $ownerId,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
+
         return $responsePayload;
     }
 

@@ -7,6 +7,7 @@ import { KitchenAvatar } from "@/components/admin/KitchenAvatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useStaffPresenceHeartbeat } from "@/hooks/useStaffPresenceHeartbeat";
+import { OpsPwaInstallNudge } from "@/components/admin/OpsPwaInstallNudge";
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -37,6 +38,7 @@ export function AdminShell({ children }: AdminShellProps) {
       renderSidebar={(props) => <Sidebar {...props} />}
     >
       <CustomerChatUrgencyAlerts />
+      <OpsPwaInstallNudge />
       {children}
     </ResponsiveAppShell>
   );

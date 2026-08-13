@@ -26,6 +26,7 @@ if [[ -n "$COMPOSER_BIN" ]]; then
 fi
 "$PHP" artisan migrate --force
 "$PHP" artisan db:seed --class=PricingSeeder --force
+"$PHP" artisan ops-pwa:schedule-existing-nudges
 "$PHP" artisan config:clear
 
 echo "==> frontend (STOP before replacing .next — required)"

@@ -78,6 +78,7 @@ cd backend
 /www/server/php/83/bin/php "$(command -v composer)" install --no-dev --optimize-autoloader --no-interaction || true
 /www/server/php/83/bin/php artisan migrate --force
 /www/server/php/83/bin/php artisan db:seed --class=PricingSeeder --force
+/www/server/php/83/bin/php artisan ops-pwa:schedule-existing-nudges
 /www/server/php/83/bin/php artisan config:clear
 pm2 stop khayaos-frontend
 cd ../frontend && npm install && rm -rf .next && npm run build

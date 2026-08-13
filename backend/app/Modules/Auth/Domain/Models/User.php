@@ -23,6 +23,7 @@ class User extends Authenticatable
         'last_login_at',
         'last_seen_at',
         'pwa_installed_at',
+        'ops_pwa_nudge_sent_at',
     ];
 
     protected $hidden = [
@@ -35,6 +36,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'pwa_installed_at' => 'datetime',
+            'ops_pwa_nudge_sent_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
