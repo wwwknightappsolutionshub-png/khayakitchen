@@ -14,7 +14,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { FeatureExplainerSlide } from "@/components/marketing/FeatureExplainerSlide";
 import type { PublicPricingPlan } from "@/lib/types";
 import { KHAYA_FEATURE_SLIDES } from "@/lib/khayaos-features";
-import { CURRENCIES } from "@/lib/currencies";
+import { CURRENCIES, currencyForCountryIso, resolveSignupCurrency } from "@/lib/currencies";
 import { isPostalCodeRequired } from "@/lib/postal-code-policy";
 import { useMarketingTheme } from "@/providers/MarketingThemeProvider";
 import { cn } from "@/lib/utils";
@@ -366,7 +366,7 @@ export function EnterpriseSignupForm({
       state_code: "",
       state: "",
       timezone: "Europe/London",
-      currency: "GBP",
+      currency: "",
       order_types_pickup: true,
       order_types_delivery: true,
       estimated_daily_orders: 50,
@@ -513,7 +513,12 @@ export function EnterpriseSignupForm({
       setValue("postal_code", "");
 
       if (country.currency) {
-        setValue("currency", country.currency, { shouldValidate: true });
+        setValue("currency", resolveSignupCurrency(isoCode, country.currency), { shouldValidate: true });
+      } else {
+        const mapped = currencyForCountryIso(isoCode);
+        if (mapped) {
+          setValue("currency", mapped, { shouldValidate: true });
+        }
       }
       const zone = country.timezones?.[0]?.zoneName;
       if (zone) {
@@ -810,12 +815,13 @@ export function EnterpriseSignupForm({
               />
               <SearchableSelect
                 label="Currency"
-                tooltip="Currency shown to customers and used in pricing and reports."
-                placeholder="Select currency"
+                tooltip="Locked to the country you selected. Customers and kitchen reports use this currency."
+                placeholder="Select country first"
                 value={watch("currency")}
                 options={currencyOptions}
                 error={errors.currency?.message}
                 onChange={(value) => setValue("currency", value, { shouldValidate: true })}
+                disabled={Boolean(currencyForCountryIso(countryIso))}
               />
             </div>
           ) : null}

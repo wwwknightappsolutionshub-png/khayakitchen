@@ -17,6 +17,8 @@ import { menuAdminService } from "@/services/menu-admin.service";
 import type { AdminMeal } from "@/lib/types";
 import { parseLimitError, type LimitErrorInfo } from "@/lib/limit-error";
 import { formatCurrency, toNumber } from "@/lib/utils";
+import { getActiveCurrency } from "@/lib/workspace-runtime";
+import { currencySymbol } from "@/lib/currencies";
 
 type MealForm = {
   name: string;
@@ -264,7 +266,7 @@ export default function MenuAdminPage() {
                 onChange={(e) => setMealForm((f) => ({ ...f, name: e.target.value }))}
               />
               <Input
-                label="Base price (£)"
+                label={`Base price (${currencySymbol(getActiveCurrency()) || "currency"})`}
                 type="number"
                 min="0"
                 step="0.01"

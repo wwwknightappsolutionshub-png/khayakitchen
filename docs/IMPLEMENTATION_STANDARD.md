@@ -8,7 +8,13 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ---
 
-## 1. Last Edit Summary (2026-08-13)
+## 1. Last Edit Summary (2026-08-14)
+
+**Tenant currency from country:** signup locks kitchen money to the selected country (Nigeria → NGN even if GBP is submitted). Tenant price labels and `formatCurrency` use workspace currency instead of hardcoded £ / GBP. KhayaOS SaaS plan prices stay GBP.
+
+Prior summary below.
+
+## 1e. Prior edit summary (2026-08-13)
 
 **Voice order through checkout:** diner Voice Order Assistant now walks quantity, meal options, pickup/delivery/time, contact, payment, then places the order via the existing customer checkout API (same cart + `usePlaceOrder`).
 

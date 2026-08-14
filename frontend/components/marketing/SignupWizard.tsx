@@ -118,6 +118,7 @@ export function SignupWizard({ startAtForm = false }: SignupWizardProps) {
       business_type: values.business_type,
       slug: values.slug,
       country: values.country,
+      country_iso: values.country_iso || undefined,
       state: values.state || undefined,
       city: values.city,
       street_address: values.street_address,

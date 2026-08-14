@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getActiveCurrency } from "@/lib/workspace-runtime";
+import { currencySymbol } from "@/lib/currencies";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,10 +22,19 @@ const CURRENCY_LOCALES: Record<string, string> = {
   ZAR: "en-ZA",
   CAD: "en-CA",
   AUD: "en-AU",
+  INR: "en-IN",
+  AED: "en-AE",
 };
 
+/** Tenant money. Uses workspace currency — never falls back to GBP. */
 export function formatCurrency(amount: string | number, currency?: string): string {
-  const code = (currency || getActiveCurrency() || "GBP").toUpperCase();
+  const code = (currency || getActiveCurrency() || "").toUpperCase();
+  if (!code) {
+    return new Intl.NumberFormat("en", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(toNumber(amount));
+  }
   const locale = CURRENCY_LOCALES[code] ?? undefined;
   try {
     return new Intl.NumberFormat(locale, {
@@ -32,10 +42,11 @@ export function formatCurrency(amount: string | number, currency?: string): stri
       currency: code,
     }).format(toNumber(amount));
   } catch {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: "GBP",
-    }).format(toNumber(amount));
+    const symbol = currencySymbol(code);
+    return `${symbol}${new Intl.NumberFormat("en", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(toNumber(amount))}`;
   }
 }
 

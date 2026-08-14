@@ -31,7 +31,7 @@ export const PROMOTIONS: Promotion[] = [
     title: "Share the flavour",
     headline: "Refer a friend, both save",
     description:
-      "Invite someone new. You both get £5 off your next order when they complete their first checkout.",
+      "Invite someone new. You both get a discount on your next order when they complete their first checkout.",
     cta: "Refer now",
     href: "/account",
     badge: "Referral",

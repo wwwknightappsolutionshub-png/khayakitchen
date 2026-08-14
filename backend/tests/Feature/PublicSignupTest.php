@@ -92,6 +92,7 @@ class PublicSignupTest extends TestCase
         $tenant = Tenant::where('slug', 'sunrise-kitchen')->firstOrFail();
         $this->assertNotNull($tenant->signup_metadata);
         $this->assertSame('London', $tenant->signup_metadata['city']);
+        $this->assertSame('GBP', $tenant->currency);
         $this->assertSame('Fresh food, fast service', $tenant->signup_metadata['tagline']);
 
         $this->assertDatabaseHas('tenant_brandings', [
@@ -375,11 +376,12 @@ class PublicSignupTest extends TestCase
             'business_type' => 'restaurant',
             'slug' => 'lagos-kitchen',
             'country' => 'Nigeria',
+            'country_iso' => 'NG',
             'state' => 'Lagos',
             'city' => 'Lagos',
             'street_address' => '12 Admiralty Way',
             'timezone' => 'Africa/Lagos',
-            'currency' => 'NGN',
+            'currency' => 'GBP',
             'owner_name' => 'Ngozi Owner',
             'owner_email' => 'ngozi@lagoskitchen.test',
             'owner_phone' => '+2348012345678',
@@ -396,6 +398,10 @@ class PublicSignupTest extends TestCase
 
         $response->assertCreated();
         Mail::assertSent(EmailVerificationMail::class);
+
+        $tenant = Tenant::where('slug', 'lagos-kitchen')->firstOrFail();
+        $this->assertSame('NGN', $tenant->currency);
+        $this->assertSame('NGN', $tenant->signup_metadata['currency'] ?? null);
     }
 
     public function test_signup_requires_postal_code_for_united_kingdom(): void

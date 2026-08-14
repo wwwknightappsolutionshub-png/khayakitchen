@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import type { AdminMeal, AdminOptionGroup } from "@/lib/types";
 import { formatCurrency, toNumber } from "@/lib/utils";
+import { getActiveCurrency } from "@/lib/workspace-runtime";
+import { currencySymbol } from "@/lib/currencies";
 
 export interface MealExtrasEditorProps {
   meal: AdminMeal;
@@ -185,7 +187,7 @@ function OptionGroupBlock({
           className="min-w-[120px] flex-1"
         />
         <Input
-          placeholder="Price +£"
+          placeholder={`Price +${currencySymbol(getActiveCurrency()) || ""}`}
           type="number"
           step="0.01"
           min="0"

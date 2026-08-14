@@ -8,6 +8,7 @@ export type SignupPayload = {
   tax_vat_number?: string;
   slug: string;
   country: string;
+  country_iso?: string;
   state?: string;
   city: string;
   street_address: string;

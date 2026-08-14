@@ -70,7 +70,10 @@ export function SearchableSelect({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((current) => !current);
+        }}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-[var(--radius)] border border-border bg-surface-elevated px-3 text-left text-sm",
           "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background",

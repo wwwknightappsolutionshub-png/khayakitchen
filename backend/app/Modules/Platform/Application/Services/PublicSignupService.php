@@ -13,6 +13,7 @@ use App\Modules\Pricing\Application\Services\AuditLogService;
 use App\Modules\Pricing\Application\Services\SubscriptionService;
 use App\Modules\Pricing\Application\Services\TenantReferralService;
 use App\Modules\Pricing\Domain\Models\Plan;
+use App\Modules\Platform\Support\CountryCurrency;
 use App\Modules\TenantBranding\Domain\Models\TenantBranding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,11 @@ class PublicSignupService
         }
 
         $plainPassword = $data['owner_password'];
+        $data['currency'] = CountryCurrency::resolve(
+            $data['country_iso'] ?? null,
+            $data['country'] ?? null,
+            $data['currency'] ?? null,
+        );
         $signupMetadata = $this->buildSignupMetadata($data);
 
         $result = DB::transaction(function () use ($data, $plan, $plainPassword, $signupMetadata) {
@@ -72,7 +78,7 @@ class PublicSignupService
                 ->where('id', $tenant['id'])
                 ->update([
                     'signup_metadata' => $signupMetadata,
-                    'currency' => strtoupper((string) ($data['currency'] ?? 'GBP')),
+                    'currency' => $data['currency'],
                     'country' => $data['country'] ?? null,
                     'country_iso' => isset($data['country_iso']) ? strtoupper((string) $data['country_iso']) : null,
                     'timezone' => $data['timezone'] ?? null,

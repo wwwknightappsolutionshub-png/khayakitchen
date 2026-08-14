@@ -1,7 +1,7 @@
 const CURRENCY_KEY = "khayaos_currency";
 const THEME_KEY = "khayaos_ui_theme";
 
-let activeCurrency = "GBP";
+let activeCurrency = "";
 
 export type UiTheme = "light" | "dark";
 
@@ -10,11 +10,12 @@ export function getActiveCurrency(): string {
     const stored = localStorage.getItem(CURRENCY_KEY);
     if (stored) activeCurrency = stored.toUpperCase();
   }
-  return activeCurrency || "GBP";
+  return activeCurrency;
 }
 
 export function setActiveCurrency(currency: string | null | undefined): void {
-  const next = (currency || "GBP").toUpperCase();
+  const next = (currency || "").trim().toUpperCase();
+  if (!next) return;
   activeCurrency = next;
   if (typeof window === "undefined") return;
   localStorage.setItem(CURRENCY_KEY, next);

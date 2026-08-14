@@ -14,6 +14,8 @@ import { MobileDataCard, ResponsiveDataView } from "@/components/ui/MobileDataCa
 import { ScrollTabs } from "@/components/ui/ScrollTabs";
 import { inventoryService } from "@/services/inventory.service";
 import { cn, formatDate, toNumber } from "@/lib/utils";
+import { getActiveCurrency } from "@/lib/workspace-runtime";
+import { currencySymbol } from "@/lib/currencies";
 
 type Tab = "stock" | "levels" | "waste" | "adjust" | "history";
 
@@ -214,7 +216,7 @@ export default function InventoryPage() {
                 onChange={(e) => setNewItem((f) => ({ ...f, reorder_level: e.target.value }))}
               />
               <Input
-                label="Cost per unit (£)"
+                label={`Cost per unit (${currencySymbol(getActiveCurrency()) || "currency"})`}
                 type="number"
                 min="0"
                 step="0.01"
@@ -254,7 +256,7 @@ export default function InventoryPage() {
               onChange={(e) => setStockQty(e.target.value)}
             />
             <Input
-              label="Cost per unit (£, optional)"
+              label={`Cost per unit (${currencySymbol(getActiveCurrency()) || "currency"}, optional)`}
               type="number"
               min="0"
               step="0.01"

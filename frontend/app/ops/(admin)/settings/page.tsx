@@ -50,7 +50,7 @@ export default function SettingsPage() {
   const [workspaceSuccess, setWorkspaceSuccess] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [workspaceForm, setWorkspaceForm] = useState({
-    currency: "GBP",
+    currency: "",
     country: "",
     country_iso: "",
     timezone: "",
@@ -108,7 +108,7 @@ export default function SettingsPage() {
     const workspace = workspaceData?.workspace;
     if (!workspace) return;
     setWorkspaceForm({
-      currency: workspace.currency || "GBP",
+      currency: workspace.currency || "",
       country: workspace.country ?? "",
       country_iso: workspace.country_iso ?? "",
       timezone: workspace.timezone ?? "",
