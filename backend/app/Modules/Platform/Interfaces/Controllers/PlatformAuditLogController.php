@@ -11,16 +11,28 @@ class PlatformAuditLogController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = min((int) $request->query('limit', 100), 500);
-        $tenantId = $request->query('tenant_id');
+        $data = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'tenant_id' => ['nullable', 'uuid'],
+        ]);
 
-        $query = DB::table('audit_logs')->orderByDesc('created_at')->limit($limit);
+        $page = (int) ($data['page'] ?? 1);
+        // Prefer per_page; keep legacy limit as alias for first-page page size.
+        $perPage = (int) ($data['per_page'] ?? $data['limit'] ?? 25);
+        $perPage = min(max($perPage, 1), 100);
+        $tenantId = $data['tenant_id'] ?? null;
+
+        $query = DB::table('audit_logs')->orderByDesc('created_at');
 
         if ($tenantId) {
             $query->where('tenant_id', $tenantId);
         }
 
-        $logs = $query->get()->map(fn ($row) => [
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        $logs = collect($paginator->items())->map(fn ($row) => [
             'id' => $row->id,
             'tenant_id' => $row->tenant_id,
             'action' => $row->action,
@@ -30,8 +42,16 @@ class PlatformAuditLogController extends Controller
             'metadata' => json_decode($row->metadata ?? '{}', true),
             'reason' => $row->reason,
             'created_at' => $row->created_at,
-        ]);
+        ])->values();
 
-        return ApiResponse::success(['logs' => $logs]);
+        return ApiResponse::success([
+            'logs' => $logs,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 }

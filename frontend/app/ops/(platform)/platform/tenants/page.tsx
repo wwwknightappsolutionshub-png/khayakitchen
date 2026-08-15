@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Hand, Trash2, Eye } from "lucide-react";
+import { Plus, Hand, Trash2, Eye, Activity, Palette, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -189,9 +189,16 @@ export default function PlatformTenantsPage() {
         reason: overrideReason || "Super admin override",
       }),
     onSuccess: () => {
+      showToast("Status overridden", "Restaurant operational status was updated.");
       queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
       setOverrideTenantId(null);
       setOverrideReason("");
+    },
+    onError: (err) => {
+      showToast(
+        "Override failed",
+        err instanceof ApiClientError ? err.message : "Could not override restaurant status.",
+      );
     },
   });
 
@@ -205,8 +212,15 @@ export default function PlatformTenantsPage() {
         ticker_text: brandingForm.ticker_text || undefined,
       }),
     onSuccess: () => {
+      showToast("Branding overridden", "Platform branding override was applied.");
       queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] });
       setBrandingTenantId(null);
+    },
+    onError: (err) => {
+      showToast(
+        "Branding override failed",
+        err instanceof ApiClientError ? err.message : "Could not apply branding override.",
+      );
     },
   });
 
@@ -371,38 +385,46 @@ export default function PlatformTenantsPage() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="gap-1"
+                            className="h-8 w-8 !px-0"
+                            title="View details"
+                            aria-label="View details"
                             onClick={() => setDetailsTenant(tenant)}
                           >
                             <Eye className="h-3.5 w-3.5" />
-                            View details
                           </Button>
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="gap-1"
+                            className="h-8 w-8 !px-0"
+                            title="Poke tenant"
+                            aria-label="Poke tenant"
                             isLoading={
                               pokeMutation.isPending && pokeMutation.variables === tenant.id
                             }
                             onClick={() => pokeMutation.mutate(tenant.id)}
                           >
                             <Hand className="h-3.5 w-3.5" />
-                            Poke
                           </Button>
                           <Button
                             size="sm"
                             variant="secondary"
+                            className="h-8 w-8 !px-0"
+                            title="Override status"
+                            aria-label="Override status"
                             onClick={() => setOverrideTenantId(tenant.id)}
                           >
-                            Override status
+                            <Activity className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="secondary"
+                            className="h-8 w-8 !px-0"
+                            title="Override branding"
+                            aria-label="Override branding"
                             onClick={() => {
                               setBrandingForm({
                                 logo_url: "",
@@ -416,26 +438,30 @@ export default function PlatformTenantsPage() {
                               setBrandingTenantId(tenant.id);
                             }}
                           >
-                            Override branding
+                            <Palette className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="secondary"
+                            className="h-8 w-8 !px-0"
+                            title="Entitlements"
+                            aria-label="Entitlements"
                             onClick={() => setEntitlementsTenantId(tenant.id)}
                           >
-                            Entitlements
+                            <Layers className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
                             variant="danger"
-                            className="gap-1"
+                            className="h-8 w-8 !px-0"
+                            title="Delete forever"
+                            aria-label="Delete forever"
                             onClick={() => {
                               setPurgeSlugConfirm("");
                               setPurgeTenant(tenant);
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                            Delete forever
                           </Button>
                         </div>
                       </td>
@@ -448,8 +474,12 @@ export default function PlatformTenantsPage() {
         </CardContent>
       </Card>
 
-      {brandingTenantId && (
-        <Card className="mt-6 border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame
+        open={!!brandingTenantId}
+        onClose={() => setBrandingTenantId(null)}
+        maxWidth="sm:max-w-2xl"
+      >
+        <Card className="border-violet-500/20 bg-[#0f1117]">
           <CardHeader>
             <CardTitle>Super admin branding override</CardTitle>
           </CardHeader>
@@ -547,14 +577,14 @@ export default function PlatformTenantsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => brandingMutation.mutate(brandingTenantId)}
+                onClick={() => brandingTenantId && brandingMutation.mutate(brandingTenantId)}
                 isLoading={brandingMutation.isPending}
               >
                 Apply branding override
               </Button>
               <Button
                 variant="secondary"
-                onClick={() => clearBrandingMutation.mutate(brandingTenantId)}
+                onClick={() => brandingTenantId && clearBrandingMutation.mutate(brandingTenantId)}
                 isLoading={clearBrandingMutation.isPending}
               >
                 Clear override
@@ -565,10 +595,14 @@ export default function PlatformTenantsPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      </ModalFrame>
 
-      {entitlementsTenantId && (
-        <Card className="mt-6 border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame
+        open={!!entitlementsTenantId}
+        onClose={() => setEntitlementsTenantId(null)}
+        maxWidth="sm:max-w-3xl"
+      >
+        <Card className="border-violet-500/20 bg-[#0f1117]">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>Tenant entitlements</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setEntitlementsTenantId(null)}>
@@ -578,6 +612,12 @@ export default function PlatformTenantsPage() {
           <CardContent className="space-y-6">
             {entitlementsQuery.isLoading ? (
               <p className="text-sm text-muted">Loading entitlements…</p>
+            ) : entitlementsQuery.isError ? (
+              <p className="text-sm text-danger">
+                {entitlementsQuery.error instanceof ApiClientError
+                  ? entitlementsQuery.error.message
+                  : "Could not load entitlements for this tenant."}
+              </p>
             ) : (
               <>
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -670,8 +710,10 @@ export default function PlatformTenantsPage() {
                     </label>
                     <Button
                       size="sm"
-                      onClick={() => featureOverrideMutation.mutate(entitlementsTenantId)}
-                      disabled={!overrideFeatureKey.trim()}
+                      onClick={() =>
+                        entitlementsTenantId && featureOverrideMutation.mutate(entitlementsTenantId)
+                      }
+                      disabled={!overrideFeatureKey.trim() || !entitlementsTenantId}
                       isLoading={featureOverrideMutation.isPending}
                     >
                       Apply feature override
@@ -701,7 +743,10 @@ export default function PlatformTenantsPage() {
                     </label>
                     <Button
                       size="sm"
-                      onClick={() => limitOverrideMutation.mutate(entitlementsTenantId)}
+                      onClick={() =>
+                        entitlementsTenantId && limitOverrideMutation.mutate(entitlementsTenantId)
+                      }
+                      disabled={!overrideLimitKey.trim() || !entitlementsTenantId}
                       isLoading={limitOverrideMutation.isPending}
                     >
                       Apply limit override
@@ -712,6 +757,7 @@ export default function PlatformTenantsPage() {
                 <Button
                   variant="danger"
                   onClick={() => {
+                    if (!entitlementsTenantId) return;
                     if (confirm("Reset all overrides to plan defaults?")) {
                       resetEntitlementsMutation.mutate(entitlementsTenantId);
                     }
@@ -724,10 +770,14 @@ export default function PlatformTenantsPage() {
             )}
           </CardContent>
         </Card>
-      )}
+      </ModalFrame>
 
-      {overrideTenantId && (
-        <Card className="mt-6 border-violet-500/20 bg-[#0f1117]">
+      <ModalFrame
+        open={!!overrideTenantId}
+        onClose={() => setOverrideTenantId(null)}
+        maxWidth="sm:max-w-lg"
+      >
+        <Card className="border-violet-500/20 bg-[#0f1117]">
           <CardHeader>
             <CardTitle>Super admin status override</CardTitle>
           </CardHeader>
@@ -770,7 +820,7 @@ export default function PlatformTenantsPage() {
             </label>
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => overrideMutation.mutate(overrideTenantId)}
+                onClick={() => overrideTenantId && overrideMutation.mutate(overrideTenantId)}
                 isLoading={overrideMutation.isPending}
               >
                 Apply override
@@ -781,7 +831,7 @@ export default function PlatformTenantsPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      </ModalFrame>
 
       <ModalFrame open={showCreateModal} onClose={() => setShowCreateModal(false)}>
           <Card className="w-full border-violet-500/20 bg-[#0f1117]">

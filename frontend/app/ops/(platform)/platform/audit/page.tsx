@@ -1,22 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardList } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { TableRowSkeleton } from "@/components/ui/LoadingSkeleton";
 import { platformService } from "@/services/platform.service";
 import { formatDate } from "@/lib/utils";
 import { BackendPage } from "@/components/shared/BackendPage";
 import { BACKEND_TABLE_CLASS, TableScroll } from "@/components/ui/TableScroll";
 
+const PER_PAGE = 25;
+
 export default function PlatformAuditPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["platform", "audit-logs"],
-    queryFn: () => platformService.getAuditLogs({ limit: 200 }),
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["platform", "audit-logs", page, PER_PAGE],
+    queryFn: () => platformService.getAuditLogs({ page, per_page: PER_PAGE }),
+    placeholderData: (previous) => previous,
   });
 
   const logs = data?.logs ?? [];
+  const meta = data?.meta;
+  const currentPage = meta?.current_page ?? page;
+  const lastPage = meta?.last_page ?? 1;
+  const total = meta?.total ?? 0;
+  const from = total === 0 ? 0 : (currentPage - 1) * (meta?.per_page ?? PER_PAGE) + 1;
+  const to = Math.min(currentPage * (meta?.per_page ?? PER_PAGE), total);
 
   return (
     <BackendPage>
@@ -76,7 +89,7 @@ export default function PlatformAuditPage() {
                   <td className="px-4 py-3 font-mono text-xs">
                     {log.user_id ? log.user_id.slice(0, 8) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-muted max-w-xs truncate">
+                  <td className="px-4 py-3 text-muted max-w-xs truncate" title={log.reason ?? undefined}>
                     {log.reason ?? "—"}
                   </td>
                 </tr>
@@ -84,6 +97,34 @@ export default function PlatformAuditPage() {
             </tbody>
           </table>
         </TableScroll>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+          <p className="text-xs text-violet-300/60">
+            {total === 0
+              ? "No entries"
+              : `Showing ${from}–${to} of ${total}${isFetching && !isLoading ? "…" : ""}`}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={currentPage <= 1 || isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-muted tabular-nums">
+              Page {currentPage} / {lastPage}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={currentPage >= lastPage || isFetching}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       </Card>
     </BackendPage>
   );

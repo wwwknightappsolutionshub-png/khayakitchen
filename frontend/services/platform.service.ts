@@ -91,11 +91,24 @@ export const platformService = {
   },
 
   async getAuditLogs(params?: {
+    page?: number;
+    per_page?: number;
+    /** @deprecated Prefer per_page; still accepted by the API as first-page page size. */
     limit?: number;
     tenant_id?: string;
-  }): Promise<{ logs: AuditLogEntry[] }> {
-    return api.get<{ logs: AuditLogEntry[] }>("/platform/audit-logs", {
+  }): Promise<{
+    logs: AuditLogEntry[];
+    meta: {
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
+    };
+  }> {
+    return api.get("/platform/audit-logs", {
       params: {
+        page: params?.page ? String(params.page) : undefined,
+        per_page: params?.per_page ? String(params.per_page) : undefined,
         limit: params?.limit ? String(params.limit) : undefined,
         tenant_id: params?.tenant_id,
       },

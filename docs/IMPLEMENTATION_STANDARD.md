@@ -8,7 +8,13 @@ This document is the single source of truth for how every feature on KhayaOS mus
 
 ---
 
-## 1. Last Edit Summary (2026-08-14)
+## 1. Last Edit Summary (2026-08-15)
+
+**Platform tenants Actions + audit pagination:** Tenant Overview Actions are icon-only (tooltips); Override status / branding / Entitlements open in modals (no off-screen inline panels). Platform Audit Logs use `page` + `per_page` with Previous/Next UI (25 per page).
+
+Prior summary below.
+
+## 1f. Prior edit summary (2026-08-14)
 
 **Tenant currency from country:** signup locks kitchen money to the selected country (Nigeria → NGN even if GBP is submitted). Tenant price labels and `formatCurrency` use workspace currency instead of hardcoded £ / GBP. KhayaOS SaaS plan prices stay GBP.
 
